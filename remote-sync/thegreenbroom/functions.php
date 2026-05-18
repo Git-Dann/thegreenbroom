@@ -377,10 +377,14 @@ function gb_get_user_dashboard_url( $user = null ) {
         return home_url( '/' );
     }
 
-    $roles = (array) $user->roles;
-    if ( in_array( 'gb_manager', $roles, true ) || in_array( 'administrator', $roles, true ) ) {
-        return home_url( '/manager-dashboard' );
-    }
+	$roles = (array) $user->roles;
+	if ( in_array( 'administrator', $roles, true ) ) {
+		return admin_url( 'users.php' );
+	}
+
+	if ( in_array( 'gb_manager', $roles, true ) ) {
+		return home_url( '/manager-dashboard' );
+	}
 
     if ( in_array( 'gb_cleaner', $roles, true ) ) {
         return home_url( '/cleaner-dashboard' );

@@ -50,3 +50,21 @@ When the temporary webspace login expires, regenerate SSH/SFTP credentials in Fa
 
 For the codebase itself, use Git history and a private remote repository so we always retain the working copy even when hosting access rotates.
 
+## WordPress Admin Access
+
+WordPress admin is the day-to-day access route and does not require logging into Fasthosts.
+
+- Admin URL: `https://thegreenbroom.uk/wp-login.php`
+- Current admin username for `danielclindsay+admin@googlemail.com`: `danclindsay`
+- Secondary administrator account present on the site: `info`
+
+Email login is disabled on this site, so use the WordPress username rather than the email address.
+
+After login, administrators are redirected directly to `wp-admin/users.php` so the Fasthosts landing page is skipped.
+
+For small emergency code edits, use the WordPress admin file editors:
+
+- Theme editor: `https://thegreenbroom.uk/wp-admin/theme-editor.php`
+- Plugin editor: `https://thegreenbroom.uk/wp-admin/plugin-editor.php`
+
+For normal code work, edit this repository first, commit the change, then deploy with `scripts/push-live.sh` while temporary SSH/SFTP credentials are available.
