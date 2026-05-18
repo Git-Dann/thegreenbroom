@@ -1,0 +1,694 @@
+<?php
+$action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '';
+$selected_page_id = isset($_GET['id']) ? absint($_GET['id']) : 0;
+$edit_page = null;
+
+if ($action === 'edit' && $selected_page_id) {
+    $candidate = get_post($selected_page_id);
+    if ($candidate && $candidate->post_type === 'page') {
+        $edit_page = $candidate;
+    }
+}
+
+$invalid_edit_target = ($action === 'edit' && $selected_page_id && !$edit_page);
+$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings'];
+?>
+
+<style>
+    /* Green OS Page Builder UI Tokens */
+    .gb-builder-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px; }
+    .gb-builder-layout { display: grid; grid-template-columns: 280px 1fr; gap: 30px; align-items: start; }
+    .gb-nav-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; position: sticky; top: 20px; }
+    .gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
+    .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 12px; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
+    .gb-editor-header .dashicons { font-size: 18px; color: #2e7d32; }
+    .gb-editor-body { padding: 25px; }
+    .gb-form-row { margin-bottom: 20px; }
+    .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+    .gb-textarea { min-height: 70px; resize: vertical; }
+    .gb-upload-wrapper { display: flex; gap: 10px; margin-top: 5px; }
+    .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .gb-sub-head { font-size: 11px; font-weight: 800; color: #2e7d32; margin: 25px 0 10px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+    
+    .gb-table { width: 100%; border-collapse: collapse; }
+    .gb-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .gb-table td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; }
+
+    .gb-btn-small-os { 
+        text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; 
+        color: #334155; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; 
+        transition: all 0.2s ease; background: white; cursor: pointer;
+    }
+    .gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
+</style>
+
+<?php if ($edit_page): 
+    $pid = (int) $edit_page->ID;
+    $p_obj = $edit_page;
+    $slug = $p_obj->post_name;
+    $is_front = (((int) get_option('page_on_front') === $pid) || $slug === 'home');
+    $is_structured_core_page = in_array($slug, $gb_structured_core_slugs, true) || $is_front;
+
+    $gb_page_defaults = [];
+    if ($is_front) {
+        $gb_page_defaults = [
+            '_gb_hero_bg'       => 'https://images.unsplash.com/photo-1581578731117-10d52143b1e8?auto=format&fit=crop&w=1920&q=80',
+            '_gb_hero_headline' => 'Spotless Homes, Cleaner Planet.',
+            '_gb_hero_sub'      => "The UK's trusted platform for finding eco-friendly cleaners.",
+            '_gb_hero_btn_1'    => 'Find a Cleaner',
+            '_gb_hero_link_1'   => '/cleaner-listings',
+            '_gb_hero_btn_2'    => 'Join as a Cleaner',
+            '_gb_hero_link_2'   => '/register',
+            '_gb_trust_banner'  => 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners',
+            '_gb_split_head'    => "Clean homes shouldn't cost the Earth.",
+            '_gb_split_body'    => 'Traditional cleaning products are full of harsh chemicals that can harm your family and pets. Plus, finding a reliable cleaner is often a headache of texts and cash payments.',
+            '_gb_split_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
+            '_gb_split_list_1'  => '100% Eco-Friendly Products Only',
+            '_gb_split_list_2'  => 'Vetted & Verified Professionals',
+            '_gb_split_list_3'  => 'Secure Cashless Payments',
+            '_gb_split_list_4'  => 'Satisfaction Guaranteed',
+            '_gb_hiw_head'      => 'How It Works',
+            '_gb_hiw_sub'       => 'Booking a cleaner has never been this simple or sustainable.',
+            '_gb_step1_title'   => 'Search & Filter',
+            '_gb_step1_text'    => 'Enter your postcode and browse profiles of vetted eco-cleaners in your area.',
+            '_gb_step2_title'   => 'Book Securely',
+            '_gb_step2_text'    => 'Select a time that works for you and pay securely through the platform.',
+            '_gb_step3_title'   => 'Relax & Enjoy',
+            '_gb_step3_text'    => "Come home to a spotless house knowing you've made a green choice.",
+            '_gb_feat_head'     => 'Why The Green Broom?',
+            '_gb_feat1_title'   => 'Eco-Friendly',
+            '_gb_feat1_text'    => 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.',
+            '_gb_feat2_title'   => 'Fully Vetted',
+            '_gb_feat2_text'    => 'We check IDs and references personally. Safety is our #1 priority.',
+            '_gb_feat3_title'   => 'Direct Chat',
+            '_gb_feat3_text'    => 'Message your cleaner directly to discuss specific needs or access details.',
+            '_gb_testi_head'    => 'What our customers say',
+            '_gb_testi1_text'   => 'Finally a cleaning service that aligns with my values. My house smells fresh without the chemical smell!',
+            '_gb_testi1_auth'   => '— Sarah J., Manchester',
+            '_gb_testi2_text'   => 'Booking was so easy. Mike was professional, on time, and did an amazing job on the kitchen.',
+            '_gb_testi2_auth'   => '— David P., Leeds',
+            '_gb_cta_heading'   => 'Ready to make money cleaning?',
+            '_gb_cta_sub'       => 'Join The Green Broom today.',
+            '_gb_cta_btn_1'     => 'Get Started Now',
+            '_gb_cta_link_1'    => '/register',
+            '_gb_cta_btn_2'     => 'Learn More',
+            '_gb_cta_link_2'    => '/how-it-works',
+            '_gb_mid_img'       => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
+        ];
+    } elseif ($slug === 'how-it-works') {
+        $gb_page_defaults = [
+            '_gb_hiw_hero_title' => 'Simple. Secure. Sustainable.',
+            '_gb_hiw_hero_sub'   => 'See how The Green Broom makes cleaning better for everyone.',
+            '_gb_hiw_s1_title'   => 'Search & Filter',
+            '_gb_hiw_s1_desc'    => 'Enter your postcode and browse profiles. Filter by price, reviews, and specific eco-services.',
+            '_gb_hiw_s1_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
+            '_gb_hiw_s2_title'   => 'Book Instantly',
+            '_gb_hiw_s2_desc'    => 'Choose a time slot that works for you. No back-and-forth texts. Our secure calendar system locks in your appointment.',
+            '_gb_hiw_s2_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
+            '_gb_hiw_s3_title'   => 'Secure Payment',
+            '_gb_hiw_s3_desc'    => 'Pay securely through the platform using Stripe. Funds are held safely and only released when the job is done.',
+            '_gb_hiw_s3_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
+            '_gb_hiw_cl_head'    => 'Earn More on Your Terms',
+            '_gb_hiw_cl_s1_title'=> '1. Create Profile',
+            '_gb_hiw_cl_s1_desc' => 'Showcase your experience, set your rates, and upload photos.',
+            '_gb_hiw_cl_s2_title'=> '2. Get Verified',
+            '_gb_hiw_cl_s2_desc' => 'Pass our quick ID check to get the Verified badge.',
+            '_gb_hiw_cl_s3_title'=> '3. Accept Jobs',
+            '_gb_hiw_cl_s3_desc' => 'Get booking requests and accept the ones that fit your schedule.',
+            '_gb_hiw_cl_btn'    => 'Become a Cleaner',
+            '_gb_hiw_cl_link'   => '/register',
+            '_gb_hiw_faq1_q'     => 'Are the cleaning products safe?',
+            '_gb_hiw_faq1_a'     => 'Yes! All cleaners on our platform are committed to using non-toxic, eco-friendly products.',
+            '_gb_hiw_faq2_q'     => 'How do I pay?',
+            '_gb_hiw_faq2_a'     => 'We use a secure cashless system. You pay via credit/debit card when you book.',
+            '_gb_hiw_faq3_q'     => 'Are cleaners vetted?',
+            '_gb_hiw_faq3_a'     => 'Absolutely. We check ID and references for every professional to ensure they meet our high standards.',
+            '_gb_hiw_faq4_q'     => 'What if I need to cancel?',
+            '_gb_hiw_faq4_a'     => 'You can cancel or reschedule up to 24 hours before your booking for a full refund.',
+            '_gb_hiw_cta_title'  => 'Ready to get started?',
+            '_gb_hiw_cta_desc'   => "Join the community that's cleaning up the UK, one home at a time.",
+            '_gb_hiw_cta_btn'    => 'Find a Cleaner',
+            '_gb_hiw_cta_link'   => '/cleaner-listings',
+        ];
+    } elseif ($slug === 'how-we-do-it') {
+        $gb_page_defaults = [
+            '_gb_about_hero_bg'    => 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1920&q=80',
+            '_gb_about_hero_title' => 'Cleaning Up The Cleaning Industry.',
+            '_gb_about_hero_sub'   => 'We believe in fair pay, non-toxic products, and a spotless finish. No compromises.',
+            '_gb_story_head'       => 'Why We Started',
+            '_gb_story_lead'       => 'Finding a reliable cleaner used to be a gamble. Finding one who cared about the environment was nearly impossible.',
+            '_gb_story_body'       => "We built The Green Broom to solve two massive problems: homeowners were tired of harsh chemicals and unreliable service, and cleaners were tired of low wages and poor treatment.\n\nBy cutting out the expensive agencies and using smart technology, we connect you directly.",
+            '_gb_story_img'        => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
+            '_gb_stat1_num'        => '100%',
+            '_gb_stat1_label'      => 'Eco-Friendly',
+            '_gb_stat2_num'        => '£15+',
+            '_gb_stat2_label'      => 'Avg. Hourly Wage',
+            '_gb_stat3_num'        => '0',
+            '_gb_stat3_label'      => 'Hidden Fees',
+            '_gb_vet_head'         => 'Trust is Everything.',
+            '_gb_vet_sub'          => 'We invite less than 10% of applicants to join our platform. Here is how we ensure only the best enter your home.',
+            '_gb_vet_s1_title'     => 'ID & Right to Work Checks',
+            '_gb_vet_s1_desc'      => 'We verify government-issued ID and proof of address for every single applicant.',
+            '_gb_vet_s2_title'     => 'Reference Verification',
+            '_gb_vet_s2_desc'      => "We speak to previous employers or clients. If they haven't delivered 5-star service before, they won't be on The Green Broom.",
+            '_gb_vet_s3_title'     => 'The "Green" Interview',
+            '_gb_vet_s3_desc'      => 'We test their knowledge of eco-friendly cleaning methods.',
+            '_gb_vet_s4_title'     => 'Ongoing Monitoring',
+            '_gb_vet_s4_desc'      => "Verification doesn't stop at signup. We monitor ratings after every job.",
+            '_gb_about_cta_head'   => 'Join the Cleaning Revolution',
+            '_gb_about_cta_sub'    => 'Whether you want a spotless home or a flexible career.',
+            '_gb_about_btn1_text'  => 'Find a Cleaner',
+            '_gb_about_btn1_link'  => '/cleaner-listings',
+            '_gb_about_btn2_text'  => 'Join as a Cleaner',
+            '_gb_about_btn2_link'  => '/register',
+        ];
+    } elseif ($slug === 'what-we-do') {
+        $gb_page_defaults = [
+            '_gb_svc_hero_bg'    => 'https://images.unsplash.com/photo-1584622050111-993a426fbf0a?auto=format&fit=crop&w=1920&q=80',
+            '_gb_svc_hero_title' => 'More Than Just a Clean Home',
+            '_gb_svc_hero_sub'   => 'Professional, reliable, and 100% eco-friendly services tailored to your lifestyle.',
+            '_gb_svc_head'       => 'Our Cleaning Services',
+            '_gb_svc_sub'        => 'Choose the level of clean that fits your needs. All services use plant-based, non-toxic products.',
+            '_gb_svc_1_title'    => 'Standard Clean',
+            '_gb_svc_1_desc'     => 'Perfect for keeping your home fresh on a weekly or fortnightly basis.',
+            '_gb_svc_1_list'     => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+            '_gb_svc_1_btn'      => 'Find Standard Cleaners',
+            '_gb_svc_1_link'     => '/cleaner-listings?service=standard',
+            '_gb_svc_2_title'    => 'Deep Clean',
+            '_gb_svc_2_desc'     => 'A thorough top-to-bottom refresh. Ideal for spring cleaning.',
+            '_gb_svc_2_list'     => "Includes everything in Standard\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
+            '_gb_svc_2_btn'      => 'Find Deep Cleaners',
+            '_gb_svc_2_link'     => '/cleaner-listings?service=deep',
+            '_gb_svc_3_title'    => 'Move In / Out',
+            '_gb_svc_3_desc'     => 'Ensure you get your deposit back. An intensive clean for empty properties.',
+            '_gb_svc_3_list'     => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
+            '_gb_svc_3_btn'      => 'Find Move Cleaners',
+            '_gb_svc_3_link'     => '/cleaner-listings?service=moving',
+            '_gb_svc_mis_img'    => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
+            '_gb_svc_mis_title'  => 'The "Green" in Green Broom',
+            '_gb_svc_mis_sub'    => "We believe a clean home shouldn't come at the cost of the environment.",
+            '_gb_svc_mis_body'   => "Traditional cleaning supplies are often packed with volatile organic compounds (VOCs).\n\nWe mandate that every cleaner uses non-toxic, biodegradable products.",
+            '_gb_svc_mis_btn'    => 'Join Our Mission',
+            '_gb_svc_mis_link'   => '/register',
+            '_gb_svc_cta_title'  => 'Ready to book?',
+            '_gb_svc_cta_sub'    => 'Find a vetted professional in your area today.',
+            '_gb_svc_cta_btn'    => 'Browse Cleaners',
+            '_gb_svc_cta_link'   => '/cleaner-listings',
+        ];
+    } elseif ($slug === 'cleaner-listings') {
+        $gb_page_defaults = [
+            '_gb_listings_title' => 'Find Your Professional',
+            '_gb_listings_sub'   => 'Trusted, vetted, and verified cleaners ready to help.',
+            '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
+        ];
+    }
+
+    $gb_field_value = function($meta_key, $fallback = '') use ($pid, $gb_page_defaults) {
+        if (empty($meta_key)) {
+            return $fallback;
+        }
+
+        $stored = get_post_meta($pid, $meta_key, true);
+        if ($stored !== '' && $stored !== null) {
+            return $stored;
+        }
+
+        if ($meta_key === '_gb_trust_banner') {
+            return 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners';
+        }
+
+        if (array_key_exists($meta_key, $gb_page_defaults)) {
+            return $gb_page_defaults[$meta_key];
+        }
+
+        return $fallback;
+    };
+?>
+    
+    <div class="gb-builder-header">
+        <div>
+            <a href="?tab=pages" class="gb-back-link" style="text-decoration:none; color:#2e7d32; font-weight:700; font-size:13px;">← Back to Pages</a>
+            <h1 class="gb-title" style="margin:10px 0 0; font-size:28px; font-weight:800; color:#0f172a;">Editing: <?php echo esc_html($p_obj->post_title); ?></h1>
+        </div>
+        <div style="display:flex; gap:12px;">
+            <a href="<?php echo get_permalink($pid); ?>" target="_blank" class="gb-btn-small-os" style="height:44px;">Preview ↗</a>
+            <button type="submit" form="page-builder-form" class="gb-header-btn" style="height:44px; background:#2e7d32; color:white; border:none; padding:0 30px; border-radius:8px; font-weight:700; cursor:pointer;">Save Content</button>
+        </div>
+    </div>
+
+    <div class="gb-builder-layout">
+        <aside class="gb-builder-nav">
+            <div class="gb-nav-card">
+                <label class="gb-label">Quick Jump</label>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="#hero" class="gb-btn-small-os" style="text-align:left;">🦸 Hero</a>
+                    <a href="#trust" class="gb-btn-small-os" style="text-align:left;">⭐ Trust Bar</a>
+                    <a href="#modules" class="gb-btn-small-os" style="text-align:left;">🧩 Modules</a>
+                    <a href="#cta" class="gb-btn-small-os" style="text-align:left;">📣 Bottom CTA</a>
+                </div>
+            </div>
+        </aside>
+
+        <div class="gb-builder-content">
+            <form method="post" id="page-builder-form">
+                <input type="hidden" name="post_id" value="<?php echo $pid; ?>">
+                <input type="hidden" name="gb_save_action" value="save_page">
+                <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
+
+                <div id="hero" class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-format-image"></span> Hero Header</div>
+                    <div class="gb-editor-body">
+                        <?php 
+                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ''));
+                            $h_title_k = $is_front
+                                ? '_gb_hero_headline'
+                                : ($slug == 'how-it-works'
+                                    ? '_gb_hiw_hero_title'
+                                    : ($slug == 'how-we-do-it'
+                                        ? '_gb_about_hero_title'
+                                        : ($slug == 'what-we-do'
+                                            ? '_gb_svc_hero_title'
+                                            : ($slug == 'cleaner-listings' ? '_gb_listings_title' : ''))));
+                            $h_sub_k = $is_front
+                                ? '_gb_hero_sub'
+                                : ($slug == 'how-it-works'
+                                    ? '_gb_hiw_hero_sub'
+                                    : ($slug == 'how-we-do-it'
+                                        ? '_gb_about_hero_sub'
+                                        : ($slug == 'what-we-do'
+                                            ? '_gb_svc_hero_sub'
+                                            : ($slug == 'cleaner-listings' ? '_gb_listings_sub' : ''))));
+                        ?>
+                        <?php if ($h_bg_k): ?>
+                            <div class="gb-form-row">
+                                <label class="gb-label">Background URL</label>
+                                <div class="gb-upload-wrapper">
+                                    <input type="text" name="<?php echo esc_attr($h_bg_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_bg_k)); ?>">
+                                    <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($h_title_k && $h_sub_k): ?>
+                            <div class="gb-form-row"><label class="gb-label">Headline</label><input type="text" name="<?php echo esc_attr($h_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_title_k)); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">Subtitle</label><textarea name="<?php echo esc_attr($h_sub_k); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($h_sub_k)); ?></textarea></div>
+                            <?php if ($is_front): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row">
+                                        <label class="gb-label">Primary Hero Button Text</label>
+                                        <input type="text" name="_gb_hero_btn_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hero_btn_1')); ?>">
+                                    </div>
+                                    <div class="gb-form-row">
+                                        <label class="gb-label">Primary Hero Button Link</label>
+                                        <input type="text" name="_gb_hero_link_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hero_link_1')); ?>">
+                                    </div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row">
+                                        <label class="gb-label">Secondary Hero Button Text</label>
+                                        <input type="text" name="_gb_hero_btn_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hero_btn_2')); ?>">
+                                    </div>
+                                    <div class="gb-form-row">
+                                        <label class="gb-label">Secondary Hero Button Link</label>
+                                        <input type="text" name="_gb_hero_link_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hero_link_2')); ?>">
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p style="margin:0; color:#64748b; font-size:13px;">This page uses standard content editing only. Use the Body Text Content editor below.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div id="trust" class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-awards"></span> Trust & Social Proof</div>
+                    <div class="gb-editor-body">
+                        <div class="gb-form-row">
+                            <label class="gb-label">Hero Trust Bar Content</label>
+                            <input type="text" 
+                                name="_gb_trust_banner" 
+                                class="gb-input"
+                                value="<?php echo esc_attr($gb_field_value('_gb_trust_banner')); ?>" 
+                                placeholder="e.g. Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="modules">
+                    <?php if ($is_front): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-megaphone"></span> Value Proposition & Trust</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Image</label><div class="gb-upload-wrapper"><input type="text" name="_gb_split_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_split_img')); ?>"><button type="button" class="gb-upload-btn gb-btn-small-os">Select</button></div></div>
+                                <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_split_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_split_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Body Text</label><textarea name="_gb_split_body" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_split_body')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Bullet Items</label>
+                                    <div class="gb-link-row"><?php for($i=1;$i<=4;$i++): ?><input type="text" name="_gb_split_list_<?php echo $i; ?>" class="gb-input" placeholder="Prop <?php echo $i; ?>" value="<?php echo esc_attr($gb_field_value("_gb_split_list_{$i}")); ?>"><?php endfor; ?></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-search"></span> How It Works (Steps)</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Section Heading</label><input type="text" name="_gb_hiw_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_hiw_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_hiw_sub')); ?></textarea></div>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Step <?php echo $i; ?></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_step<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_step{$i}_title")); ?>"><textarea name="_gb_step<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_step{$i}_text")); ?></textarea></div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-star-filled"></span> Features & Reviews</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Features Section Heading</label>
+                                    <input type="text" name="_gb_feat_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_feat_head')); ?>">
+                                </div>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Feature <?php echo $i; ?></div>
+                                    <div class="gb-form-row">
+                                        <input type="text" name="_gb_feat<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_feat{$i}_title")); ?>">
+                                        <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
+                                    </div>
+                                <?php endfor; ?>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Reviews Section Heading</label>
+                                    <input type="text" name="_gb_testi_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_head')); ?>">
+                                </div>
+                                <?php for($i=1;$i<=2;$i++): ?>
+                                    <div class="gb-sub-head">Review <?php echo $i; ?></div>
+                                    <div class="gb-form-row">
+                                        <textarea name="_gb_testi<?php echo $i; ?>_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value("_gb_testi{$i}_text")); ?></textarea>
+                                        <input type="text" name="_gb_testi<?php echo $i; ?>_auth" class="gb-input" style="margin-top:8px;" placeholder="Author" value="<?php echo esc_attr($gb_field_value("_gb_testi{$i}_auth")); ?>">
+                                    </div>
+                                <?php endfor; ?>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Middle Showcase Image</label>
+                                    <div class="gb-upload-wrapper">
+                                        <input type="text" name="_gb_mid_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_mid_img')); ?>">
+                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <?php elseif ($slug == 'how-it-works'): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-admin-home"></span> Homeowner Pathway</div>
+                            <div class="gb-editor-body">
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Step <?php echo $i; ?></div>
+                                    <div class="gb-form-row"><label class="gb-label">Image</label><div class="gb-upload-wrapper"><input type="text" name="_gb_hiw_s<?php echo $i; ?>_img" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_hiw_s{$i}_img")); ?>"><button type="button" class="gb-upload-btn gb-btn-small-os">Select</button></div></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_hiw_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_hiw_s{$i}_title")); ?>"><textarea name="_gb_hiw_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_hiw_s{$i}_desc")); ?></textarea></div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-id-alt"></span> Cleaner Pathway & FAQs</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Section Header</label><input type="text" name="_gb_hiw_cl_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_cl_head')); ?>"></div>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-form-row"><label class="gb-label">Step <?php echo $i; ?></label><input type="text" name="_gb_hiw_cl_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_hiw_cl_s{$i}_title")); ?>"><input type="text" name="_gb_hiw_cl_s<?php echo $i; ?>_desc" class="gb-input" style="margin-top:8px;" value="<?php echo esc_attr($gb_field_value("_gb_hiw_cl_s{$i}_desc")); ?>"></div>
+                                <?php endfor; ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Cleaner CTA Button Text</label><input type="text" name="_gb_hiw_cl_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_cl_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Cleaner CTA Button Link</label><input type="text" name="_gb_hiw_cl_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_cl_link')); ?>"></div>
+                                </div>
+                                <?php for($i=1;$i<=4;$i++): ?>
+                                    <div class="gb-sub-head">FAQ <?php echo $i; ?></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_hiw_faq<?php echo $i; ?>_q" class="gb-input" placeholder="Question" value="<?php echo esc_attr($gb_field_value("_gb_hiw_faq{$i}_q")); ?>"><textarea name="_gb_hiw_faq<?php echo $i; ?>_a" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_hiw_faq{$i}_a")); ?></textarea></div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                    <?php elseif ($slug == 'how-we-do-it'): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-book-alt"></span> Story & Vetting</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Story Headline</label><input type="text" name="_gb_story_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_story_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Story Lead Paragraph</label><textarea name="_gb_story_lead" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_story_lead')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Story Body</label><textarea name="_gb_story_body" class="gb-textarea" style="height:150px;"><?php echo esc_textarea($gb_field_value('_gb_story_body')); ?></textarea></div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Story Image</label>
+                                    <div class="gb-upload-wrapper">
+                                        <input type="text" name="_gb_story_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_story_img')); ?>">
+                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
+                                    </div>
+                                </div>
+
+                                <div class="gb-sub-head">Stats Bar</div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Stat 1 Number</label><input type="text" name="_gb_stat1_num" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat1_num')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Stat 1 Label</label><input type="text" name="_gb_stat1_label" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat1_label')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Stat 2 Number</label><input type="text" name="_gb_stat2_num" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat2_num')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Stat 2 Label</label><input type="text" name="_gb_stat2_label" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat2_label')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Stat 3 Number</label><input type="text" name="_gb_stat3_num" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat3_num')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Stat 3 Label</label><input type="text" name="_gb_stat3_label" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_stat3_label')); ?>"></div>
+                                </div>
+
+                                <div class="gb-sub-head">Vetting Intro</div>
+                                <div class="gb-form-row"><label class="gb-label">Vetting Section Heading</label><input type="text" name="_gb_vet_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_vet_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Vetting Section Subheading</label><textarea name="_gb_vet_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_vet_sub')); ?></textarea></div>
+                                <?php for($i=1;$i<=4;$i++): ?>
+                                    <div class="gb-sub-head">Vetting Step <?php echo $i; ?></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_vet_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_vet_s{$i}_title")); ?>"><textarea name="_gb_vet_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_vet_s{$i}_desc")); ?></textarea></div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                    <?php elseif ($slug == 'what-we-do'): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-forms"></span> Service Packages & Mission</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Services Section Heading</label><input type="text" name="_gb_svc_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Services Section Subheading</label><textarea name="_gb_svc_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_svc_sub')); ?></textarea></div>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Package <?php echo $i; ?></div>
+                                    <div class="gb-form-row">
+                                        <input type="text" name="_gb_svc_<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_title")); ?>">
+                                        <textarea name="_gb_svc_<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_svc_{$i}_desc")); ?></textarea>
+                                        <textarea name="_gb_svc_<?php echo $i; ?>_list" class="gb-textarea" style="margin-top:8px;" placeholder="Bullet list (line by line)"><?php echo esc_textarea($gb_field_value("_gb_svc_{$i}_list")); ?></textarea>
+                                        <input type="text" name="_gb_svc_<?php echo $i; ?>_btn" class="gb-input" style="margin-top:8px;" placeholder="Button text" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_btn")); ?>">
+                                        <input type="text" name="_gb_svc_<?php echo $i; ?>_link" class="gb-input" style="margin-top:8px;" placeholder="Button link" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_link")); ?>">
+                                    </div>
+                                <?php endfor; ?>
+                                <div class="gb-sub-head">Our Mission</div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Mission Image</label>
+                                    <div class="gb-upload-wrapper">
+                                        <input type="text" name="_gb_svc_mis_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_img')); ?>">
+                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
+                                    </div>
+                                </div>
+                                <div class="gb-form-row"><label class="gb-label">Mission Headline</label><input type="text" name="_gb_svc_mis_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_title')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Mission Subheading</label><textarea name="_gb_svc_mis_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Mission Body</label><textarea name="_gb_svc_mis_body" class="gb-textarea" style="height:120px;"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_body')); ?></textarea></div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Mission Button Text</label><input type="text" name="_gb_svc_mis_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Mission Button Link</label><input type="text" name="_gb_svc_mis_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_link')); ?>"></div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div id="cta" class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-megaphone"></span> Bottom CTA Banner</div>
+                    <div class="gb-editor-body">
+                        <?php 
+                            $c_title_k = $is_front
+                                ? '_gb_cta_heading'
+                                : ($slug == 'how-it-works'
+                                    ? '_gb_hiw_cta_title'
+                                    : ($slug == 'how-we-do-it'
+                                        ? '_gb_about_cta_head'
+                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_title' : '')));
+                            $c_sub_k = $is_front
+                                ? '_gb_cta_sub'
+                                : ($slug == 'how-it-works'
+                                    ? '_gb_hiw_cta_desc'
+                                    : ($slug == 'how-we-do-it'
+                                        ? '_gb_about_cta_sub'
+                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_sub' : '')));
+                        ?>
+                        <?php if ($c_title_k && $c_sub_k): ?>
+                            <div class="gb-form-row"><label class="gb-label">CTA Headline</label><input type="text" name="<?php echo esc_attr($c_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($c_title_k)); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">CTA Description</label><textarea name="<?php echo esc_attr($c_sub_k); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($c_sub_k)); ?></textarea></div>
+                            <?php if ($is_front): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Primary CTA Button Text</label><input type="text" name="_gb_cta_btn_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_cta_btn_1')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Primary CTA Button Link</label><input type="text" name="_gb_cta_link_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_cta_link_1')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Text</label><input type="text" name="_gb_cta_btn_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_cta_btn_2')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Link</label><input type="text" name="_gb_cta_link_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_cta_link_2')); ?>"></div>
+                                </div>
+                            <?php elseif ($slug === 'how-it-works'): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Text</label><input type="text" name="_gb_hiw_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_cta_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Link</label><input type="text" name="_gb_hiw_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_cta_link')); ?>"></div>
+                                </div>
+                            <?php elseif ($slug === 'how-we-do-it'): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Primary CTA Button Text</label><input type="text" name="_gb_about_btn1_text" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn1_text')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Primary CTA Button Link</label><input type="text" name="_gb_about_btn1_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn1_link')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Text</label><input type="text" name="_gb_about_btn2_text" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn2_text')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Link</label><input type="text" name="_gb_about_btn2_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn2_link')); ?>"></div>
+                                </div>
+                            <?php elseif ($slug === 'what-we-do'): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Text</label><input type="text" name="_gb_svc_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Link</label><input type="text" name="_gb_svc_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_link')); ?>"></div>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p style="margin:0; color:#64748b; font-size:13px;">No structured bottom CTA fields are mapped for this page.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div id="content" class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-editor-paragraph"></span> Body Text Content</div>
+                    <div class="gb-editor-body">
+                        <?php if($slug == 'cleaner-listings'): ?>
+                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                        <?php elseif ($is_structured_core_page): ?>
+                            <p style="margin:0; color:#64748b; font-size:13px;">This page is fully controlled by the structured fields above.</p>
+                        <?php else: ?>
+                            <?php wp_editor($p_obj->post_content, 'gb_main_content', ['textarea_rows' => 15, 'textarea_name' => 'gb_main_content']); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    jQuery(document).ready(function($){
+        $('.gb-upload-btn').click(function(e) { 
+            e.preventDefault(); var btn=$(this); var input=btn.prev('input'); 
+            wp.media({title:'Select Image',button:{text:'Use URL'},multiple:false})
+            .on('select',function(){ input.val(this.state().get('selection').first().toJSON().url); })
+            .open(); 
+        });
+    });
+    </script>
+
+<?php else: ?>
+    <?php
+    $front_id = (int) get_option('page_on_front');
+    $all_pages = get_posts([
+        'post_type'      => 'page',
+        'post_status'    => ['publish', 'draft', 'private'],
+        'posts_per_page' => -1,
+        'orderby'        => 'menu_order title',
+        'order'          => 'ASC',
+    ]);
+
+    $pages_by_slug = [];
+    foreach ($all_pages as $page_obj) {
+        $pages_by_slug[$page_obj->post_name] = $page_obj;
+    }
+
+    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings'];
+    $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr'];
+
+    $core_pages = [];
+    if ($front_id) {
+        $front_page = get_post($front_id);
+        if ($front_page && $front_page->post_type === 'page') {
+            $core_pages[$front_page->ID] = $front_page;
+        }
+    }
+
+    foreach ($core_slugs as $slug_key) {
+        if (isset($pages_by_slug[$slug_key])) {
+            $core_pages[$pages_by_slug[$slug_key]->ID] = $pages_by_slug[$slug_key];
+        }
+    }
+
+    $legal_pages = [];
+    foreach ($legal_slugs as $slug_key) {
+        if (isset($pages_by_slug[$slug_key])) {
+            $legal_pages[$pages_by_slug[$slug_key]->ID] = $pages_by_slug[$slug_key];
+        }
+    }
+
+    ?>
+
+    <div class="booking-controls">
+        <div>
+            <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Site Content Management</h1>
+            <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Edit manager-facing pages quickly with direct edit access.</p>
+        </div>
+    </div>
+
+    <?php if ($invalid_edit_target): ?>
+        <div style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; border-radius:10px; padding:12px 14px; margin-bottom:20px;">
+            The selected page could not be loaded. Please choose a page from the list below.
+        </div>
+    <?php endif; ?>
+
+    <div style="margin-bottom: 28px;">
+        <div style="margin:0 0 10px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Core System Pages</div>
+        <div class="gb-card" style="padding:0; overflow:hidden; background: white; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table class="gb-booking-table">
+                <thead>
+                    <tr><th style="width:40%;">Page Identity</th><th>Type</th><th style="text-align:right;">Action</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($core_pages as $p): 
+                        $is_home = ($p->ID === $front_id) || $p->post_name === 'home';
+                    ?>
+                            <tr>
+                                <td><strong style="font-size:15px; color:#0f172a;"><?php echo $p->post_title; ?></strong><div style="font-size:11px; color:#94a3b8; margin-top:4px;">/<?php echo $p->post_name; ?></div></td>
+                                <td>
+                                    <span style="background:<?php echo $is_home?'#dcfce7':'#f1f5f9'; ?>; color:<?php echo $is_home?'#166534':'#475569'; ?>; border-radius:20px; padding:6px 12px; font-size:10px; font-weight:800; text-transform:uppercase;">
+                                        <?php echo $is_home ? '🏠 Home':'📄 Core'; ?>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="?tab=pages&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os">Edit Content</a>
+                                </td>
+                            </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <div style="margin:0 0 10px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Legal & Policy Documentation</div>
+        <div class="gb-card" style="padding:0; overflow:hidden; background: white; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table class="gb-booking-table">
+                <thead>
+                    <tr><th style="width:40%;">Policy Name</th><th>Status</th><th style="text-align:right;">Action</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($legal_pages as $p): ?>
+                            <tr>
+                                <td><strong style="font-size:15px; color:#0f172a;"><?php echo $p->post_title; ?></strong><div style="font-size:11px; color:#94a3b8; margin-top:4px;">/<?php echo $p->post_name; ?></div></td>
+                                <td>
+                                    <span style="background:#f1f5f9; color:#475569; border-radius:20px; padding:6px 12px; font-size:10px; font-weight:800; text-transform:uppercase;">
+                                        ⚖️ Legal
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="?tab=pages&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os">Edit Policy</a>
+                                </td>
+                            </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<?php endif; ?>

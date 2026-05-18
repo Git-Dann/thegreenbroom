@@ -1,0 +1,278 @@
+/* =========================================
+   THE GREEN BROOM - MASTER STYLESHEET v2.0
+   ========================================= */
+
+/* 1. IMPORTS & VARIABLES */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+    /* Brand Colors */
+    --color-primary: #2e7d32;      /* Forest Green */
+    --color-primary-dark: #1b5e20; /* Darker Green */
+    --color-accent: #10b981;       /* Emerald/Teal (UI Elements) */
+    --color-accent-dark: #059669;
+    
+    /* Status Colors */
+    --color-success: #dcfce7;
+    --text-success: #166534;
+    --color-warning: #fef3c7;
+    --text-warning: #b45309;
+    --color-danger: #fee2e2;
+    --text-danger: #991b1b;
+    
+    /* Neutrals */
+    --bg-body: #f8fafc;
+    --bg-white: #ffffff;
+    --text-main: #0f172a;   /* Slate 900 */
+    --text-muted: #64748b;  /* Slate 500 */
+    --border-color: #e2e8f0;
+    
+    /* Layout */
+    --container-width: 1100px;
+    --header-height: 80px;
+    --border-radius: 12px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-card: 0 10px 30px rgba(0,0,0,0.05);
+    
+    /* Font */
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 2. RESET & BASE */
+* { box-sizing: border-box; }
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5 { margin-top: 0; font-weight: 700; line-height: 1.2; color: var(--text-main); }
+a { color: var(--color-primary); text-decoration: none; transition: 0.2s; }
+a:hover { color: var(--color-primary-dark); }
+ul { list-style: none; padding: 0; margin: 0; }
+
+/* 3. LAYOUT UTILITIES */
+.gb-container { max-width: var(--container-width); margin: 0 auto; padding: 0 20px; }
+.gb-page-wrapper { min-height: 100vh; padding: 60px 0; }
+
+.gb-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+.gb-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.gb-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+@media (max-width: 900px) {
+    .gb-grid-2, .gb-grid-3, .gb-grid-4 { grid-template-columns: 1fr; gap: 20px; }
+}
+
+/* 4. COMPONENT: CARDS */
+.gb-card {
+    background: var(--bg-white);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    padding: 30px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover effect only for linked/action cards */
+a.gb-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+    border-color: var(--color-primary);
+}
+
+.gb-card-head {
+    padding-bottom: 20px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex; justify-content: space-between; align-items: center;
+}
+.gb-card-title { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+
+/* 5. COMPONENT: BUTTONS */
+.gb-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 12px 24px; border-radius: 8px;
+    font-weight: 600; font-size: 0.95rem;
+    cursor: pointer; transition: 0.2s; border: none;
+    text-decoration: none;
+}
+
+.gb-btn-primary { background-color: var(--color-primary); color: white !important; }
+.gb-btn-primary:hover { background-color: var(--color-primary-dark); transform: translateY(-1px); }
+
+.gb-btn-secondary { background-color: white; color: var(--text-main) !important; border: 1px solid var(--border-color); }
+.gb-btn-secondary:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+
+.gb-btn-danger { background-color: white; color: var(--text-danger) !important; border: 1px solid var(--text-danger); }
+.gb-btn-danger:hover { background-color: var(--text-danger); color: white !important; }
+
+.gb-btn-block { width: 100%; }
+.gb-btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+/* 6. COMPONENT: FORMS */
+.gb-form-group { margin-bottom: 20px; }
+
+.gb-label {
+    display: block; font-weight: 600; font-size: 0.9rem;
+    color: var(--text-main); margin-bottom: 8px;
+}
+
+.gb-input, .gb-textarea, .gb-select {
+    width: 100%; padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px; font-size: 1rem;
+    font-family: var(--font-main);
+    box-sizing: border-box; transition: 0.2s;
+}
+
+.gb-input:focus, .gb-textarea:focus, .gb-select:focus {
+    outline: none; border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+/* 7. COMPONENT: BADGES */
+.gb-badge {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: inline-block;
+}
+.gb-badge-success { background: var(--color-success); color: var(--text-success); }
+.gb-badge-warning { background: var(--color-warning); color: var(--text-warning); }
+.gb-badge-danger  { background: var(--color-danger); color: var(--text-danger); }
+
+/* 8. COMPONENT: TABLES */
+.gb-table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.gb-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; white-space: nowrap; }
+.gb-table th {
+    text-align: left; padding: 16px;
+    background: #f8fafc; border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.gb-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.gb-table tr:last-child td { border-bottom: none; }
+
+/* 9. HEADER & NAV */
+.site-header {
+    background: white; height: var(--header-height);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky; top: 0; z-index: 1000;
+    display: flex; align-items: center;
+}
+.header-inner {
+    width: 100%; max-width: var(--container-width);
+    margin: 0 auto; padding: 0 20px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.main-navigation ul { display: flex; gap: 30px; }
+.main-navigation a { color: var(--text-main); font-weight: 500; font-size: 0.95rem; }
+.main-navigation a:hover { color: var(--color-primary); }
+
+/* Mobile Menu Logic */
+.menu-toggle { display: none; background: none; border: none; cursor: pointer; }
+@media (max-width: 900px) {
+    .menu-toggle { display: block; }
+    .main-navigation {
+        position: absolute; top: 100%; left: 0; right: 0;
+        background: white; padding: 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: none; flex-direction: column;
+        box-shadow: var(--shadow-card);
+    }
+    .main-navigation.tgb-nav-open { display: flex; }
+    .main-navigation ul { flex-direction: column; gap: 15px; }
+    .header-actions { display: none; } /* Hide buttons on mobile for now */
+}
+
+/* 10. SPECIFIC: AUTH PAGES */
+.gb-auth-wrapper {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg-body); padding: 20px;
+}
+.gb-auth-card { width: 100%; max-width: 400px; padding: 40px !important; }
+
+/* 11. SPECIFIC: DASHBOARD HEROES */
+.gb-hero-sm {
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+    color: white; padding: 60px 0 100px; margin-bottom: -50px; text-align: center;
+}
+.gb-hero-sm h1 { color: white !important; font-size: 2.2rem; margin-bottom: 10px; }
+.gb-hero-sm p { opacity: 0.9; font-size: 1.1rem; }
+
+/* 12. UTILITIES */
+.text-center { text-align: center; }
+.mb-20 { margin-bottom: 20px; }
+.mt-20 { margin-top: 20px; }
+
+/* =========================================
+   13. CRITICAL HEADER FIXES (Add to bottom)
+   ========================================= */
+
+/* Logo Sizing & Toggle */
+.logo-desktop { 
+    height: 45px; 
+    width: auto; 
+    display: none; /* Hidden on mobile by default */
+}
+.logo-mobile { 
+    height: 35px; 
+    width: auto; 
+    display: block; /* Shown on mobile */
+}
+
+/* Desktop View */
+@media (min-width: 900px) {
+    .logo-desktop { display: block; }
+    .logo-mobile { display: none; }
+}
+
+/* Nav Actions (Login/CTA Buttons) */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.nav-login {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+.nav-cta {
+    background-color: var(--color-primary);
+    color: white !important;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+.nav-cta:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+/* Mobile Menu Toggle Button */
+.hamburger-box {
+    width: 24px; 
+    height: 20px; 
+    display: inline-block; 
+    position: relative;
+}
+.hamburger-inner {
+    display: block; top: 50%; margin-top: -1px;
+    width: 100%; height: 2px;
+    background-color: var(--text-main);
+    position: absolute;
+}
+.hamburger-inner::before, .hamburger-inner::after {
+    content: ""; display: block; width: 100%; height: 2px;
+    background-color: var(--text-main); position: absolute;
+}
+.hamburger-inner::before { top: -8px; }
+.hamburger-inner::after { bottom: -8px; }
