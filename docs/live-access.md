@@ -1,70 +1,80 @@
 # Live Access Notes
 
-This repository keeps a durable copy of the live WordPress code that is reachable through temporary Fasthosts/IONOS SSH/SFTP credentials.
+The source of truth for the live site is this Git repository.
 
-The host-issued credentials expire, so do not treat them as the source of truth. The source of truth should be this Git repository.
+- GitHub repo: https://github.com/Git-Dann/thegreenbroom (private)
+- Live site: https://thegreenbroom.uk
 
-## Remote
+## Normal deploy workflow
 
-- Host: `access-5019091254.webspace-host.com`
+Edit files in `remote-sync/`, commit, and push to `main`:
+
+```bash
+git add remote-sync/
+git commit -m "describe the change"
+git push
+```
+
+GitHub Actions automatically rsyncs `remote-sync/thegreenbroom/` → `themes/thegreenbroom/` and `remote-sync/greenbroom-core/` → `plugins/greenbroom-core/` on the live server. No FastHosts login needed.
+
+Watch a deploy: https://github.com/Git-Dann/thegreenbroom/actions
+
+## Pulling live code back to this repo
+
+If you've made emergency edits directly on the server (e.g. via the WordPress theme/plugin editor) and need to sync them back here:
+
+```bash
+./scripts/pull-live.sh
+git add remote-sync/
+git commit -m "sync live edits back to repo"
+git push
+```
+
+`pull-live.sh` uses key-based SSH auth — no password needed.
+
+## Remote server details
+
+- SSH alias: `greenbroom` (configured in `~/.ssh/config`)
+- Actual host: `access-5019091254.webspace-host.com`
 - Port: `22`
 - Default remote directory: `/home/www/public/wp-content`
-- Mirrored theme: `themes/thegreenbroom`
-- Mirrored plugin: `plugins/greenbroom-core`
 
-## Pull Latest Live Code
+## When FastHosts credentials expire
 
-Set the temporary SSH username in your shell, then run:
+FastHosts temporary credentials expire every 48 hours. This does **not** affect GitHub Actions deploys (the SSH key stored as a secret doesn't expire). It only affects local `pull-live.sh` runs.
 
-```bash
-export GB_SSH_USER=suXXXXXXX
-./scripts/pull-live.sh
-```
+When you need local SSH access again:
 
-SSH will prompt for the current temporary password. The password is not stored by the scripts.
-
-## Deploy Code
-
-Preview first:
+1. Log into FastHosts and regenerate credentials
+2. Note the new username (e.g. `su123456`)
+3. Run:
 
 ```bash
-export GB_SSH_USER=suXXXXXXX
-./scripts/push-live.sh
+./scripts/rotate-credentials.sh su123456
 ```
 
-Apply the deploy:
+4. Update the `SSH_USER` secret in GitHub so Actions keeps working:
 
 ```bash
-export GB_SSH_USER=suXXXXXXX
-./scripts/push-live.sh --apply
+gh secret set SSH_USER --repo Git-Dann/thegreenbroom --body "su123456"
 ```
 
-The deploy syncs only:
+The SSH key itself doesn't change — only the username needs updating.
 
-- `remote-sync/thegreenbroom/` to `themes/thegreenbroom/`
-- `remote-sync/greenbroom-core/` to `plugins/greenbroom-core/`
+## SSH key location
 
-## Long-Term Access
+- Private key: `~/.ssh/greenbroom`
+- Public key: `~/.ssh/greenbroom.pub`
+- GitHub secret: `SSH_PRIVATE_KEY` (copy of the private key, for Actions deploys)
 
-When the temporary webspace login expires, regenerate SSH/SFTP credentials in Fasthosts/IONOS and re-run the scripts with the new `GB_SSH_USER`.
+## WordPress admin access
 
-For the codebase itself, use Git history and a private remote repository so we always retain the working copy even when hosting access rotates.
+- Admin URL: https://thegreenbroom.uk/wp-login.php
+- Username: `danclindsay` (for `danielclindsay+admin@googlemail.com`)
+- Secondary admin: `info`
 
-## WordPress Admin Access
+Email login is disabled — use the WordPress username, not the email address.
 
-WordPress admin is the day-to-day access route and does not require logging into Fasthosts.
-
-- Admin URL: `https://thegreenbroom.uk/wp-login.php`
-- Current admin username for `danielclindsay+admin@googlemail.com`: `danclindsay`
-- Secondary administrator account present on the site: `info`
-
-Email login is disabled on this site, so use the WordPress username rather than the email address.
-
-After login, administrators are redirected directly to `wp-admin/users.php` so the Fasthosts landing page is skipped.
-
-For small emergency code edits, use the WordPress admin file editors:
-
-- Theme editor: `https://thegreenbroom.uk/wp-admin/theme-editor.php`
-- Plugin editor: `https://thegreenbroom.uk/wp-admin/plugin-editor.php`
-
-For normal code work, edit this repository first, commit the change, then deploy with `scripts/push-live.sh` while temporary SSH/SFTP credentials are available.
+Emergency file editors (no SSH needed):
+- Theme editor: https://thegreenbroom.uk/wp-admin/theme-editor.php
+- Plugin editor: https://thegreenbroom.uk/wp-admin/plugin-editor.php
