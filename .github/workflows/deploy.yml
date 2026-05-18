@@ -14,9 +14,10 @@ jobs:
 
       - name: Install SSH key
         run: |
-          install -m 600 -D /dev/null ~/.ssh/greenbroom
+          install -m 700 -d ~/.ssh
+          install -m 600 /dev/null ~/.ssh/greenbroom
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/greenbroom
-          echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
       - name: Deploy theme
         run: |
