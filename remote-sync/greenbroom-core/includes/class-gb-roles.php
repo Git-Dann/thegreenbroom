@@ -6,23 +6,24 @@ class GB_Roles {
 
     public function __construct() {
         add_action( 'init', array( $this, 'register_roles' ) );
-        
-        // Admin Columns
+
         add_filter( 'manage_users_columns', array( $this, 'add_sub_column' ) );
         add_filter( 'manage_users_custom_column', array( $this, 'show_sub_column_content' ), 10, 3 );
-        
-        // AJAX Toggle
+
         add_action( 'wp_ajax_gb_toggle_sub', array( $this, 'ajax_toggle_subscription' ) );
 
-        // Cron
         add_action( 'gb_daily_expiry_check', array( $this, 'check_expiries' ) );
+        add_action( 'gb_subscription_expired', array( $this, 'send_expiry_email' ) );
     }
 
     public static function activate() {
-        // Schedule Cron
         if ( ! wp_next_scheduled( 'gb_daily_expiry_check' ) ) {
             wp_schedule_event( time(), 'daily', 'gb_daily_expiry_check' );
         }
+    }
+
+    public static function deactivate() {
+        wp_clear_scheduled_hook( 'gb_daily_expiry_check' );
     }
 
     public function register_roles() {
@@ -71,12 +72,24 @@ class GB_Roles {
 
         update_user_meta( $user_id, 'gb_subscription_status', $new_status );
         
-        // If activating, set expiry to +30 days (example)
         if ( $new_status === 'active' ) {
-            update_user_meta( $user_id, 'gb_subscription_expiry', date( 'Y-m-d', strtotime( '+30 days' ) ) );
+            update_user_meta( $user_id, 'gb_subscription_expiry', wp_date( 'Y-m-d', strtotime( '+30 days' ) ) );
         }
 
         wp_send_json_success( array( 'new_status' => $new_status ) );
+    }
+
+    public function send_expiry_email( $user_id ) {
+        $user = get_userdata( $user_id );
+        if ( ! $user ) {
+            return;
+        }
+
+        wp_mail(
+            $user->user_email,
+            'Your Green Broom subscription has expired',
+            "Hi {$user->display_name},\n\nYour subscription has expired and your listing is no longer visible to clients.\n\nTo reactivate, please contact us at " . get_option( 'admin_email' ) . ".\n\nThe Green Broom"
+        );
     }
 
     // --- Cron Logic --- //

@@ -254,7 +254,112 @@ class GB_CPT {
         }
     }
 
-    /** Search Logic (Keep existing handle_search & shortcode methods here) */
-    public function render_search_shortcode() { /* ... keep previous code ... */ return ''; }
-    public function handle_search() { /* ... keep previous code ... */ }
+    public function render_search_shortcode() {
+        ob_start();
+        ?>
+        <form id="gb-search-form">
+            <input type="text" name="postcode" placeholder="Your postcode (e.g. SW1A 1AA)" required>
+            <select name="radius">
+                <option value="5">Within 5 miles</option>
+                <option value="10" selected>Within 10 miles</option>
+                <option value="20">Within 20 miles</option>
+                <option value="50">Within 50 miles</option>
+            </select>
+            <input type="number" name="max_rate" placeholder="Max hourly rate (£)" min="1" step="0.50">
+            <button type="submit">Search</button>
+        </form>
+        <div id="gb-results-grid"></div>
+        <?php
+        return ob_get_clean();
+    }
+
+    public function handle_search() {
+        check_ajax_referer( 'gb_search_nonce', 'nonce' );
+
+        $postcode = sanitize_text_field( wp_unslash( $_POST['postcode'] ?? '' ) );
+        $radius   = absint( $_POST['radius'] ?? 10 );
+        $max_rate = floatval( $_POST['max_rate'] ?? 0 );
+
+        if ( empty( $postcode ) ) {
+            wp_send_json_error( 'Please enter a postcode.' );
+        }
+
+        $response = wp_remote_get( 'https://api.postcodes.io/postcodes/' . rawurlencode( $postcode ) );
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( 'Could not look up that postcode. Please try again.' );
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+        if ( empty( $body['result'] ) ) {
+            wp_send_json_error( 'Postcode not found. Please check and try again.' );
+        }
+
+        $search_lat = (float) $body['result']['latitude'];
+        $search_lng = (float) $body['result']['longitude'];
+
+        $cleaners = get_posts( array(
+            'post_type'   => 'gb_cleaner',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'meta_query'  => array(
+                array( 'key' => 'gb_lat', 'compare' => 'EXISTS' ),
+                array( 'key' => 'gb_lng', 'compare' => 'EXISTS' ),
+            ),
+        ) );
+
+        $results = array();
+        foreach ( $cleaners as $cleaner ) {
+            $lat            = (float) get_post_meta( $cleaner->ID, 'gb_lat', true );
+            $lng            = (float) get_post_meta( $cleaner->ID, 'gb_lng', true );
+            $rate           = (float) get_post_meta( $cleaner->ID, 'gb_hourly_rate', true );
+            $cleaner_radius = (int)   get_post_meta( $cleaner->ID, 'gb_radius', true );
+            $distance       = $this->haversine_miles( $search_lat, $search_lng, $lat, $lng );
+
+            if ( $cleaner_radius > 0 && $distance > $cleaner_radius ) continue;
+            if ( $distance > $radius ) continue;
+            if ( $max_rate > 0 && $rate > $max_rate ) continue;
+
+            $results[] = array( 'post' => $cleaner, 'distance' => $distance, 'rate' => $rate );
+        }
+
+        if ( empty( $results ) ) {
+            wp_send_json_error( 'No cleaners found in your area. Try increasing the search radius.' );
+        }
+
+        usort( $results, function( $a, $b ) { return $a['distance'] <=> $b['distance']; } );
+
+        ob_start();
+        foreach ( $results as $result ) {
+            $post      = $result['post'];
+            $avatar_id = get_post_meta( $post->ID, 'gb_avatar_id', true );
+            $avatar    = $avatar_id ? wp_get_attachment_image_url( $avatar_id, 'thumbnail' ) : '';
+            $verified  = get_post_meta( $post->ID, 'gb_verified', true );
+            $bio       = get_post_meta( $post->ID, 'gb_bio', true );
+            ?>
+            <div class="gb-cleaner-card">
+                <?php if ( $avatar ) : ?>
+                    <img src="<?php echo esc_url( $avatar ); ?>" alt="<?php echo esc_attr( $post->post_title ); ?>">
+                <?php endif; ?>
+                <h3><a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>"><?php echo esc_html( $post->post_title ); ?></a></h3>
+                <?php if ( $result['rate'] ) : ?>
+                    <p>£<?php echo esc_html( $result['rate'] ); ?>/hr</p>
+                <?php endif; ?>
+                <p><?php echo esc_html( round( $result['distance'], 1 ) ); ?> miles away</p>
+                <?php if ( $bio ) : ?>
+                    <p><?php echo esc_html( wp_trim_words( $bio, 15 ) ); ?></p>
+                <?php endif; ?>
+                <?php if ( $verified ) : ?><span>&#10003; Verified</span><?php endif; ?>
+                <a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>">View Profile</a>
+            </div>
+            <?php
+        }
+        wp_send_json_success( ob_get_clean() );
+    }
+
+    private function haversine_miles( $lat1, $lng1, $lat2, $lng2 ) {
+        $dlat = deg2rad( $lat2 - $lat1 );
+        $dlng = deg2rad( $lng2 - $lng1 );
+        $a    = sin( $dlat / 2 ) ** 2 + cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) * sin( $dlng / 2 ) ** 2;
+        return 3958.8 * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+    }
 }

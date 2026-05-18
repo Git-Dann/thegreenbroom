@@ -59,6 +59,6 @@ class Green_Broom_Core {
 // Boot the plugin
 new Green_Broom_Core();
 
-// Activation Hooks
 register_activation_hook( __FILE__, array( 'GB_Roles', 'activate' ) );
-register_activation_hook( __FILE__, array( 'GB_Uploads', 'activate' ) ); // Creates secure folder
+register_activation_hook( __FILE__, array( 'GB_Uploads', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'GB_Roles', 'deactivate' ) );

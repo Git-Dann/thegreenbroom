@@ -341,13 +341,26 @@ class GB_Uploads {
             return '<p class="gb-success">You are verified.</p>';
         }
 
+        $cleaner_id = self::get_cleaner_id_for_user( get_current_user_id() );
+        $documents  = $cleaner_id ? self::get_cleaner_verification_documents( $cleaner_id ) : array();
+        $fields     = self::get_document_fields();
+
         ob_start();
         ?>
         <form method="post" enctype="multipart/form-data" class="gb-form">
             <?php wp_nonce_field( 'gb_upload_doc', 'gb_doc_nonce' ); ?>
-            <label>Upload verification document (PDF/JPG/PNG):</label>
-            <input type="file" name="gb_document" required accept="image/*,.pdf">
-            <button type="submit" class="gb-btn">Upload for Verification</button>
+            <?php foreach ( $fields as $field => $label ) : ?>
+                <p>
+                    <label>
+                        <?php echo esc_html( $label ); ?>
+                        <?php if ( ! empty( $documents[ $field ] ) ) : ?>
+                            <em style="color:green;"> &#10003; Uploaded</em>
+                        <?php endif; ?>
+                    </label>
+                    <input type="file" name="gb_document[<?php echo esc_attr( $field ); ?>]" accept="image/*,.pdf">
+                </p>
+            <?php endforeach; ?>
+            <button type="submit" class="gb-btn">Upload Documents</button>
         </form>
         <?php
         return ob_get_clean();
@@ -359,11 +372,23 @@ class GB_Uploads {
         }
 
         $cleaner_id = self::get_cleaner_id_for_user( get_current_user_id() );
-        if ( $cleaner_id < 1 || empty( $_FILES['gb_document']['name'] ) ) {
+        if ( $cleaner_id < 1 || empty( $_FILES['gb_document'] ) ) {
             return;
         }
 
-        self::store_cleaner_verification_document( $cleaner_id, 'doc_id', $_FILES['gb_document'] );
+        $allowed_fields = self::get_document_fields();
+        foreach ( array_keys( $allowed_fields ) as $field ) {
+            if ( ! empty( $_FILES['gb_document']['name'][ $field ] ) ) {
+                $file = array(
+                    'name'     => $_FILES['gb_document']['name'][ $field ],
+                    'type'     => $_FILES['gb_document']['type'][ $field ],
+                    'tmp_name' => $_FILES['gb_document']['tmp_name'][ $field ],
+                    'error'    => $_FILES['gb_document']['error'][ $field ],
+                    'size'     => $_FILES['gb_document']['size'][ $field ],
+                );
+                self::store_cleaner_verification_document( $cleaner_id, $field, $file );
+            }
+        }
     }
 
     private static function stream_file_response( $filepath, $mime, $filename ) {
