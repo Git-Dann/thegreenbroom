@@ -1,0 +1,33 @@
+name: Deploy to live site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'remote-sync/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SSH key
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/greenbroom
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/greenbroom
+          echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+      - name: Deploy theme
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/greenbroom -p 22" \
+            remote-sync/thegreenbroom/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:themes/thegreenbroom/
+
+      - name: Deploy plugin
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/greenbroom -p 22" \
+            remote-sync/greenbroom-core/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:plugins/greenbroom-core/
