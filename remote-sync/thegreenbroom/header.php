@@ -30,7 +30,11 @@
             display: block; padding: 10px 0; 
         }
         .main-navigation a:hover { color: #10b981; }
-        
+        .main-navigation .menu-parent-label {
+            color: #333; font-weight: 600; font-size: 15px;
+            display: block; padding: 10px 0; cursor: default; user-select: none;
+        }
+
         /* --- DROPDOWN LOGIC (FORCED) --- */
         .menu-item-has-children { position: relative !important; }
         
@@ -118,9 +122,10 @@
                 // MENU STRUCTURE
                 $header_menu = [
                     [
-                        'label' => 'How it Works', 
-                        'url' => '/how-it-works',
+                        'label' => 'About',
+                        'url' => null, // parent-only, not clickable
                         'children' => [
+                            ['label' => 'How it Works', 'url' => '/how-it-works'],
                             ['label' => 'What We Do', 'url' => '/what-we-do'],
                             ['label' => 'How We Do It', 'url' => '/how-we-do-it']
                         ]
@@ -134,10 +139,17 @@
                         $has_children = isset($item['children']) && !empty($item['children']);
                     ?>
                         <li class="<?php echo $has_children ? 'menu-item-has-children' : ''; ?>">
+                            <?php if( empty($item['url']) ): ?>
+                            <span class="menu-parent-label">
+                                <?php echo esc_html( $item['label'] ); ?>
+                                <?php if($has_children): ?><span class="dropdown-arrow">▼</span><?php endif; ?>
+                            </span>
+                            <?php else: ?>
                             <a href="<?php echo esc_url( home_url($item['url']) ); ?>">
                                 <?php echo esc_html( $item['label'] ); ?>
                                 <?php if($has_children): ?><span class="dropdown-arrow">▼</span><?php endif; ?>
                             </a>
+                            <?php endif; ?>
                             
                             <?php if($has_children): ?>
                                 <ul class="sub-menu">
