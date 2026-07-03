@@ -8,3 +8,6 @@
 *.zip
 node_modules/
 
+
+# local safety backups pulled from live server
+scratch-live-backup/
