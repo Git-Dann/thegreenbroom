@@ -46,7 +46,7 @@ $mis_title  = get_post_meta(get_the_ID(), '_gb_svc_mis_title', true)  ?: 'The "G
 $mis_sub    = get_post_meta(get_the_ID(), '_gb_svc_mis_sub', true)    ?: "We believe a clean home shouldn't come at the cost of the environment.";
 $mis_body   = get_post_meta(get_the_ID(), '_gb_svc_mis_body', true)   ?: "Traditional cleaning supplies are often packed with volatile organic compounds (VOCs).\n\nWe mandate that every cleaner uses non-toxic, biodegradable products.";
 $mis_btn    = get_post_meta(get_the_ID(), '_gb_svc_mis_btn', true)    ?: 'Join Our Mission';
-$mis_link   = get_post_meta(get_the_ID(), '_gb_svc_mis_link', true)   ?: '/register';
+$mis_link   = get_post_meta(get_the_ID(), '_gb_svc_mis_link', true)   ?: '/join';
 
 // D. Bottom CTA
 $cta_title  = get_post_meta(get_the_ID(), '_gb_svc_cta_title', true)  ?: 'Ready to book?';

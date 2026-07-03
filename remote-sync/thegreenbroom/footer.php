@@ -153,7 +153,7 @@ $gb_blog_url = function_exists('gb_get_blog_url') ? gb_get_blog_url() : home_url
         <div class="gb-footer-col">
             <h3>Ready to start?</h3>
             <p style="color:rgba(255,255,255,0.7); font-size:0.85rem; margin-bottom: 15px;">Join hundreds of cleaners earning more today.</p>
-            <a href="/register" class="gb-footer-btn">Join The Green Broom &rarr;</a>
+            <a href="/join" class="gb-footer-btn">Join The Green Broom &rarr;</a>
         </div>
 
     </div>

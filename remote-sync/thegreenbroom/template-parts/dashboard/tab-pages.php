@@ -11,7 +11,7 @@ if ($action === 'edit' && $selected_page_id) {
 }
 
 $invalid_edit_target = ($action === 'edit' && $selected_page_id && !$edit_page);
-$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings'];
+$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join'];
 ?>
 
 <style>
@@ -59,7 +59,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_hero_btn_1'    => 'Find a Cleaner',
             '_gb_hero_link_1'   => '/cleaner-listings',
             '_gb_hero_btn_2'    => 'Join as a Cleaner',
-            '_gb_hero_link_2'   => '/register',
+            '_gb_hero_link_2'   => '/join',
             '_gb_trust_banner'  => 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners',
             '_gb_split_head'    => "Clean homes shouldn't cost the Earth.",
             '_gb_split_body'    => 'Traditional cleaning products are full of harsh chemicals that can harm your family and pets. Plus, finding a reliable cleaner is often a headache of texts and cash payments.',
@@ -161,7 +161,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_about_btn1_text'  => 'Find a Cleaner',
             '_gb_about_btn1_link'  => '/cleaner-listings',
             '_gb_about_btn2_text'  => 'Join as a Cleaner',
-            '_gb_about_btn2_link'  => '/register',
+            '_gb_about_btn2_link'  => '/join',
         ];
     } elseif ($slug === 'what-we-do') {
         $gb_page_defaults = [
@@ -190,7 +190,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_svc_mis_sub'    => "We believe a clean home shouldn't come at the cost of the environment.",
             '_gb_svc_mis_body'   => "Traditional cleaning supplies are often packed with volatile organic compounds (VOCs).\n\nWe mandate that every cleaner uses non-toxic, biodegradable products.",
             '_gb_svc_mis_btn'    => 'Join Our Mission',
-            '_gb_svc_mis_link'   => '/register',
+            '_gb_svc_mis_link'   => '/join',
             '_gb_svc_cta_title'  => 'Ready to book?',
             '_gb_svc_cta_sub'    => 'Find a vetted professional in your area today.',
             '_gb_svc_cta_btn'    => 'Browse Cleaners',
@@ -201,6 +201,45 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_title' => 'Find Your Professional',
             '_gb_listings_sub'   => 'Trusted, vetted, and verified cleaners ready to help.',
             '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
+        ];
+    } elseif ($slug === 'join') {
+        $gb_page_defaults = [
+            '_gb_join_hero_bg'    => 'https://images.unsplash.com/photo-1581578731117-10d52143b1e8?auto=format&fit=crop&w=1920&q=80',
+            '_gb_join_hero_title' => 'Turn cleaning into a career you control.',
+            '_gb_join_hero_sub'   => 'Set your own rates, choose your own hours, and keep more of what you earn. The Green Broom connects you directly with vetted local customers — no agency taking the biggest cut.',
+            '_gb_join_hero_btn'   => 'Create Your Free Profile',
+            '_gb_join_hero_link'  => '/register',
+            '_gb_join_hero_btn2'  => 'See How It Works',
+            '_gb_join_hero_link2' => '/how-it-works',
+            '_gb_join_ben_head'   => 'Why cleaners choose The Green Broom',
+            '_gb_join_ben_sub'    => 'We built this platform for cleaners, not agencies. Here is what that means for you.',
+            '_gb_join_b1_title'   => 'Keep more of what you earn',
+            '_gb_join_b1_text'    => 'No expensive agency middlemen. You set your rates and take home the lion\'s share of every job.',
+            '_gb_join_b2_title'   => 'Work on your own terms',
+            '_gb_join_b2_text'    => 'Accept only the jobs that fit your schedule. Full-time, part-time, or the odd weekend — it is entirely up to you.',
+            '_gb_join_b3_title'   => 'Get paid securely, on time',
+            '_gb_join_b3_text'    => 'Customers pay through the platform, so no chasing cash or awkward conversations. Your money lands in your account automatically.',
+            '_gb_join_b4_title'   => 'Real customers, ready to book',
+            '_gb_join_b4_text'    => 'We bring vetted local homeowners to you. Build your reputation with reviews and let repeat bookings roll in.',
+            '_gb_join_stat1_num'   => '£15+',
+            '_gb_join_stat1_label' => 'Average hourly earnings',
+            '_gb_join_stat2_num'   => '0%',
+            '_gb_join_stat2_label' => 'Hidden agency fees',
+            '_gb_join_stat3_num'   => 'You',
+            '_gb_join_stat3_label' => 'Choose your own hours',
+            '_gb_join_steps_head' => 'Start earning in three simple steps',
+            '_gb_join_s1_title'   => '1. Create your profile',
+            '_gb_join_s1_desc'    => 'Sign up in minutes. Add your experience, set your rates, and showcase your best work with photos.',
+            '_gb_join_s2_title'   => '2. Get verified',
+            '_gb_join_s2_desc'    => 'Pass our quick ID and reference check to earn your Verified badge — the mark customers trust.',
+            '_gb_join_s3_title'   => '3. Accept jobs & get paid',
+            '_gb_join_s3_desc'    => 'Receive booking requests from local customers, accept the ones that suit you, and get paid securely.',
+            '_gb_join_testi_text' => 'I left my agency job and doubled my take-home pay within two months. I pick my own clients, my own hours, and I actually get to keep what I earn.',
+            '_gb_join_testi_auth' => '— Emma R., Cleaner in Bristol',
+            '_gb_join_cta_title'  => 'Ready to be your own boss?',
+            '_gb_join_cta_sub'    => 'Join hundreds of cleaners already earning more on their own terms. It is free to create your profile.',
+            '_gb_join_cta_btn'    => 'Get Started — It\'s Free',
+            '_gb_join_cta_link'   => '/register',
         ];
     }
 
@@ -260,7 +299,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                     <div class="gb-editor-header"><span class="dashicons dashicons-format-image"></span> Hero Header</div>
                     <div class="gb-editor-body">
                         <?php 
-                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ''));
+                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ($slug == 'join' ? '_gb_join_hero_bg' : '')));
                             $h_title_k = $is_front
                                 ? '_gb_hero_headline'
                                 : ($slug == 'how-it-works'
@@ -269,7 +308,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         ? '_gb_about_hero_title'
                                         : ($slug == 'what-we-do'
                                             ? '_gb_svc_hero_title'
-                                            : ($slug == 'cleaner-listings' ? '_gb_listings_title' : ''))));
+                                            : ($slug == 'cleaner-listings' ? '_gb_listings_title'
+                                                : ($slug == 'join' ? '_gb_join_hero_title' : '')))));
                             $h_sub_k = $is_front
                                 ? '_gb_hero_sub'
                                 : ($slug == 'how-it-works'
@@ -278,7 +318,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         ? '_gb_about_hero_sub'
                                         : ($slug == 'what-we-do'
                                             ? '_gb_svc_hero_sub'
-                                            : ($slug == 'cleaner-listings' ? '_gb_listings_sub' : ''))));
+                                            : ($slug == 'cleaner-listings' ? '_gb_listings_sub'
+                                                : ($slug == 'join' ? '_gb_join_hero_sub' : '')))));
                         ?>
                         <?php if ($h_bg_k): ?>
                             <div class="gb-form-row">
@@ -496,6 +537,66 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 </div>
                             </div>
                         </div>
+
+                    <?php elseif ($slug == 'join'): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-buddicons-groups"></span> Hero Call-to-Action Buttons</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Primary Button Text</label><input type="text" name="_gb_join_hero_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_hero_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Primary Button Link</label><input type="text" name="_gb_join_hero_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_hero_link')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Secondary Button Text</label><input type="text" name="_gb_join_hero_btn2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_hero_btn2')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Secondary Button Link</label><input type="text" name="_gb_join_hero_link2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_hero_link2')); ?>"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-heart"></span> Benefits ("Why Join")</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Section Heading</label><input type="text" name="_gb_join_ben_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_ben_head')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_join_ben_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_join_ben_sub')); ?></textarea></div>
+                                <?php for($i=1;$i<=4;$i++): ?>
+                                    <div class="gb-sub-head">Benefit <?php echo $i; ?></div>
+                                    <div class="gb-form-row">
+                                        <input type="text" name="_gb_join_b<?php echo $i; ?>_title" class="gb-input" placeholder="Title" value="<?php echo esc_attr($gb_field_value("_gb_join_b{$i}_title")); ?>">
+                                        <textarea name="_gb_join_b<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_b{$i}_text")); ?></textarea>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-chart-bar"></span> Earnings / Stats Bar</div>
+                            <div class="gb-editor-body">
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-link-row">
+                                        <div class="gb-form-row"><label class="gb-label">Stat <?php echo $i; ?> Number</label><input type="text" name="_gb_join_stat<?php echo $i; ?>_num" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_join_stat{$i}_num")); ?>"></div>
+                                        <div class="gb-form-row"><label class="gb-label">Stat <?php echo $i; ?> Label</label><input type="text" name="_gb_join_stat<?php echo $i; ?>_label" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_join_stat{$i}_label")); ?>"></div>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-list-view"></span> How To Start (Steps)</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Section Heading</label><input type="text" name="_gb_join_steps_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_steps_head')); ?>"></div>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Step <?php echo $i; ?></div>
+                                    <div class="gb-form-row">
+                                        <input type="text" name="_gb_join_s<?php echo $i; ?>_title" class="gb-input" placeholder="Title" value="<?php echo esc_attr($gb_field_value("_gb_join_s{$i}_title")); ?>">
+                                        <textarea name="_gb_join_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_s{$i}_desc")); ?></textarea>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-format-quote"></span> Cleaner Testimonial</div>
+                            <div class="gb-editor-body">
+                                <div class="gb-form-row"><label class="gb-label">Quote</label><textarea name="_gb_join_testi_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_join_testi_text')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Attribution</label><input type="text" name="_gb_join_testi_auth" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_testi_auth')); ?>"></div>
+                            </div>
+                        </div>
                     <?php endif; ?>
                 </div>
 
@@ -509,14 +610,16 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     ? '_gb_hiw_cta_title'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_cta_head'
-                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_title' : '')));
+                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_title'
+                                            : ($slug == 'join' ? '_gb_join_cta_title' : ''))));
                             $c_sub_k = $is_front
                                 ? '_gb_cta_sub'
                                 : ($slug == 'how-it-works'
                                     ? '_gb_hiw_cta_desc'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_cta_sub'
-                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_sub' : '')));
+                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_sub'
+                                            : ($slug == 'join' ? '_gb_join_cta_sub' : ''))));
                         ?>
                         <?php if ($c_title_k && $c_sub_k): ?>
                             <div class="gb-form-row"><label class="gb-label">CTA Headline</label><input type="text" name="<?php echo esc_attr($c_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($c_title_k)); ?>"></div>
@@ -548,6 +651,11 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 <div class="gb-link-row">
                                     <div class="gb-form-row"><label class="gb-label">CTA Button Text</label><input type="text" name="_gb_svc_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_btn')); ?>"></div>
                                     <div class="gb-form-row"><label class="gb-label">CTA Button Link</label><input type="text" name="_gb_svc_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_link')); ?>"></div>
+                                </div>
+                            <?php elseif ($slug === 'join'): ?>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Text</label><input type="text" name="_gb_join_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_cta_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">CTA Button Link</label><input type="text" name="_gb_join_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_cta_link')); ?>"></div>
                                 </div>
                             <?php endif; ?>
                         <?php else: ?>
@@ -598,7 +706,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $pages_by_slug[$page_obj->post_name] = $page_obj;
     }
 
-    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings'];
+    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr'];
 
     $core_pages = [];

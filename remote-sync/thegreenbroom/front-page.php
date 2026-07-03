@@ -14,7 +14,7 @@ $hero_bg       = get_post_meta(get_the_ID(), '_gb_hero_bg', true)       ?: 'http
 $hero_btn_1    = get_post_meta(get_the_ID(), '_gb_hero_btn_1', true)    ?: 'Find a Cleaner';
 $hero_link_1   = get_post_meta(get_the_ID(), '_gb_hero_link_1', true)   ?: '/cleaner-listings';
 $hero_btn_2    = get_post_meta(get_the_ID(), '_gb_hero_btn_2', true)    ?: 'Join as a Cleaner';
-$hero_link_2   = get_post_meta(get_the_ID(), '_gb_hero_link_2', true)   ?: '/register';
+$hero_link_2   = get_post_meta(get_the_ID(), '_gb_hero_link_2', true)   ?: '/join';
 
 // B. Trust Bar (UPDATED to match the new Dashboard Field)
 $trust_text    = get_post_meta(get_the_ID(), '_gb_trust_banner', true)  ?: 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners';

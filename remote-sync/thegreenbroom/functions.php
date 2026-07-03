@@ -17,6 +17,80 @@ function gb_theme_setup() {
 }
 add_action( 'after_setup_theme', 'gb_theme_setup' );
 
+/**
+ * Ensure the cleaner-recruitment "Join" page exists.
+ * Creates a published page with slug 'join' if one does not already exist,
+ * so it appears in the manager dashboard Pages tab and uses page-join.php.
+ * Guarded by an option so the lookup only runs until the page is provisioned.
+ */
+function gb_ensure_join_page() {
+    if ( get_option( 'gb_join_page_created' ) ) {
+        return;
+    }
+
+    $existing = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'join',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( empty( $existing ) ) {
+        wp_insert_post( array(
+            'post_title'   => 'Join',
+            'post_name'    => 'join',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_content' => '',
+        ) );
+    }
+
+    update_option( 'gb_join_page_created', 1 );
+}
+add_action( 'init', 'gb_ensure_join_page' );
+
+/**
+ * One-time migration: point existing "Join" buttons at the new /join page.
+ * Only rewrites values that are empty or still '/register' so any deliberately
+ * customised link is preserved. Guarded by an option so it runs just once.
+ */
+function gb_migrate_join_links() {
+    if ( get_option( 'gb_join_links_migrated' ) ) {
+        return;
+    }
+
+    $targets = array();
+
+    $front_id = (int) get_option( 'page_on_front' );
+    if ( $front_id ) {
+        $targets[ $front_id ] = '_gb_hero_link_2';
+    }
+
+    foreach ( array( 'how-we-do-it' => '_gb_about_btn2_link', 'what-we-do' => '_gb_svc_mis_link' ) as $slug => $meta_key ) {
+        $ids = get_posts( array(
+            'post_type'      => 'page',
+            'name'           => $slug,
+            'post_status'    => array( 'publish', 'draft', 'private' ),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ) );
+        if ( ! empty( $ids ) ) {
+            $targets[ (int) $ids[0] ] = $meta_key;
+        }
+    }
+
+    foreach ( $targets as $pid => $meta_key ) {
+        $current = get_post_meta( $pid, $meta_key, true );
+        if ( $current === '' || $current === '/register' ) {
+            update_post_meta( $pid, $meta_key, '/join' );
+        }
+    }
+
+    update_option( 'gb_join_links_migrated', 1 );
+}
+add_action( 'init', 'gb_migrate_join_links' );
+
 function gb_load_assets() {
     $style_version = wp_get_theme()->get( 'Version' );
     $style_path = get_stylesheet_directory() . '/style.css';
