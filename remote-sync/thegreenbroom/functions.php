@@ -2157,8 +2157,12 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
     }
 
     if ($payment_status === 'paid') {
+        $was_already_confirmed = get_post_meta($booking_id, '_gb_booking_status', true) === 'confirmed';
         wp_update_post(['ID' => $booking_id, 'post_status' => 'publish']);
         update_post_meta($booking_id, '_gb_booking_status', 'confirmed');
+        if (!$was_already_confirmed) {
+            gb_send_booking_confirmation_emails($booking_id);
+        }
     } else {
         if (get_post_status($booking_id) !== 'pending') {
             wp_update_post(['ID' => $booking_id, 'post_status' => 'pending']);
@@ -2169,6 +2173,70 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
     }
 
     return $session;
+}
+
+function gb_send_booking_confirmation_emails($booking_id) {
+    $booking_id = absint($booking_id);
+    if (!$booking_id || get_post_type($booking_id) !== 'gb_booking') {
+        return;
+    }
+
+    $customer_name    = (string) get_post_meta($booking_id, '_gb_customer_name', true);
+    $customer_email   = sanitize_email((string) get_post_meta($booking_id, '_gb_customer_email', true));
+    $service          = (string) get_post_meta($booking_id, '_gb_booking_service', true);
+    $date             = (string) get_post_meta($booking_id, '_gb_booking_date', true);
+    $time             = (string) get_post_meta($booking_id, '_gb_booking_time', true);
+    $duration         = (int) get_post_meta($booking_id, '_gb_booking_duration', true);
+    $address          = (string) get_post_meta($booking_id, '_gb_customer_address', true);
+    $total_gbp        = (float) get_post_meta($booking_id, '_gb_booking_total_gbp', true);
+    $cleaner_post_id  = (int) get_post_meta($booking_id, '_gb_booking_cleaner_id', true);
+    $cleaner_name     = $cleaner_post_id ? get_the_title($cleaner_post_id) : 'TBC';
+    $cleaner_user_id  = $cleaner_post_id ? (int) get_post_field('post_author', $cleaner_post_id) : 0;
+    $access_token     = (string) get_post_meta($booking_id, '_gb_booking_access_token_raw', true);
+
+    $site_name  = get_bloginfo('name');
+    $from_email = get_option('admin_email');
+    $date_fmt   = $date ? date_i18n('l j F Y', strtotime($date)) : $date;
+    $time_fmt   = $time ? date_i18n('g:i A', strtotime($time)) : $time;
+    $total_fmt  = $total_gbp > 0 ? '£' . number_format($total_gbp, 2) : '';
+    $booking_url = add_query_arg(
+        ['bid' => $booking_id, 't' => gb_generate_booking_access_token($booking_id)],
+        home_url('/booking-success')
+    );
+
+    // — Customer email —
+    if (is_email($customer_email)) {
+        $subject = sprintf('[%s] Your booking is confirmed — %s on %s', $site_name, $service, $date_fmt);
+        $body    = "Hi {$customer_name},\n\nYour booking is confirmed. Here are the details:\n\n"
+                 . "Service:      {$service}\n"
+                 . "Professional: {$cleaner_name}\n"
+                 . "Date:         {$date_fmt}\n"
+                 . "Time:         {$time_fmt}\n"
+                 . "Duration:     {$duration} hour" . ($duration === 1 ? '' : 's') . "\n"
+                 . "Address:      {$address}\n"
+                 . ($total_fmt ? "Total paid:   {$total_fmt}\n" : '')
+                 . "\nView your booking: {$booking_url}\n\n"
+                 . "Thank you for booking with {$site_name}.";
+        wp_mail($customer_email, $subject, $body);
+    }
+
+    // — Cleaner email —
+    if ($cleaner_user_id > 0) {
+        $cleaner_user = get_userdata($cleaner_user_id);
+        if ($cleaner_user && is_email($cleaner_user->user_email)) {
+            $subject = sprintf('[%s] New booking confirmed — %s on %s', $site_name, $service, $date_fmt);
+            $body    = "Hi {$cleaner_name},\n\nYou have a new confirmed booking:\n\n"
+                     . "Service:  {$service}\n"
+                     . "Customer: {$customer_name}\n"
+                     . "Date:     {$date_fmt}\n"
+                     . "Time:     {$time_fmt}\n"
+                     . "Duration: {$duration} hour" . ($duration === 1 ? '' : 's') . "\n"
+                     . "Address:  {$address}\n\n"
+                     . "Log in to your dashboard to view full details: " . home_url('/cleaner-dashboard') . "\n\n"
+                     . $site_name;
+            wp_mail($cleaner_user->user_email, $subject, $body);
+        }
+    }
 }
 
 function gb_get_cleaner_connect_status_live($cleaner_id) {
