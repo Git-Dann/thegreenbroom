@@ -1,10 +1,10 @@
 name: Deploy to live site
 
+# NOTE: FastHosts "Hosting for WordPress" only issues temporary 48h SSH creds
+# with a rotating username, so automated push-triggered deploys cannot work.
+# Deploys are done manually via scripts/push-live.sh. Kept for manual dispatch only.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'remote-sync/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
