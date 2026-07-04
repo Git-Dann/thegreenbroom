@@ -131,7 +131,8 @@
                         ]
                     ],
                     ['label' => 'Cleaner Listings', 'url' => '/cleaner-listings'],
-                    ['label' => 'Blog', 'url' => '/blog']
+                    ['label' => 'Blog', 'url' => '/blog'],
+                    ['label' => 'Join', 'url' => '/join']
                 ];
                 ?>
                 <ul class="nav-menu">
