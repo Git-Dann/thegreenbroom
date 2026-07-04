@@ -134,6 +134,121 @@ function gb_migrate_cleaner_rates() {
 }
 add_action( 'init', 'gb_migrate_cleaner_rates' );
 
+/**
+ * Ensure standalone, editable legal pages exist (Cookie Policy, GDPR).
+ * Previously these were footer links that only redirected into the Privacy
+ * page, so they could not be edited in the dashboard. Provision them as real
+ * pages so they get the same editing treatment as Terms & Conditions.
+ */
+function gb_ensure_legal_pages() {
+    if ( get_option( 'gb_legal_pages_created' ) ) {
+        return;
+    }
+
+    $legal_pages = array(
+        'cookies' => array(
+            'title'   => 'Cookie Policy',
+            'content' => "This is your Cookie Policy. Replace this text with your full policy from the manager dashboard (Pages → Cookie Policy).\n\nWe use cookies to operate this website, remember your preferences, and understand how it is used.",
+        ),
+        'gdpr' => array(
+            'title'   => 'GDPR',
+            'content' => "This is your GDPR / Data Protection statement. Replace this text with your full policy from the manager dashboard (Pages → GDPR).\n\nYou have the right to access, correct, and request deletion of your personal data.",
+        ),
+    );
+
+    foreach ( $legal_pages as $slug => $data ) {
+        $existing = get_posts( array(
+            'post_type'      => 'page',
+            'name'           => $slug,
+            'post_status'    => array( 'publish', 'draft', 'private' ),
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ) );
+        if ( empty( $existing ) ) {
+            wp_insert_post( array(
+                'post_title'   => $data['title'],
+                'post_name'    => $slug,
+                'post_status'  => 'publish',
+                'post_type'    => 'page',
+                'post_content' => $data['content'],
+            ) );
+        }
+    }
+
+    update_option( 'gb_legal_pages_created', 1 );
+}
+add_action( 'init', 'gb_ensure_legal_pages' );
+
+/**
+ * Email the manager when a new support/contact message arrives.
+ * Destination is the "Support Notification Email" setting, falling back to
+ * the WordPress admin email.
+ */
+function gb_notify_support_message( $message_id, $context = 'Contact' ) {
+    $settings_id = (int) get_option( 'page_on_front' );
+    $to = $settings_id ? get_post_meta( $settings_id, '_gb_support_email', true ) : '';
+    if ( ! is_email( $to ) ) {
+        $to = get_option( 'admin_email' );
+    }
+    if ( ! is_email( $to ) ) {
+        return;
+    }
+
+    $sender_name  = (string) get_post_meta( $message_id, '_gb_sender_name', true );
+    $sender_email = (string) get_post_meta( $message_id, '_gb_sender_email', true );
+    $post         = get_post( $message_id );
+    $subject_line = $post ? $post->post_title : 'New message';
+    $body_text    = $post ? $post->post_content : '';
+
+    $dashboard_url = home_url( '/manager-dashboard?tab=support&action=view_message&id=' . $message_id );
+
+    $subject = sprintf( '[%s] New %s message: %s', get_bloginfo( 'name' ), $context, $subject_line );
+    $body    = "You have a new {$context} message on " . get_bloginfo( 'name' ) . ".\n\n"
+             . "From:    {$sender_name}" . ( $sender_email ? " <{$sender_email}>" : '' ) . "\n"
+             . "Subject: {$subject_line}\n\n"
+             . "Message:\n{$body_text}\n\n"
+             . "View & reply in the dashboard:\n{$dashboard_url}\n";
+
+    $headers = array();
+    if ( is_email( $sender_email ) ) {
+        $headers[] = 'Reply-To: ' . $sender_name . ' <' . $sender_email . '>';
+    }
+
+    wp_mail( $to, $subject, $body, $headers );
+}
+
+/**
+ * Auto-archive support messages older than 30 days (daily cron).
+ * Archived messages drop out of the main inbox but remain viewable under
+ * the "Archived" filter and are never deleted automatically.
+ */
+function gb_archive_old_messages() {
+    $old = get_posts( array(
+        'post_type'      => 'gb_message',
+        'post_status'    => 'publish',
+        'posts_per_page' => 200,
+        'fields'         => 'ids',
+        'date_query'     => array(
+            array( 'before' => '30 days ago' ),
+        ),
+        'meta_query'     => array(
+            array( 'key' => '_gb_archived', 'compare' => 'NOT EXISTS' ),
+        ),
+    ) );
+
+    foreach ( $old as $mid ) {
+        update_post_meta( $mid, '_gb_archived', '1' );
+    }
+}
+add_action( 'gb_archive_old_messages_event', 'gb_archive_old_messages' );
+
+function gb_schedule_message_archive() {
+    if ( ! wp_next_scheduled( 'gb_archive_old_messages_event' ) ) {
+        wp_schedule_event( time() + 3600, 'daily', 'gb_archive_old_messages_event' );
+    }
+}
+add_action( 'init', 'gb_schedule_message_archive' );
+
 function gb_load_assets() {
     $style_version = wp_get_theme()->get( 'Version' );
     $style_path = get_stylesheet_directory() . '/style.css';
@@ -1090,11 +1205,11 @@ function gb_handle_public_route_fixes() {
         exit;
     }
 
+    // Note: 'cookies' and 'gdpr' are now standalone editable pages (see
+    // gb_ensure_legal_pages), so they are intentionally NOT redirected here.
     $legacy_redirects = [
         'contact-us'     => gb_get_contact_page_url(),
         'privacy-policy' => gb_get_privacy_page_url(),
-        'cookies'        => gb_get_privacy_anchor_url( 'cookies-policy' ),
-        'gdpr'           => gb_get_privacy_anchor_url( 'gdpr-rights' ),
         'legal'          => gb_get_terms_page_url(),
     ];
 
@@ -1395,6 +1510,7 @@ function gb_send_cleaner_message() {
         update_post_meta($msg_id, '_gb_sender_name', $name);
         update_post_meta($msg_id, '_gb_sender_email', $email);
         update_post_meta($msg_id, '_gb_responded_date', '');
+        gb_notify_support_message($msg_id, 'Cleaner enquiry');
         wp_send_json_success(['message'=>'Message sent!']);
     } else {
         wp_send_json_error(['message'=>'System error.']);
@@ -1469,8 +1585,9 @@ add_action('init', function() {
             update_post_meta($ticket_id, '_gb_sender_name', $name);
             update_post_meta($ticket_id, '_gb_sender_email', $email);
             // This flag is what tab-helpdesk.php filters by
-            update_post_meta($ticket_id, '_gb_is_helpdesk', '1'); 
-            
+            update_post_meta($ticket_id, '_gb_is_helpdesk', '1');
+            gb_notify_support_message($ticket_id, 'Support');
+
             // Redirect with success flag for page-contactus.php
             $referer = wp_get_referer() ? wp_get_referer() : gb_get_contact_page_url();
             wp_safe_redirect(add_query_arg('contact_success', '1', $referer));

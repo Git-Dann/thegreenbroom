@@ -3,6 +3,7 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $cleaner_id_filter = isset($_GET['cleaner_id']) ? intval($_GET['cleaner_id']) : 0;
 $search_query = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
 $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_desc';
+$view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'inbox';
 ?>
 
 <style>
@@ -59,6 +60,11 @@ $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_des
             <?php if(!$responded_date): ?>
                 <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'mark_replied', 'id' => $mid]), 'gb_manager_action_mark_replied_' . $mid)); ?>" class="gb-btn-small-os">Mark Replied</a>
             <?php endif; ?>
+            <?php if (get_post_meta($mid, '_gb_archived', true)): ?>
+                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'unarchive_message', 'id' => $mid], home_url('/manager-dashboard')), 'gb_manager_action_unarchive_message_' . $mid)); ?>" class="gb-btn-small-os">Restore</a>
+            <?php else: ?>
+                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'archive_message', 'id' => $mid], home_url('/manager-dashboard')), 'gb_manager_action_archive_message_' . $mid)); ?>" class="gb-btn-small-os">Archive</a>
+            <?php endif; ?>
             <a href="mailto:<?php echo esc_attr($sender_email); ?>" class="gb-btn-small-os gb-btn-reply">Reply via Email ↗</a>
         </div>
     </div>
@@ -108,8 +114,12 @@ $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_des
     
     <div class="booking-controls">
         <div>
-            <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Support Inbox</h1>
-            <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Manage inquiries and communications from users.</p>
+            <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;"><?php echo $view === 'archived' ? 'Archived Messages' : 'Support Inbox'; ?></h1>
+            <p style="margin:5px 0 0; color:#64748b; font-size:14px;"><?php echo $view === 'archived' ? 'Messages archived automatically after 30 days, or manually.' : 'Manage inquiries and communications from users.'; ?></p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="?tab=support" class="gb-btn-small-os" style="<?php echo $view !== 'archived' ? 'background:#0f172a; color:white; border:none;' : ''; ?>">Inbox</a>
+            <a href="?tab=support&view=archived" class="gb-btn-small-os" style="<?php echo $view === 'archived' ? 'background:#0f172a; color:white; border:none;' : ''; ?>">Archived</a>
         </div>
     </div>
 
@@ -159,7 +169,14 @@ $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_des
                     'orderby' => 'date',
                     'order' => ($orderby == 'date_asc') ? 'ASC' : 'DESC'
                 ];
-                if ($cleaner_id_filter > 0) $args['meta_query'] = [['key' => '_gb_related_cleaner', 'value' => $cleaner_id_filter]];
+                $meta_query = ['relation' => 'AND'];
+                if ($view === 'archived') {
+                    $meta_query[] = ['key' => '_gb_archived', 'value' => '1'];
+                } else {
+                    $meta_query[] = ['key' => '_gb_archived', 'compare' => 'NOT EXISTS'];
+                }
+                if ($cleaner_id_filter > 0) $meta_query[] = ['key' => '_gb_related_cleaner', 'value' => $cleaner_id_filter];
+                $args['meta_query'] = $meta_query;
                 if ($search_query) $args['s'] = $search_query;
 
                 $messages = new WP_Query($args);
@@ -198,7 +215,14 @@ $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_des
                         <?php echo human_time_diff(get_the_time('U'), current_time('timestamp')); ?> ago
                     </td>
                     <td style="text-align:right;">
-                        <a href="?tab=support&action=view_message&id=<?php echo get_the_ID(); ?>" class="gb-btn-small-os">View</a>
+                        <div style="display:flex; justify-content:flex-end; gap:6px;">
+                            <a href="?tab=support&action=view_message&id=<?php echo get_the_ID(); ?>" class="gb-btn-small-os">View</a>
+                            <?php if ($view === 'archived'): ?>
+                                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'unarchive_message', 'id' => get_the_ID()], home_url('/manager-dashboard')), 'gb_manager_action_unarchive_message_' . get_the_ID())); ?>" class="gb-btn-small-os">Restore</a>
+                            <?php else: ?>
+                                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'archive_message', 'id' => get_the_ID()], home_url('/manager-dashboard')), 'gb_manager_action_archive_message_' . get_the_ID())); ?>" class="gb-btn-small-os">Archive</a>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endwhile; else: ?>

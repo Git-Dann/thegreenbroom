@@ -799,4 +799,42 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         </div>
     </div>
 
+    <?php
+    // Any remaining published/draft pages that aren't Core or Legal — make them editable too.
+    $shown_ids = array_merge(array_keys($core_pages), array_keys($legal_pages));
+    $other_pages = [];
+    foreach ($all_pages as $page_obj) {
+        if (!in_array($page_obj->ID, $shown_ids, true)) {
+            $other_pages[$page_obj->ID] = $page_obj;
+        }
+    }
+    ?>
+    <?php if (!empty($other_pages)): ?>
+    <div style="margin-top:28px;">
+        <div style="margin:0 0 10px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Other Pages</div>
+        <div class="gb-card" style="padding:0; overflow:hidden; background: white; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table class="gb-booking-table">
+                <thead>
+                    <tr><th style="width:40%;">Page Identity</th><th>Status</th><th style="text-align:right;">Action</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($other_pages as $p): ?>
+                            <tr>
+                                <td><strong style="font-size:15px; color:#0f172a;"><?php echo $p->post_title; ?></strong><div style="font-size:11px; color:#94a3b8; margin-top:4px;">/<?php echo $p->post_name; ?></div></td>
+                                <td>
+                                    <span style="background:#f1f5f9; color:#475569; border-radius:20px; padding:6px 12px; font-size:10px; font-weight:800; text-transform:uppercase;">
+                                        📄 <?php echo esc_html(ucfirst($p->post_status)); ?>
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="?tab=pages&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os">Edit Content</a>
+                                </td>
+                            </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
 <?php endif; ?>

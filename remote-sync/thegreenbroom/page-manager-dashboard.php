@@ -260,7 +260,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
 // 3. HANDLE ACTIONS
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $mid = intval($_GET['id']);
-    if ($action === 'delete_message' || $action === 'mark_replied' || $action === 'toggle_service' || $action === 'sync_service_product' || $action === 'delete_entity' || $action === 'archive_message') {
+    if ($action === 'delete_message' || $action === 'mark_replied' || $action === 'toggle_service' || $action === 'sync_service_product' || $action === 'delete_entity' || $action === 'archive_message' || $action === 'unarchive_message') {
         if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'gb_manager_action_' . $action . '_' . $mid)) {
             wp_die('Security check failed.');
         }
@@ -271,6 +271,12 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
     }
     if ($action === 'mark_replied') {
         if (get_post_type($mid) == 'gb_message') { update_post_meta($mid, '_gb_responded_date', current_time('mysql')); wp_redirect(home_url('/manager-dashboard?tab=support&action=view_message&id='.$mid.'&msg=replied')); exit; }
+    }
+    if ($action === 'archive_message') {
+        if (get_post_type($mid) == 'gb_message') { update_post_meta($mid, '_gb_archived', '1'); wp_redirect(home_url('/manager-dashboard?tab=support&msg=archived')); exit; }
+    }
+    if ($action === 'unarchive_message') {
+        if (get_post_type($mid) == 'gb_message') { delete_post_meta($mid, '_gb_archived'); wp_redirect(home_url('/manager-dashboard?tab=support&view=archived&msg=unarchived')); exit; }
     }
 
     if ($action === 'toggle_service') {

@@ -155,6 +155,31 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                 </div>
             </div>
 
+            <div id="social" class="gb-editor-section">
+                <div class="gb-editor-header"><span class="dashicons dashicons-share"></span> Social Media & Notifications</div>
+                <div class="gb-editor-body">
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Support Notification Email</label>
+                        <input type="email" name="_gb_support_email" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_support_email', true)); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">New contact &amp; support messages are emailed here. Leave blank to use the WordPress admin email.</p>
+                    </div>
+                    <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Social Media Links</div>
+                    <p style="margin:0 0 16px; color:#64748b; font-size:12px;">Add a full URL to show that icon in the site footer. Leave a field blank and it stays hidden.</p>
+                    <div class="gb-link-row" style="margin-bottom:20px;">
+                        <div class="gb-form-row"><label class="gb-label">Facebook URL</label><input type="url" name="_gb_social_facebook" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_facebook', true)); ?>" placeholder="https://facebook.com/yourpage"></div>
+                        <div class="gb-form-row"><label class="gb-label">Instagram URL</label><input type="url" name="_gb_social_instagram" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_instagram', true)); ?>" placeholder="https://instagram.com/yourhandle"></div>
+                    </div>
+                    <div class="gb-link-row" style="margin-bottom:20px;">
+                        <div class="gb-form-row"><label class="gb-label">X / Twitter URL</label><input type="url" name="_gb_social_twitter" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_twitter', true)); ?>" placeholder="https://x.com/yourhandle"></div>
+                        <div class="gb-form-row"><label class="gb-label">LinkedIn URL</label><input type="url" name="_gb_social_linkedin" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_linkedin', true)); ?>" placeholder="https://linkedin.com/company/yourcompany"></div>
+                    </div>
+                    <div class="gb-link-row" style="margin-bottom:0;">
+                        <div class="gb-form-row"><label class="gb-label">TikTok URL</label><input type="url" name="_gb_social_tiktok" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_tiktok', true)); ?>" placeholder="https://tiktok.com/@yourhandle"></div>
+                        <div class="gb-form-row"><label class="gb-label">YouTube URL</label><input type="url" name="_gb_social_youtube" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_youtube', true)); ?>" placeholder="https://youtube.com/@yourchannel"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="monetisation" class="gb-editor-section">
                 <div class="gb-editor-header"><span class="dashicons dashicons-chart-area"></span> Tax & Monetisation</div>
                 <div class="gb-editor-body">
