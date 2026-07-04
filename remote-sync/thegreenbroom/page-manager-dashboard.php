@@ -260,7 +260,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
 // 3. HANDLE ACTIONS
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $mid = intval($_GET['id']);
-    if ($action === 'delete_message' || $action === 'mark_replied' || $action === 'toggle_service' || $action === 'sync_service_product') {
+    if ($action === 'delete_message' || $action === 'mark_replied' || $action === 'toggle_service' || $action === 'sync_service_product' || $action === 'delete_entity' || $action === 'archive_message') {
         if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'gb_manager_action_' . $action . '_' . $mid)) {
             wp_die('Security check failed.');
         }
@@ -323,6 +323,23 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
                 'stripe_sync_msg' => $sync_msg,
             ], home_url('/manager-dashboard'))); exit;
         }
+    }
+
+    // Unified delete: services, bookings, cleaners, blog posts, pages.
+    if ($action === 'delete_entity') {
+        $type_to_tab = [
+            'gb_service' => 'services',
+            'gb_booking' => 'bookings',
+            'gb_cleaner' => 'cleaners',
+            'post'       => 'blog',
+            'page'       => 'pages',
+        ];
+        $ptype = get_post_type($mid);
+        if ($mid && isset($type_to_tab[$ptype])) {
+            wp_trash_post($mid);
+            wp_redirect(home_url('/manager-dashboard?tab=' . $type_to_tab[$ptype] . '&msg=deleted')); exit;
+        }
+        wp_redirect(home_url('/manager-dashboard?msg=delete_failed')); exit;
     }
 }
 

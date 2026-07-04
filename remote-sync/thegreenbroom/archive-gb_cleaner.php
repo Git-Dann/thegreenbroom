@@ -162,7 +162,7 @@ get_header();
             while ( have_posts() ) : the_post(); 
                 // Get Meta
                 $id = get_the_ID();
-                $rate = get_post_meta($id, 'gb_hourly_rate', true);
+                $rate = function_exists('gb_get_cleaner_rate') ? gb_get_cleaner_rate($id) : (get_post_meta($id, 'hourly_rate', true) ?: get_post_meta($id, 'gb_hourly_rate', true));
                 $loc  = get_post_meta($id, 'gb_postcode', true);
                 $ver  = get_post_meta($id, 'gb_verified', true);
                 $img_id = get_post_meta($id, 'gb_avatar_id', true);

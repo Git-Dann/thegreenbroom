@@ -53,7 +53,7 @@ if ($cleaner_id && get_post_type($cleaner_id) !== 'gb_cleaner') {
 }
 
 $cleaner_name = $cleaner_id ? get_the_title($cleaner_id) : 'Any Professional';
-$base_rate = $cleaner_id ? (float) (get_post_meta($cleaner_id, 'hourly_rate', true) ?: 15) : 15;
+$base_rate = $cleaner_id ? gb_get_cleaner_rate($cleaner_id) : 15;
 $today_ymd = current_time('Y-m-d');
 
 $form_data = [

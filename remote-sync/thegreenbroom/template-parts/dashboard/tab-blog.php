@@ -164,7 +164,12 @@
                     <td><span style="color:<?php echo $score_col; ?>; font-weight:800; border:1px solid <?php echo $score_col; ?>33; padding:4px 10px; border-radius:20px; font-size:11px;"><?php echo $score; ?> / 100</span></td>
                     <td><span style="background:#f1f5f9; color:#64748b; font-size:10px; padding:3px 8px; border-radius:4px; font-weight:700; text-transform:uppercase;"><?php echo $p->post_status; ?></span></td>
                     <td style="color:#64748b; font-size:13px;"><?php echo get_the_date('M j, Y', $p->ID); ?></td>
-                    <td style="text-align:right;"><a href="?tab=blog&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #e2e8f0; border-radius:6px; color:#334155; font-size:12px; font-weight:700;">Edit Article</a></td>
+                    <td style="text-align:right;">
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <a href="?tab=blog&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #e2e8f0; border-radius:6px; color:#334155; font-size:12px; font-weight:700;">Edit Article</a>
+                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $p->ID], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $p->ID)); ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #fecaca; border-radius:6px; color:#ef4444; font-size:12px; font-weight:700;" onclick="return confirm('Delete this article? It will be moved to trash.');">Delete</a>
+                        </div>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

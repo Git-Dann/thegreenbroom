@@ -184,8 +184,8 @@ $connected_cleaners = get_posts([
                     'post_type' => 'gb_service',
                     'posts_per_page' => -1,
                     'post_status' => ['publish', 'draft'],
-                    'orderby' => 'menu_order title',
-                    'order' => 'ASC',
+                    'orderby' => 'date',
+                    'order' => 'DESC', // newest services at the top
                 ]);
                 if ($services->have_posts()):
                     while ($services->have_posts()): $services->the_post();
@@ -225,6 +225,13 @@ $connected_cleaners = get_posts([
                             ], home_url('/manager-dashboard')),
                             'gb_manager_action_sync_service_product_' . $service_id
                         );
+                        $delete_url = wp_nonce_url(
+                            add_query_arg([
+                                'action' => 'delete_entity',
+                                'id' => $service_id,
+                            ], home_url('/manager-dashboard')),
+                            'gb_manager_action_delete_entity_' . $service_id
+                        );
                 ?>
                     <tr>
                         <td style="font-size:24px; text-align:center;"><?php echo esc_html($icon ?: '🧹'); ?></td>
@@ -258,6 +265,7 @@ $connected_cleaners = get_posts([
                                 <a href="?tab=services&action=edit&id=<?php echo $service_id; ?>" class="gb-btn-small-os">Edit</a>
                                 <a href="<?php echo esc_url($sync_url); ?>" class="gb-btn-small-os">Sync</a>
                                 <a href="<?php echo esc_url($toggle_url); ?>" class="gb-btn-small-os"><?php echo esc_html($toggle_label); ?></a>
+                                <a href="<?php echo esc_url($delete_url); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Delete this service? It will be moved to trash.');">Delete</a>
                             </div>
                         </td>
                     </tr>

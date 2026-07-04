@@ -385,7 +385,10 @@
                         <?php endif; ?>
                     </td>
                     <td style="text-align:right;">
-                        <a href="?tab=cleaners&action=edit&id=<?php echo $cid; ?>" style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 14px; font-weight: 700; color: #334155; text-decoration: none; font-size: 11px;">Edit Profile</a>
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <a href="?tab=cleaners&action=edit&id=<?php echo $cid; ?>" style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 14px; font-weight: 700; color: #334155; text-decoration: none; font-size: 11px;">Edit Profile</a>
+                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $cid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $cid)); ?>" style="background: white; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 14px; font-weight: 700; color: #ef4444; text-decoration: none; font-size: 11px;" onclick="return confirm('Delete this cleaner profile? It will be moved to trash.');">Delete</a>
+                        </div>
                     </td>
                 </tr>
                 <?php endwhile; wp_reset_postdata(); endif; ?>

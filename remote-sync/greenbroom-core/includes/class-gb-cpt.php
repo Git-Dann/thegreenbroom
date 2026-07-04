@@ -71,7 +71,8 @@ class GB_CPT {
 
     public function render_meta_box_content( $post ) {
         // Retrieve Data
-        $rate     = get_post_meta( $post->ID, 'gb_hourly_rate', true );
+        $rate     = get_post_meta( $post->ID, 'hourly_rate', true );
+        if ( $rate === '' || $rate === null ) { $rate = get_post_meta( $post->ID, 'gb_hourly_rate', true ); }
         $postcode = get_post_meta( $post->ID, 'gb_postcode', true );
         $radius   = get_post_meta( $post->ID, 'gb_radius', true );
         $verified = get_post_meta( $post->ID, 'gb_verified', true );
@@ -179,7 +180,7 @@ class GB_CPT {
         if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
         // Save Fields
-        if(isset($_POST['gb_hourly_rate'])) update_post_meta($post_id, 'gb_hourly_rate', sanitize_text_field($_POST['gb_hourly_rate']));
+        if(isset($_POST['gb_hourly_rate'])) update_post_meta($post_id, 'hourly_rate', sanitize_text_field($_POST['gb_hourly_rate']));
         if(isset($_POST['gb_radius'])) update_post_meta($post_id, 'gb_radius', intval($_POST['gb_radius']));
         if(isset($_POST['gb_bio'])) update_post_meta($post_id, 'gb_bio', sanitize_textarea_field($_POST['gb_bio']));
         if(isset($_POST['gb_experience'])) update_post_meta($post_id, 'gb_experience', intval($_POST['gb_experience']));

@@ -91,6 +91,49 @@ function gb_migrate_join_links() {
 }
 add_action( 'init', 'gb_migrate_join_links' );
 
+/**
+ * Canonical cleaner hourly rate accessor.
+ * Historically two meta keys were used: 'hourly_rate' (theme/frontend/booking)
+ * and 'gb_hourly_rate' (plugin admin metabox). This reads the canonical
+ * 'hourly_rate' first, falls back to the legacy key, then to a £15 default.
+ */
+function gb_get_cleaner_rate( $cleaner_id ) {
+    $rate = get_post_meta( $cleaner_id, 'hourly_rate', true );
+    if ( $rate === '' || $rate === null ) {
+        $rate = get_post_meta( $cleaner_id, 'gb_hourly_rate', true );
+    }
+    $rate = (float) $rate;
+    return $rate > 0 ? $rate : 15.0;
+}
+
+/**
+ * One-time migration: consolidate legacy 'gb_hourly_rate' into 'hourly_rate'
+ * so the listing, profile, dashboard and booking calculator all agree.
+ */
+function gb_migrate_cleaner_rates() {
+    if ( get_option( 'gb_cleaner_rates_migrated' ) ) {
+        return;
+    }
+
+    $cleaners = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => array( 'publish', 'pending', 'draft' ),
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    ) );
+
+    foreach ( $cleaners as $cid ) {
+        $primary = get_post_meta( $cid, 'hourly_rate', true );
+        $legacy  = get_post_meta( $cid, 'gb_hourly_rate', true );
+        if ( ( $primary === '' || $primary === null ) && $legacy !== '' && $legacy !== null ) {
+            update_post_meta( $cid, 'hourly_rate', $legacy );
+        }
+    }
+
+    update_option( 'gb_cleaner_rates_migrated', 1 );
+}
+add_action( 'init', 'gb_migrate_cleaner_rates' );
+
 function gb_load_assets() {
     $style_version = wp_get_theme()->get( 'Version' );
     $style_path = get_stylesheet_directory() . '/style.css';
