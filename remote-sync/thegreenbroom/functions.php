@@ -279,7 +279,40 @@ function gb_cleaner_verification_missing( $cleaner_id ) {
         }
     }
 
+    if ( get_post_meta( $cleaner_id, '_gb_toa_signed', true ) !== '1' ) {
+        $missing[] = 'Signed Terms of Association';
+    }
+
     return $missing;
+}
+
+/**
+ * The Cleaner Terms of Association text (editable in settings, with a default).
+ */
+function gb_get_terms_of_association() {
+    $settings_id = (int) get_option( 'page_on_front' );
+    $text = $settings_id ? get_post_meta( $settings_id, '_gb_terms_of_association', true ) : '';
+    if ( trim( (string) $text ) !== '' ) {
+        return $text;
+    }
+
+    return "TERMS OF ASSOCIATION\n\n"
+        . "This agreement is between The Green Broom Ltd (\"the Platform\") and the cleaner named below (\"the Associate\").\n\n"
+        . "1. Independent status. The Associate provides cleaning services as a self-employed independent professional and is not an employee of the Platform.\n\n"
+        . "2. Conduct & standards. The Associate agrees to carry out all work professionally, honestly, and to the standards expected by the Platform and its customers.\n\n"
+        . "3. Insurance & compliance. The Associate confirms the information and documents provided (including DBS certificate and references) are true, and agrees to hold appropriate insurance where required.\n\n"
+        . "4. Verification. The Associate agrees to the Platform verifying their identity, DBS status, and references.\n\n"
+        . "5. Payments. Fees are handled through the Platform, subject to the applicable platform fee and an active monthly subscription.\n\n"
+        . "6. Data. The Associate consents to the Platform storing the information provided for the purposes of running the service, in line with the Privacy Policy.\n\n"
+        . "By typing my name and title and ticking the box, I confirm I have read and agree to these Terms of Association.";
+}
+
+/**
+ * Short version fingerprint of the current Terms, recorded at signing time so
+ * you can tell which wording a cleaner agreed to.
+ */
+function gb_get_terms_of_association_version() {
+    return substr( md5( (string) gb_get_terms_of_association() ), 0, 8 );
 }
 
 function gb_load_assets() {

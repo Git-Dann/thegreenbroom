@@ -259,6 +259,28 @@
                     </div>
                 </div>
 
+                <?php
+                $toa_signed  = get_post_meta($pid, '_gb_toa_signed', true) === '1';
+                $toa_name    = get_post_meta($pid, '_gb_toa_signed_name', true);
+                $toa_title   = get_post_meta($pid, '_gb_toa_signed_title', true);
+                $toa_date    = get_post_meta($pid, '_gb_toa_signed_date', true);
+                ?>
+                <div class="gb-os-card">
+                    <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Terms of Association</div></div></div>
+                    <div class="gb-os-body">
+                        <?php if ($toa_signed): ?>
+                            <div style="font-weight:700; color:#166534;">✅ Signed</div>
+                            <div style="font-size:13px; color:#475569; margin-top:4px;">
+                                <?php echo esc_html($toa_name); ?> (<?php echo esc_html($toa_title); ?>)<?php echo $toa_date ? ' · ' . esc_html(date_i18n('j M Y', strtotime($toa_date))) : ''; ?>
+                            </div>
+                            <a href="<?php echo esc_url(add_query_arg('agreement_id', $pid, home_url('/manager-dashboard'))); ?>" target="_blank" rel="noopener" class="gb-btn-small-os" style="margin-top:12px; justify-content:center;">Print / Download Agreement</a>
+                        <?php else: ?>
+                            <div style="color:#ef4444; font-weight:600; font-size:13px;">Not signed yet</div>
+                            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">The cleaner must sign before they can be verified.</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="gb-os-card">
                     <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Stripe Connect</div></div></div>
                     <div class="gb-os-body">

@@ -180,6 +180,20 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                 </div>
             </div>
 
+            <div id="agreement" class="gb-editor-section">
+                <div class="gb-editor-header"><span class="dashicons dashicons-media-document"></span> Cleaner Terms of Association (E-Signature)</div>
+                <div class="gb-editor-body">
+                    <div style="margin:0 0 16px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
+                        This is the agreement each cleaner must sign (type name + title + tick to accept) before they can go live. Edit the wording below — it takes effect immediately for anyone who has not yet signed. Signed copies are viewable and printable from each cleaner's profile.
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:0;">
+                        <label class="gb-label">Agreement Text</label>
+                        <textarea name="_gb_terms_of_association" class="gb-input" style="min-height:260px; font-family:inherit; line-height:1.5;"><?php echo esc_textarea(get_post_meta($settings_id, '_gb_terms_of_association', true)); ?></textarea>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Basic HTML is allowed. Leave blank to use the built-in default wording.</p>
+                    </div>
+                </div>
+            </div>
+
             <div id="monetisation" class="gb-editor-section">
                 <div class="gb-editor-header"><span class="dashicons dashicons-chart-area"></span> Tax & Monetisation</div>
                 <div class="gb-editor-body">

@@ -20,6 +20,50 @@ $tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview';
 $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : '';
 $msg = isset($_GET['msg']) ? sanitize_key($_GET['msg']) : '';
 
+// Printable / downloadable signed Terms of Association (opens as a clean doc).
+if (isset($_GET['agreement_id'])) {
+    $agr_id = intval($_GET['agreement_id']);
+    if (get_post_type($agr_id) === 'gb_cleaner' && get_post_meta($agr_id, '_gb_toa_signed', true) === '1') {
+        $a_name    = get_post_meta($agr_id, '_gb_toa_signed_name', true);
+        $a_title   = get_post_meta($agr_id, '_gb_toa_signed_title', true);
+        $a_date    = get_post_meta($agr_id, '_gb_toa_signed_date', true);
+        $a_ip      = get_post_meta($agr_id, '_gb_toa_signed_ip', true);
+        $a_version = get_post_meta($agr_id, '_gb_toa_signed_version', true);
+        $a_text    = get_post_meta($agr_id, '_gb_toa_signed_text', true);
+        if (trim((string) $a_text) === '' && function_exists('gb_get_terms_of_association')) {
+            $a_text = gb_get_terms_of_association();
+        }
+        ?><!DOCTYPE html><html><head><meta charset="utf-8"><title>Terms of Association — <?php echo esc_html($a_name); ?></title>
+        <style>
+            body { font-family: Georgia, 'Times New Roman', serif; max-width: 800px; margin: 40px auto; padding: 0 30px; color: #1a1a1a; line-height: 1.6; }
+            h1 { font-size: 22px; border-bottom: 2px solid #1b5e20; padding-bottom: 10px; }
+            .doc-body { white-space: pre-wrap; font-size: 14px; margin: 24px 0; }
+            .sig { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; font-size: 14px; }
+            .sig .name { font-size: 22px; font-family: 'Segoe Script', 'Brush Script MT', cursive; color: #1b5e20; }
+            .meta { color: #555; font-size: 12px; margin-top: 12px; }
+            .noprint { margin: 20px 0; }
+            @media print { .noprint { display: none; } body { margin: 0; } }
+            button { background: #1b5e20; color: #fff; border: 0; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+        </style></head><body>
+        <div class="noprint"><button onclick="window.print()">🖨 Print / Save as PDF</button></div>
+        <h1><?php echo esc_html(get_bloginfo('name')); ?> — Terms of Association</h1>
+        <div class="doc-body"><?php echo wp_kses_post($a_text); ?></div>
+        <div class="sig">
+            <div>Signed by:</div>
+            <div class="name"><?php echo esc_html($a_name); ?></div>
+            <div><strong><?php echo esc_html($a_title); ?></strong></div>
+            <div class="meta">
+                Cleaner profile: <?php echo esc_html(get_the_title($agr_id)); ?><br>
+                Date signed: <?php echo $a_date ? esc_html(date_i18n('j F Y, g:i a', strtotime($a_date))) : '—'; ?><br>
+                Agreement version: <?php echo esc_html($a_version ?: 'n/a'); ?><?php echo $a_ip ? ' · IP: ' . esc_html($a_ip) : ''; ?>
+            </div>
+        </div>
+        </body></html><?php
+        exit;
+    }
+    wp_die('No signed agreement found for this cleaner.');
+}
+
 // 2. CONTROLLER: HANDLE SAVES & ACTIONS
 if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
