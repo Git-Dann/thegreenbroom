@@ -31,6 +31,7 @@ class GB_Uploads {
         return array(
             'doc_id'      => 'Government ID',
             'doc_address' => 'Proof of Address',
+            'doc_dbs'     => 'DBS Certificate',
         );
     }
 

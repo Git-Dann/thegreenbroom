@@ -249,6 +249,39 @@ function gb_schedule_message_archive() {
 }
 add_action( 'init', 'gb_schedule_message_archive' );
 
+/**
+ * Whether a cleaner has completed mandatory verification: DBS + Government ID
+ * + Proof of Address documents, their phone number, and two full references.
+ * Returns array of missing item labels (empty array = complete).
+ */
+function gb_cleaner_verification_missing( $cleaner_id ) {
+    $missing = array();
+
+    $doc_labels = array( 'doc_id' => 'Government ID', 'doc_address' => 'Proof of Address', 'doc_dbs' => 'DBS Certificate' );
+    if ( class_exists( 'GB_Uploads' ) && method_exists( 'GB_Uploads', 'get_cleaner_verification_document' ) ) {
+        foreach ( $doc_labels as $field => $label ) {
+            $doc = GB_Uploads::get_cleaner_verification_document( $cleaner_id, $field );
+            if ( empty( $doc ) ) {
+                $missing[] = $label;
+            }
+        }
+    }
+
+    if ( ! get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ) ) {
+        $missing[] = 'Phone number';
+    }
+    foreach ( array( '1', '2' ) as $n ) {
+        $ok = get_post_meta( $cleaner_id, "_gb_ref{$n}_name", true )
+           && get_post_meta( $cleaner_id, "_gb_ref{$n}_address", true )
+           && get_post_meta( $cleaner_id, "_gb_ref{$n}_phone", true );
+        if ( ! $ok ) {
+            $missing[] = "Reference {$n}";
+        }
+    }
+
+    return $missing;
+}
+
 function gb_load_assets() {
     $style_version = wp_get_theme()->get( 'Version' );
     $style_path = get_stylesheet_directory() . '/style.css';

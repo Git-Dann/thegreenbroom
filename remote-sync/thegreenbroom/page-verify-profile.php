@@ -20,76 +20,124 @@ $status = $cleaner_post[0]->post_status;
 
 $msg = '';
 
-// --- HANDLE FILE UPLOAD ---
+// Helper: is a verification document already stored?
+$gb_doc_present = function($field) use ($cleaner_id) {
+    if (class_exists('GB_Uploads') && method_exists('GB_Uploads', 'get_cleaner_verification_document')) {
+        $doc = GB_Uploads::get_cleaner_verification_document($cleaner_id, $field);
+        return !empty($doc);
+    }
+    return (bool) get_post_meta($cleaner_id, '_gb_' . $field, true);
+};
+
+// --- HANDLE SUBMISSION ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_upload_docs']) && wp_verify_nonce($_POST['verify_nonce'], 'gb_verify_action')) {
-    if (!class_exists('GB_Uploads') || !method_exists('GB_Uploads', 'store_cleaner_verification_document')) {
-        $msg .= '<div class="gb-alert error">Secure upload handling is unavailable right now. Please contact support.</div>';
+    $rate_state = gb_rate_limit_check('cleaner_verification_upload', 5, HOUR_IN_SECONDS, (string) $cleaner_id);
+    if ($rate_state['blocked']) {
+        $msg .= '<div class="gb-alert error">' . esc_html(gb_get_rate_limit_message($rate_state)) . '</div>';
     } else {
-        $rate_state = gb_rate_limit_check('cleaner_verification_upload', 5, HOUR_IN_SECONDS, (string) $cleaner_id);
-        if ($rate_state['blocked']) {
-            $msg .= '<div class="gb-alert error">' . esc_html(gb_get_rate_limit_message($rate_state)) . '</div>';
-        } else {
-            gb_record_rate_limit_hit('cleaner_verification_upload', HOUR_IN_SECONDS, (string) $cleaner_id);
+        gb_record_rate_limit_hit('cleaner_verification_upload', HOUR_IN_SECONDS, (string) $cleaner_id);
 
-            $files = ['doc_id', 'doc_address'];
-            $success_count = 0;
+        // 1. Save text fields (persist progress even if submission is incomplete).
+        $text_fields = [
+            '_gb_cleaner_phone' => 'cleaner_phone',
+            '_gb_ref1_name'     => 'ref1_name',
+            '_gb_ref1_address'  => 'ref1_address',
+            '_gb_ref1_phone'    => 'ref1_phone',
+            '_gb_ref2_name'     => 'ref2_name',
+            '_gb_ref2_address'  => 'ref2_address',
+            '_gb_ref2_phone'    => 'ref2_phone',
+        ];
+        foreach ($text_fields as $meta_key => $post_key) {
+            $val = isset($_POST[$post_key]) ? sanitize_text_field(wp_unslash($_POST[$post_key])) : '';
+            update_post_meta($cleaner_id, $meta_key, $val);
+        }
 
-            foreach ($files as $field) {
+        // 2. Process document uploads.
+        if (class_exists('GB_Uploads') && method_exists('GB_Uploads', 'store_cleaner_verification_document')) {
+            foreach (['doc_id', 'doc_address', 'doc_dbs'] as $field) {
                 if (!empty($_FILES[$field]['name'])) {
                     $upload_result = GB_Uploads::store_cleaner_verification_document($cleaner_id, $field, $_FILES[$field]);
-
                     if (is_wp_error($upload_result)) {
-                        $msg .= '<div class="gb-alert error">Error uploading ' . esc_html($field) . ': ' . esc_html($upload_result->get_error_message()) . '</div>';
-                    } else {
-                        $success_count++;
+                        $msg .= '<div class="gb-alert error">Error uploading document: ' . esc_html($upload_result->get_error_message()) . '</div>';
                     }
                 }
             }
+        } else {
+            $msg .= '<div class="gb-alert error">Secure upload handling is unavailable right now. Please contact support.</div>';
+        }
 
-            if ($success_count > 0) {
-                wp_update_post(['ID' => $cleaner_id, 'post_status' => 'pending']);
-                gb_sync_cleaner_verification_state($cleaner_id, 'pending');
-                $msg = '<div class="gb-alert success">✅ Documents uploaded securely. Your profile is now under review.</div>';
-                $status = 'pending';
-            }
+        // 3. Hard-block completeness check.
+        $missing = [];
+        if (!$gb_doc_present('doc_id'))      { $missing[] = 'Government ID'; }
+        if (!$gb_doc_present('doc_address')) { $missing[] = 'Proof of Address'; }
+        if (!$gb_doc_present('doc_dbs'))     { $missing[] = 'DBS Certificate'; }
+        if (!get_post_meta($cleaner_id, '_gb_cleaner_phone', true)) { $missing[] = 'Your phone number'; }
+        foreach (['1', '2'] as $n) {
+            $ok = get_post_meta($cleaner_id, "_gb_ref{$n}_name", true)
+               && get_post_meta($cleaner_id, "_gb_ref{$n}_address", true)
+               && get_post_meta($cleaner_id, "_gb_ref{$n}_phone", true);
+            if (!$ok) { $missing[] = "Reference {$n} (name, address & phone)"; }
+        }
+
+        if (empty($missing)) {
+            wp_update_post(['ID' => $cleaner_id, 'post_status' => 'pending']);
+            gb_sync_cleaner_verification_state($cleaner_id, 'pending');
+            $status = 'pending';
+            $msg = '<div class="gb-alert success">✅ Everything received. Your profile is now under review.</div>';
+        } else {
+            $msg .= '<div class="gb-alert error"><strong>Your progress is saved, but you cannot be verified yet.</strong><br>Still required: ' . esc_html(implode(', ', $missing)) . '</div>';
         }
     }
 }
 
-get_header(); 
+// Prefill values
+$v_phone       = get_post_meta($cleaner_id, '_gb_cleaner_phone', true);
+$v_ref1_name   = get_post_meta($cleaner_id, '_gb_ref1_name', true);
+$v_ref1_addr   = get_post_meta($cleaner_id, '_gb_ref1_address', true);
+$v_ref1_phone  = get_post_meta($cleaner_id, '_gb_ref1_phone', true);
+$v_ref2_name   = get_post_meta($cleaner_id, '_gb_ref2_name', true);
+$v_ref2_addr   = get_post_meta($cleaner_id, '_gb_ref2_address', true);
+$v_ref2_phone  = get_post_meta($cleaner_id, '_gb_ref2_phone', true);
+
+get_header();
 ?>
 
 <style>
     #gb-page-wrapper { width: 100vw; position: relative; left: 50%; margin-left: -50vw; background: #f4f6f8; min-height: 100vh; font-family: sans-serif; }
-    .gb-hero-sm { background: #0f172a; padding: 60px 0 100px; color: white; text-align: center; }
-    .gb-container { max-width: 600px; margin: -50px auto 50px; position: relative; padding: 0 20px; }
-    .gb-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-    
-    .gb-back-link { display: inline-flex; align-items: center; color: white; text-decoration: none; font-weight: 600; margin-bottom: 20px; opacity: 0.8; }
-    .gb-back-link:hover { opacity: 1; text-decoration: underline; }
+    #gb-page-wrapper .gb-hero-sm { background: #0f172a; padding: 60px 0 100px; color: white; text-align: center; }
+    #gb-page-wrapper .gb-container { max-width: 640px; margin: -50px auto 50px; position: relative; padding: 0 20px; }
+    #gb-page-wrapper .gb-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 
-    .gb-alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
-    .gb-alert.success { background: #dcfce7; color: #166534; }
-    .gb-alert.error { background: #fee2e2; color: #991b1b; }
+    #gb-page-wrapper .gb-back-link { display: inline-flex; align-items: center; color: white; text-decoration: none; font-weight: 600; margin-bottom: 20px; opacity: 0.8; }
+    #gb-page-wrapper .gb-back-link:hover { opacity: 1; text-decoration: underline; }
 
-    .gb-upload-box { border: 2px dashed #cbd5e1; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; transition: 0.2s; background: #f8fafc; }
-    .gb-upload-box:hover { border-color: #10b981; background: #f0fdf4; }
-    .gb-upload-label { font-weight: 700; display: block; margin-bottom: 8px; color: #334155; }
-    
-    input[type="file"] { width: 100%; }
+    #gb-page-wrapper .gb-alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; line-height: 1.5; }
+    #gb-page-wrapper .gb-alert.success { background: #dcfce7; color: #166534; }
+    #gb-page-wrapper .gb-alert.error { background: #fee2e2; color: #991b1b; }
+
+    #gb-page-wrapper .gb-section-head { font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; margin: 30px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+    #gb-page-wrapper .gb-upload-box { border: 2px dashed #cbd5e1; padding: 18px; border-radius: 8px; text-align: center; margin-bottom: 16px; transition: 0.2s; background: #f8fafc; }
+    #gb-page-wrapper .gb-upload-box.done { border-color: #10b981; background: #f0fdf4; }
+    #gb-page-wrapper .gb-upload-label { font-weight: 700; display: block; margin-bottom: 6px; color: #334155; }
+    #gb-page-wrapper input[type="file"] { width: 100%; }
+    #gb-page-wrapper .gb-field { margin-bottom: 14px; }
+    #gb-page-wrapper .gb-field label { display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:5px; }
+    #gb-page-wrapper .gb-field input { width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box; font-family:inherit; }
+    #gb-page-wrapper .gb-ref-card { border:1px solid #e2e8f0; border-radius:10px; padding:18px; margin-bottom:16px; background:#f8fafc; }
+    #gb-page-wrapper .gb-req { color:#ef4444; }
 </style>
 
 <div id="gb-page-wrapper">
     <div class="gb-hero-sm">
-        <div style="max-width:600px; margin:0 auto; text-align:left; padding:0 20px;">
+        <div style="max-width:640px; margin:0 auto; text-align:left; padding:0 20px;">
             <a href="/cleaner-dashboard" class="gb-back-link">← Back to Dashboard</a>
         </div>
         <h1>Get Verified</h1>
-        <p>Upload your documents securely to start accepting jobs.</p>
+        <p>All items below are required before you can go live and accept jobs.</p>
     </div>
 
     <div class="gb-container">
-        
+
         <?php echo $msg; ?>
 
         <div class="gb-card">
@@ -101,13 +149,12 @@ get_header();
                     <a href="/cleaner-dashboard" style="display:inline-block; margin-top:20px; background:#0f172a; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">Go to Dashboard</a>
                 </div>
             <?php elseif($status === 'pending'): ?>
-                <div style="text-align:center; padding:40px 0;">
+                <div style="text-align:center; padding:30px 0 20px;">
                     <span class="dashicons dashicons-hourglass" style="font-size:64px; color:#f59e0b; margin-bottom:20px; display:block; width:auto; height:auto;"></span>
                     <h2 style="margin:0; color:#f59e0b;">Under Review</h2>
-                    <p style="color:#64748b;">Our team is currently reviewing your documents.<br>This usually takes 24-48 hours.</p>
-                    
-                    <hr style="border:0; border-top:1px solid #eee; margin:30px 0;">
-                    <p style="font-size:14px; color:#999;">Need to re-upload?</p>
+                    <p style="color:#64748b;">Our team is reviewing your documents and references.<br>This usually takes 24-48 hours.</p>
+                    <hr style="border:0; border-top:1px solid #eee; margin:24px 0;">
+                    <p style="font-size:14px; color:#999;">Need to update something? Edit and resubmit below.</p>
                 </div>
             <?php endif; ?>
 
@@ -116,21 +163,47 @@ get_header();
                     <?php wp_nonce_field('gb_verify_action', 'verify_nonce'); ?>
                     <input type="hidden" name="gb_upload_docs" value="1">
 
-                    <div class="gb-upload-box">
-                        <span class="dashicons dashicons-id-alt" style="font-size:32px; color:#64748b; margin-bottom:10px;"></span>
-                        <label class="gb-upload-label">Government ID</label>
-                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Passport or Driving License (JPG/PNG/PDF)</p>
-                        <input type="file" name="doc_id" required accept="image/*,.pdf">
+                    <div class="gb-section-head">Your Contact Details</div>
+                    <div class="gb-field">
+                        <label>Your Phone Number <span class="gb-req">*</span></label>
+                        <input type="tel" name="cleaner_phone" value="<?php echo esc_attr($v_phone); ?>" placeholder="e.g. 07123 456789" required>
                     </div>
 
-                    <div class="gb-upload-box">
-                        <span class="dashicons dashicons-admin-home" style="font-size:32px; color:#64748b; margin-bottom:10px;"></span>
-                        <label class="gb-upload-label">Proof of Address</label>
-                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Utility Bill or Bank Statement (Recent)</p>
-                        <input type="file" name="doc_address" required accept="image/*,.pdf">
+                    <div class="gb-section-head">Documents</div>
+                    <div class="gb-upload-box <?php echo $gb_doc_present('doc_id') ? 'done' : ''; ?>">
+                        <label class="gb-upload-label">Government ID <span class="gb-req">*</span></label>
+                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Passport or Driving License (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_id') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <input type="file" name="doc_id" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_id') ? '' : 'required'; ?>>
+                    </div>
+                    <div class="gb-upload-box <?php echo $gb_doc_present('doc_address') ? 'done' : ''; ?>">
+                        <label class="gb-upload-label">Proof of Address <span class="gb-req">*</span></label>
+                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Utility Bill or Bank Statement (recent)<?php echo $gb_doc_present('doc_address') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <input type="file" name="doc_address" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_address') ? '' : 'required'; ?>>
+                    </div>
+                    <div class="gb-upload-box <?php echo $gb_doc_present('doc_dbs') ? 'done' : ''; ?>">
+                        <label class="gb-upload-label">DBS Certificate <span class="gb-req">*</span></label>
+                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Your Disclosure &amp; Barring Service certificate (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_dbs') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <input type="file" name="doc_dbs" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_dbs') ? '' : 'required'; ?>>
                     </div>
 
-                    <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:15px; border-radius:8px; font-weight:700; font-size:16px; cursor:pointer;">Submit for Verification</button>
+                    <div class="gb-section-head">Character References</div>
+                    <p style="font-size:13px; color:#64748b; margin:0 0 16px;">Provide two verifiable references. We may contact them to confirm your suitability.</p>
+
+                    <div class="gb-ref-card">
+                        <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 1</div>
+                        <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref1_name" value="<?php echo esc_attr($v_ref1_name); ?>" required></div>
+                        <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref1_address" value="<?php echo esc_attr($v_ref1_addr); ?>" required></div>
+                        <div class="gb-field" style="margin-bottom:0;"><label>Phone Number <span class="gb-req">*</span></label><input type="tel" name="ref1_phone" value="<?php echo esc_attr($v_ref1_phone); ?>" required></div>
+                    </div>
+                    <div class="gb-ref-card">
+                        <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 2</div>
+                        <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref2_name" value="<?php echo esc_attr($v_ref2_name); ?>" required></div>
+                        <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref2_address" value="<?php echo esc_attr($v_ref2_addr); ?>" required></div>
+                        <div class="gb-field" style="margin-bottom:0;"><label>Phone Number <span class="gb-req">*</span></label><input type="tel" name="ref2_phone" value="<?php echo esc_attr($v_ref2_phone); ?>" required></div>
+                    </div>
+
+                    <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:15px; border-radius:8px; font-weight:700; font-size:16px; cursor:pointer; margin-top:10px;">Submit for Verification</button>
+                    <p style="text-align:center; font-size:12px; color:#94a3b8; margin:14px 0 0;">You will not go live until all documents and references are provided and approved.</p>
                 </form>
             <?php endif; ?>
         </div>
