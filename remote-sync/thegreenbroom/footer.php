@@ -192,7 +192,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
     </div>
 
     <div class="gb-copyright-bar">
-        &copy; <?php echo date('Y'); ?> The Green Broom Ltd. All rights reserved. Built eco-consciously in Manchester.
+        &copy; <?php echo esc_html( wp_date('Y') ); ?> The Green Broom Ltd. All rights reserved. Built eco-consciously in Liverpool.
     </div>
 
 </footer>
