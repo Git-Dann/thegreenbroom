@@ -1244,7 +1244,7 @@ add_action( 'template_redirect', 'gb_gate_unverified_users', 1 );
  * stale "please log in" response that looks exactly like being logged out,
  * even though their session was never actually invalidated.
  */
-function gb_disable_cache_for_account_pages() {
+function gb_disable_cache_for_account_pages( $template ) {
     $gated_templates = array(
         'page-manager-dashboard.php',
         'page-cleaner-dashboard.php',
@@ -1263,15 +1263,21 @@ function gb_disable_cache_for_account_pages() {
         'page-lost-password.php',
     );
 
-    if ( ! is_page_template( $gated_templates ) ) {
-        return;
+    // Checked against the ACTUAL resolved template file (not just the
+    // '_wp_page_template' meta via is_page_template()) because a page whose
+    // slug matches the "page-{slug}.php" naming convention (e.g. a page at
+    // /cleaner-dashboard/ automatically using page-cleaner-dashboard.php)
+    // is picked up by WordPress's template hierarchy without that meta ever
+    // being set, and is_page_template() alone would miss it.
+    if ( $template && in_array( basename( $template ), $gated_templates, true ) ) {
+        nocache_headers();
+        // LiteSpeed Cache's documented opt-out API — a no-op if the plugin isn't active.
+        do_action( 'litespeed_control_set_nocache', 'gb-account-page' );
     }
 
-    nocache_headers();
-    // LiteSpeed Cache's documented opt-out API — a no-op if the plugin isn't active.
-    do_action( 'litespeed_control_set_nocache', 'gb-account-page' );
+    return $template;
 }
-add_action( 'template_redirect', 'gb_disable_cache_for_account_pages', -10 );
+add_filter( 'template_include', 'gb_disable_cache_for_account_pages', -10 );
 
 function gb_handle_public_route_fixes() {
     if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
