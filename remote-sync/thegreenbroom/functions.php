@@ -1233,6 +1233,46 @@ function gb_gate_unverified_users() {
 }
 add_action( 'template_redirect', 'gb_gate_unverified_users', 1 );
 
+/**
+ * Never let any caching layer (browser, proxy, or a host-level cache such as
+ * LiteSpeed Cache) store a response for these account-gated pages.
+ *
+ * These templates render completely differently depending on who is asking
+ * (a redirect-to-login for a logged-out visitor vs. a personalized dashboard
+ * for a logged-in one), so a cached copy of one visitor's response must never
+ * be replayed to another. If it is, a fully logged-in user can be served a
+ * stale "please log in" response that looks exactly like being logged out,
+ * even though their session was never actually invalidated.
+ */
+function gb_disable_cache_for_account_pages() {
+    $gated_templates = array(
+        'page-manager-dashboard.php',
+        'page-cleaner-dashboard.php',
+        'page-edit-profile.php',
+        'page-edit-listing.php',
+        'page-manage-listings.php',
+        'page-schedule.php',
+        'page-inbox.php',
+        'page-my-account.php',
+        'page-settings.php',
+        'page-verify-profile.php',
+        'page-book.php',
+        'page-booking-success.php',
+        'page-login.php',
+        'page-register.php',
+        'page-lost-password.php',
+    );
+
+    if ( ! is_page_template( $gated_templates ) ) {
+        return;
+    }
+
+    nocache_headers();
+    // LiteSpeed Cache's documented opt-out API — a no-op if the plugin isn't active.
+    do_action( 'litespeed_control_set_nocache', 'gb-account-page' );
+}
+add_action( 'template_redirect', 'gb_disable_cache_for_account_pages', -10 );
+
 function gb_handle_public_route_fixes() {
     if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
         return;
