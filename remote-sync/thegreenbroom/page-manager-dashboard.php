@@ -16,6 +16,12 @@ if (!in_array('gb_manager', (array) $current_user->roles) && !current_user_can('
 }
 add_filter('show_admin_bar', '__return_false');
 
+// Required for wp.media() (featured image picker, page-builder image fields,
+// TinyMCE "Add Media") to work on this front-end template — without this,
+// clicking those buttons does nothing because the media library JS/templates
+// are never loaded outside wp-admin.
+wp_enqueue_media();
+
 $tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview';
 $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : '';
 $msg = isset($_GET['msg']) ? sanitize_key($_GET['msg']) : '';

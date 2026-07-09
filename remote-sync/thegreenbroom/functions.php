@@ -1297,6 +1297,26 @@ function gb_register_roles() {
     add_role( 'gb_manager', 'Manager', array('read'=>true, 'edit_posts'=>true, 'upload_files'=>true));
     add_role( 'gb_cleaner', 'Cleaner', array('read'=>true, 'upload_files'=>true, 'edit_posts'=>false));
     add_role( 'gb_customer', 'Customer', array('read'=>true, 'upload_files'=>false, 'edit_posts'=>false));
+
+    // add_role() is a no-op if the role already exists in the DB, so any
+    // capability added here later would never reach a site whose roles were
+    // created before this line was added. Sync the required caps explicitly.
+    $required_caps = array(
+        'gb_manager'  => array('read', 'edit_posts', 'upload_files'),
+        'gb_cleaner'  => array('read', 'upload_files'),
+        'gb_customer' => array('read'),
+    );
+    foreach ( $required_caps as $role_key => $caps ) {
+        $role = get_role( $role_key );
+        if ( ! $role ) {
+            continue;
+        }
+        foreach ( $caps as $cap ) {
+            if ( ! $role->has_cap( $cap ) ) {
+                $role->add_cap( $cap );
+            }
+        }
+    }
 }
 add_action('init', 'gb_register_roles');
 

@@ -50,7 +50,9 @@ if ( isset($_POST['gb_save_listing']) && wp_verify_nonce($_POST['gb_listing_nonc
     $listing = get_post($post_id);
 }
 
-get_header(); 
+wp_enqueue_media(); // required for wp.media() image picker below
+
+get_header();
 ?>
 
 <div class="gb-dashboard-wrapper">
