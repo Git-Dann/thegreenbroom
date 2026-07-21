@@ -143,6 +143,7 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
         <form method="post" action="<?php echo esc_url(home_url('/manager-dashboard')); ?>">
             <input type="hidden" name="gb_reply_action" value="reply_message">
             <input type="hidden" name="message_id" value="<?php echo (int) $mid; ?>">
+            <input type="hidden" name="gb_reply_redirect" value="<?php echo esc_url(home_url('/manager-dashboard?tab=support&action=view_message&id=' . (int) $mid)); ?>">
             <?php wp_nonce_field('gb_reply_message', 'gb_reply_nonce'); ?>
             <textarea name="gb_reply_body" class="gb-input" required style="width:100%; min-height:140px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;" placeholder="Type your reply…"><?php echo $existing_reply ? '' : ''; ?></textarea>
             <div style="margin-top:15px; display:flex; gap:12px; align-items:center;">

@@ -223,8 +223,8 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
 
         <div class="gb-card" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; border-left: 4px solid #dc2626; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <h3 style="font-size: 18px; font-weight: 800; color: #dc2626; margin-bottom: 15px;">Danger Zone</h3>
-            <p style="color: #64748b; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Once you delete your account, there is no going back. Please be certain.</p>
-            <button class="gb-btn" style="background: #fff; color: #dc2626; border: 1px solid #dc2626; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer;">Delete Account</button>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Account deletion is permanent and removes your profile and listings. To protect against accidental loss and keep booking/payment records compliant, deletions are handled by our team on request.</p>
+            <a href="<?php echo esc_url(add_query_arg('subject', rawurlencode('Account deletion request'), home_url('/contact-support'))); ?>" class="gb-btn" style="display:inline-block; text-decoration:none; background: #fff; color: #dc2626; border: 1px solid #dc2626; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer;">Request Account Deletion</a>
         </div>
 
     </div>

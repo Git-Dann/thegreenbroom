@@ -1919,6 +1919,140 @@ function gb_password_notice_html() {
     return '<div style="background:' . $bg . '; border:1px solid ' . $border . '; color:' . $color . '; padding:14px 16px; border-radius:8px; margin-bottom:20px; font-size:14px;">' . esc_html($text) . '</div>';
 }
 
+/**
+ * Shared in-dashboard message reply handler.
+ *
+ * Used by BOTH the manager inbox/helpdesk and the cleaner inbox: it emails the
+ * message sender and marks the message replied, so the "Replied" status always
+ * reflects a reply actually being sent from within the platform (the old flow
+ * was a bare mailto: that never recorded anything).
+ *
+ * Authorization: managers/admins may reply to any message; a cleaner may only
+ * reply to a message tied to their own cleaner profile.
+ *
+ * NOTE: delivery still depends on wp_mail being backed by a working mail
+ * service. wp_mail() can report success even when the host silently drops the
+ * message, so a "reply_sent" flag means "handed to wp_mail", not "delivered".
+ */
+add_action('init', function () {
+    if (!isset($_POST['gb_reply_action']) || $_POST['gb_reply_action'] !== 'reply_message') {
+        return;
+    }
+    if (empty($_POST['gb_reply_nonce']) || !wp_verify_nonce($_POST['gb_reply_nonce'], 'gb_reply_message')) {
+        wp_die('Security check failed.');
+    }
+    if (!is_user_logged_in()) {
+        wp_safe_redirect(home_url('/login'));
+        exit;
+    }
+
+    $mid = isset($_POST['message_id']) ? intval($_POST['message_id']) : 0;
+    $reply_body = isset($_POST['gb_reply_body']) ? sanitize_textarea_field(wp_unslash($_POST['gb_reply_body'])) : '';
+
+    $redirect = '';
+    if (!empty($_POST['gb_reply_redirect'])) {
+        $redirect = wp_validate_redirect(esc_url_raw(wp_unslash($_POST['gb_reply_redirect'])), '');
+    }
+    if ($redirect === '') {
+        $redirect = home_url('/manager-dashboard?tab=support&action=view_message&id=' . $mid);
+    }
+    $bounce = function ($flag) use ($redirect) {
+        wp_safe_redirect(add_query_arg('msg', $flag, $redirect));
+        exit;
+    };
+
+    if (get_post_type($mid) !== 'gb_message' || $reply_body === '') {
+        $bounce('reply_error');
+    }
+
+    // Authorization.
+    $user = wp_get_current_user();
+    $can_reply = current_user_can('administrator') || in_array('gb_manager', (array) $user->roles, true);
+    if (!$can_reply) {
+        $related = (int) get_post_meta($mid, '_gb_related_cleaner', true);
+        if ($related) {
+            $owned = get_posts([
+                'post_type'   => 'gb_cleaner',
+                'author'      => $user->ID,
+                'include'     => [$related],
+                'post_status' => ['publish', 'pending', 'draft'],
+                'fields'      => 'ids',
+            ]);
+            $can_reply = !empty($owned);
+        }
+    }
+    if (!$can_reply) {
+        wp_die('You are not allowed to reply to this message.');
+    }
+
+    $to = sanitize_email((string) get_post_meta($mid, '_gb_sender_email', true));
+    $sent = false;
+    if (is_email($to)) {
+        $settings_id = (int) get_option('page_on_front');
+        $from_name = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_from_name', true) : '';
+        $from_name = $from_name !== '' ? $from_name : get_bloginfo('name');
+        $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_reply_to', true) : '';
+        if (!is_email($reply_to)) {
+            $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_support_email', true) : '';
+        }
+        if (!is_email($reply_to)) {
+            $reply_to = get_option('admin_email');
+        }
+
+        $subject = 'Re: ' . get_the_title($mid);
+        $body = $reply_body . "\n\n—\n" . $from_name;
+        $headers = ['From: ' . $from_name . ' <' . get_option('admin_email') . '>'];
+        if (is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+        $sent = wp_mail($to, $subject, $body, $headers);
+    }
+
+    update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
+    update_post_meta($mid, '_gb_reply_body', $reply_body);
+
+    $bounce($sent ? 'reply_sent' : 'replied_nomail');
+}, 5);
+
+/**
+ * One-time cleanup of legacy mis-tagged support messages.
+ *
+ * Helpdesk / manager-directed messages (_gb_is_helpdesk = '1') should never
+ * carry a _gb_related_cleaner. Older code paths sometimes attached one, which
+ * made those messages display under a specific cleaner ("To: Alston Knight")
+ * in the manager inbox. Clear that stray meta once so historical tickets show
+ * correctly. Genuine customer→cleaner enquiries (not helpdesk-flagged) are
+ * left untouched. Runs a single time when a manager/admin is on the site.
+ */
+add_action('init', function () {
+    if (get_option('gb_helpdesk_relation_cleanup_v1')) {
+        return;
+    }
+    if (!is_user_logged_in()) {
+        return;
+    }
+    $user = wp_get_current_user();
+    if (!current_user_can('administrator') && !in_array('gb_manager', (array) $user->roles, true)) {
+        return;
+    }
+
+    $ids = get_posts([
+        'post_type'      => 'gb_message',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => '_gb_is_helpdesk', 'value' => '1'],
+            ['key' => '_gb_related_cleaner', 'compare' => 'EXISTS'],
+        ],
+    ]);
+    foreach ($ids as $id) {
+        delete_post_meta($id, '_gb_related_cleaner');
+    }
+    update_option('gb_helpdesk_relation_cleanup_v1', 1);
+}, 20);
+
 /* ==========================================================================
    6. STRIPE API SETTINGS ENGINE
    ========================================================================== */
