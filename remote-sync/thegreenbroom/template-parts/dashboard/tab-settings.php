@@ -97,6 +97,7 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                             <select name="_gb_require_insurance" class="gb-input" style="height: 45px;">
                                 <option value="yes" <?php selected(get_post_meta($settings_id, '_gb_require_insurance', true), 'yes'); ?>>Mandatory (Proof Required)</option>
                                 <option value="no" <?php selected(get_post_meta($settings_id, '_gb_require_insurance', true), 'no'); ?>>Optional (Self-Certified)</option>
+                                <option value="provided" <?php selected(get_post_meta($settings_id, '_gb_require_insurance', true), 'provided'); ?>>Insurance Provided by The Green Broom</option>
                             </select>
                         </div>
                     </div>
@@ -325,6 +326,32 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                 </p>
                 <a href="<?php echo esc_url(home_url('/manager-dashboard?tab=services')); ?>" class="gb-btn-small-os" style="margin-bottom:16px;">Open Services Catalog</a>
                 <?php echo do_shortcode('[gb_stripe_storefront]'); ?>
+            </div>
+        </div>
+
+        <div id="account" class="gb-editor-section">
+            <div class="gb-editor-header"><span class="dashicons dashicons-admin-users"></span> Your Account &amp; Password</div>
+            <div class="gb-editor-body">
+                <?php echo function_exists('gb_password_notice_html') ? gb_password_notice_html() : ''; ?>
+                <p style="margin:0 0 18px; color:#64748b; font-size:13px;">Change the password for your manager login (<strong><?php echo esc_html(wp_get_current_user()->user_login); ?></strong>). You'll stay logged in after updating.</p>
+                <form method="post" action="<?php echo esc_url(home_url('/manager-dashboard')); ?>" style="max-width:460px;">
+                    <input type="hidden" name="gb_pw_action" value="change_password">
+                    <input type="hidden" name="gb_pw_redirect" value="<?php echo esc_url(home_url('/manager-dashboard?tab=settings')); ?>">
+                    <?php wp_nonce_field('gb_change_password', 'gb_pw_nonce'); ?>
+                    <div class="gb-form-row">
+                        <label class="gb-label">Current Password</label>
+                        <input type="password" name="gb_current_password" class="gb-input" required autocomplete="current-password">
+                    </div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">New Password (min. 8 characters)</label>
+                        <input type="password" name="gb_new_password" class="gb-input" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">Confirm New Password</label>
+                        <input type="password" name="gb_confirm_password" class="gb-input" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="gb-header-btn" style="background:#2e7d32; color:#fff; border:none; height:44px; padding:0 24px; border-radius:8px; font-weight:700; cursor:pointer;">Update Password</button>
+                </form>
             </div>
         </div>
     </div>

@@ -70,6 +70,52 @@ if (isset($_GET['agreement_id'])) {
     wp_die('No signed agreement found for this cleaner.');
 }
 
+// 1b. HANDLE IN-DASHBOARD MESSAGE REPLY
+// Replying from inside the dashboard emails the sender AND marks the message
+// as replied, so the inbox status reflects reality. (The old flow only offered
+// a mailto: link, which opened the mail app but never updated the status.)
+if (isset($_POST['gb_reply_action']) && $_POST['gb_reply_action'] === 'reply_message') {
+    if (empty($_POST['gb_reply_nonce']) || !wp_verify_nonce($_POST['gb_reply_nonce'], 'gb_reply_message')) {
+        wp_die('Security check failed.');
+    }
+
+    $mid = intval($_POST['message_id']);
+    $reply_body = isset($_POST['gb_reply_body']) ? sanitize_textarea_field(wp_unslash($_POST['gb_reply_body'])) : '';
+
+    if (get_post_type($mid) !== 'gb_message' || $reply_body === '') {
+        wp_redirect(home_url('/manager-dashboard?tab=support&action=view_message&id=' . $mid . '&msg=reply_error')); exit;
+    }
+
+    $to = sanitize_email((string) get_post_meta($mid, '_gb_sender_email', true));
+    $sent = false;
+    if (is_email($to)) {
+        $settings_id = (int) get_option('page_on_front');
+        $from_name = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_from_name', true) : '';
+        $from_name = $from_name !== '' ? $from_name : get_bloginfo('name');
+        $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_reply_to', true) : '';
+        if (!is_email($reply_to)) {
+            $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_support_email', true) : '';
+        }
+        if (!is_email($reply_to)) {
+            $reply_to = get_option('admin_email');
+        }
+
+        $subject = 'Re: ' . get_the_title($mid);
+        $body = $reply_body . "\n\n—\n" . $from_name;
+        $headers = ['From: ' . $from_name . ' <' . get_option('admin_email') . '>'];
+        if (is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+        $sent = wp_mail($to, $subject, $body, $headers);
+    }
+
+    update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
+    update_post_meta($mid, '_gb_reply_body', $reply_body);
+
+    $flag = $sent ? 'reply_sent' : 'replied_nomail';
+    wp_redirect(home_url('/manager-dashboard?tab=support&action=view_message&id=' . $mid . '&msg=' . $flag)); exit;
+}
+
 // 2. CONTROLLER: HANDLE SAVES & ACTIONS
 if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
@@ -392,7 +438,17 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         ];
         $ptype = get_post_type($mid);
         if ($mid && isset($type_to_tab[$ptype])) {
-            wp_trash_post($mid);
+            // Bookings represent a "cancelled" appointment using the 'trash'
+            // post status, and the bookings list intentionally shows trashed
+            // (cancelled) rows. That means wp_trash_post() is a no-op on an
+            // already-cancelled booking and never removes it — so "Delete"
+            // appeared to do nothing for confirmed, pending OR cancelled
+            // bookings. Permanently delete bookings so they actually disappear.
+            if ($ptype === 'gb_booking') {
+                wp_delete_post($mid, true);
+            } else {
+                wp_trash_post($mid);
+            }
             wp_redirect(home_url('/manager-dashboard?tab=' . $type_to_tab[$ptype] . '&msg=deleted')); exit;
         }
         wp_redirect(home_url('/manager-dashboard?msg=delete_failed')); exit;

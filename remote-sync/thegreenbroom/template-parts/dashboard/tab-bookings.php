@@ -390,7 +390,7 @@ $gb_payment_class = static function($payment_status) {
                     <td style="text-align:right;">
                         <div style="display:flex; justify-content:flex-end; gap:8px;">
                             <a href="?tab=bookings&action=edit&id=<?php echo $bid; ?>" class="gb-btn-small-os">Manage</a>
-                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $bid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $bid)); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Delete this booking? It will be moved to trash.');">Delete</a>
+                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $bid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $bid)); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Permanently delete this booking? This cannot be undone.');">Delete</a>
                         </div>
                     </td>
                 </tr>

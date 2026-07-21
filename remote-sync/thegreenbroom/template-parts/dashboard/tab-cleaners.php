@@ -194,7 +194,7 @@
                     <div class="gb-os-body">
                         <?php if ($post->post_status === 'publish'): ?>
                             <div style="font-size:12px; color:#166534; background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; padding:12px;">
-                                This cleaner is verified. Review documents are purged automatically once approval is granted.
+                                This cleaner is verified. For data protection, the ID, proof-of-address and DBS documents they uploaded for review are automatically and permanently deleted once approval is granted, so sensitive files are never kept on the platform longer than needed.
                             </div>
                         <?php else: ?>
                             <?php foreach (['doc_id' => 'Government ID', 'doc_address' => 'Proof of Address', 'doc_dbs' => 'DBS Certificate'] as $doc_key => $doc_label): ?>
@@ -221,7 +221,7 @@
                                 </div>
                             <?php endforeach; ?>
                             <div style="font-size:11px; color:#64748b; margin-top:12px;">
-                                Uploaded verification files stay out of the public media library and are purged automatically once the cleaner is marked verified.
+                                Uploaded verification files (ID, proof of address, DBS) are kept in private storage — never the public media library — and are automatically and permanently deleted once the cleaner is marked verified.
                             </div>
                         <?php endif; ?>
                     </div>

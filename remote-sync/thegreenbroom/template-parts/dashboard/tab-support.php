@@ -44,11 +44,29 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
         return;
     }
     $related_cleaner_id = get_post_meta($mid, '_gb_related_cleaner', true);
-    $related_cleaner_name = $related_cleaner_id ? get_the_title($related_cleaner_id) : 'General Inquiry';
+    $is_helpdesk_msg = get_post_meta($mid, '_gb_is_helpdesk', true) === '1';
+    if ($related_cleaner_id && get_post_type($related_cleaner_id) === 'gb_cleaner') {
+        $related_cleaner_name = get_the_title($related_cleaner_id);
+    } elseif ($is_helpdesk_msg) {
+        $related_cleaner_name = 'Platform / Manager';
+    } else {
+        $related_cleaner_name = 'General Inquiry';
+    }
     $sender_email = get_post_meta($mid, '_gb_sender_email', true) ?: 'Guest';
     $sender_name = get_post_meta($mid, '_gb_sender_name', true) ?: 'Unknown Sender';
     $responded_date = get_post_meta($mid, '_gb_responded_date', true);
+    $existing_reply = get_post_meta($mid, '_gb_reply_body', true);
+    $reply_notice = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
 ?>
+    <?php if ($reply_notice === 'reply_sent'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Reply sent and message marked as replied.</div>
+    <?php elseif ($reply_notice === 'replied'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Message marked as replied.</div>
+    <?php elseif ($reply_notice === 'replied_nomail'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:15px;">Message marked as replied, but the email could not be sent (no valid sender email, or mail is not configured yet). Your reply is saved below.</div>
+    <?php elseif ($reply_notice === 'reply_error'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">Could not send that reply. Please add a message and try again.</div>
+    <?php endif; ?>
     <div class="gb-edit-header">
         <div>
             <a href="?tab=support" class="gb-back-link" style="text-decoration:none; color:#2e7d32; font-weight:700; font-size:13px;">← Back to Inbox</a>
@@ -108,6 +126,30 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                 <span class="status-badge" style="background:#f1f5f9; color:#475569;"><?php echo esc_html($related_cleaner_name); ?></span>
             </div>
         </div>
+    </div>
+
+    <div class="gb-card" style="padding:30px; margin-top:30px;">
+        <h3 style="margin-top:0; font-size:16px; font-weight:800; color:#0f172a; margin-bottom:6px;">Reply</h3>
+        <p style="margin:0 0 18px; color:#64748b; font-size:13px;">
+            Send a reply straight from here. It emails <strong><?php echo esc_html($sender_email); ?></strong> and marks this message as replied.
+            <?php if (!is_email($sender_email)): ?><br><span style="color:#9a3412;">This sender has no valid email address — sending will only mark it replied.</span><?php endif; ?>
+        </p>
+        <?php if ($existing_reply): ?>
+            <div style="background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; padding:15px; margin-bottom:18px;">
+                <div style="font-size:11px; color:#166534; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Last reply sent</div>
+                <div style="font-size:14px; color:#334155; white-space:pre-wrap;"><?php echo esc_html($existing_reply); ?></div>
+            </div>
+        <?php endif; ?>
+        <form method="post" action="<?php echo esc_url(home_url('/manager-dashboard')); ?>">
+            <input type="hidden" name="gb_reply_action" value="reply_message">
+            <input type="hidden" name="message_id" value="<?php echo (int) $mid; ?>">
+            <?php wp_nonce_field('gb_reply_message', 'gb_reply_nonce'); ?>
+            <textarea name="gb_reply_body" class="gb-input" required style="width:100%; min-height:140px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;" placeholder="Type your reply…"><?php echo $existing_reply ? '' : ''; ?></textarea>
+            <div style="margin-top:15px; display:flex; gap:12px; align-items:center;">
+                <button type="submit" class="gb-header-btn" style="background:#2e7d32; color:#fff; border:none; height:44px; padding:0 24px; border-radius:8px; font-weight:700; cursor:pointer;">Send Reply</button>
+                <a href="mailto:<?php echo esc_attr($sender_email); ?>?subject=<?php echo rawurlencode('Re: ' . get_the_title($mid)); ?>" class="gb-btn-small-os">Reply in mail app instead ↗</a>
+            </div>
+        </form>
     </div>
 
 <?php else: ?>
@@ -182,7 +224,14 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                 $messages = new WP_Query($args);
                 if($messages->have_posts()): while($messages->have_posts()): $messages->the_post(); 
                     $cleaner_id = get_post_meta(get_the_ID(), '_gb_related_cleaner', true);
-                    $cleaner_name = $cleaner_id ? get_the_title($cleaner_id) : 'General Inquiry';
+                    $is_helpdesk_msg = get_post_meta(get_the_ID(), '_gb_is_helpdesk', true) === '1';
+                    if ($cleaner_id && get_post_type($cleaner_id) === 'gb_cleaner') {
+                        $cleaner_name = get_the_title($cleaner_id);
+                    } elseif ($is_helpdesk_msg) {
+                        $cleaner_name = 'Platform / Manager';
+                    } else {
+                        $cleaner_name = 'General Inquiry';
+                    }
                     $sender = get_post_meta(get_the_ID(), '_gb_sender_email', true) ?: 'Guest';
                     $sender_name = get_post_meta(get_the_ID(), '_gb_sender_name', true) ?: $sender;
                     $responded = get_post_meta(get_the_ID(), '_gb_responded_date', true);
