@@ -131,6 +131,8 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
 
     <div class="gb-container" style="margin-top: -50px; max-width: 600px; position: relative; z-index: 10;">
 
+        <?php echo gb_password_notice_html(); ?>
+
         <?php if ($connect_notice === 'error' && $connect_notice_msg !== ''): ?>
             <div class="gb-card mb-20" style="background:#fef2f2; border-color:#fecaca; color:#991b1b;">
                 Stripe Connect: <?php echo esc_html($connect_notice_msg); ?>
@@ -157,9 +159,10 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
                 </div>
             </div>
 
-            <button type="button" class="gb-btn-auth" style="background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
+            <a href="<?php echo esc_url(home_url('/contact-support')); ?>" class="gb-btn-auth" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box; background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
                 Update Membership Plan
-            </button>
+            </a>
+            <p style="margin:12px 0 0; color:#64748b; font-size:12px; line-height:1.5;">Contact the team to upgrade, downgrade or pause your membership. Self-service billing is coming soon.</p>
         </div>
 
         <div class="gb-card mb-20" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -201,15 +204,18 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
 
         <div class="gb-card mb-20" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 20px;">Change Password</h3>
-            <form>
+            <form method="post" action="<?php echo esc_url($settings_page_url); ?>">
+                <input type="hidden" name="gb_pw_action" value="change_password">
+                <input type="hidden" name="gb_pw_redirect" value="<?php echo esc_url($settings_page_url); ?>">
+                <?php wp_nonce_field('gb_change_password', 'gb_pw_nonce'); ?>
                 <div style="margin-bottom: 15px;">
-                    <input type="password" placeholder="Current Password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <input type="password" name="gb_current_password" placeholder="Current Password" required autocomplete="current-password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <input type="password" placeholder="New Password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <input type="password" name="gb_new_password" placeholder="New Password (min. 8 characters)" required minlength="8" autocomplete="new-password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                 </div>
                 <div style="margin-bottom: 20px;">
-                    <input type="password" placeholder="Confirm New Password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <input type="password" name="gb_confirm_password" placeholder="Confirm New Password" required minlength="8" autocomplete="new-password" style="width: 100%; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
                 </div>
                 <button type="submit" style="background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Update Password</button>
             </form>

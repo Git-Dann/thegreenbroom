@@ -204,10 +204,6 @@
                     <a href="<?php echo esc_url( home_url('/login') ); ?>" class="nav-login">
                         Log in
                     </a>
-                    
-                    <a href="<?php echo esc_url( home_url('/register') ); ?>" class="nav-cta">
-                        Try it free
-                    </a>
 
                 <?php endif; ?>
 
