@@ -681,11 +681,35 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     </div>
     <script>
     jQuery(document).ready(function($){
-        $('.gb-upload-btn').click(function(e) { 
-            e.preventDefault(); var btn=$(this); var input=btn.prev('input'); 
-            wp.media({title:'Select Image',button:{text:'Use URL'},multiple:false})
-            .on('select',function(){ input.val(this.state().get('selection').first().toJSON().url); })
-            .open(); 
+        function gbRenderPreview($wrap, url){
+            if(!$wrap.length) return;
+            var $prev = $wrap.find('.gb-img-preview');
+            if(!url){ $prev.remove(); return; }
+            if(!$prev.length){
+                $prev = $('<div class="gb-img-preview" style="margin-top:8px;"></div>').appendTo($wrap);
+            }
+            $prev.html('<img src="'+url+'" alt="" style="max-width:140px; height:auto; border-radius:6px; border:1px solid #e2e8f0; display:block;">');
+        }
+
+        // Show a preview for any image field that already has a URL saved.
+        $('.gb-upload-wrapper').each(function(){
+            var $wrap = $(this);
+            gbRenderPreview($wrap, $wrap.find('input').val());
+        });
+
+        $('.gb-upload-btn').on('click', function(e){
+            e.preventDefault();
+            var $btn = $(this);
+            var $input = $btn.closest('.gb-upload-wrapper').find('input').first();
+            if(!$input.length){ $input = $btn.prev('input'); }
+            // A fresh frame per click avoids stale selection state between fields.
+            var frame = wp.media({ title: 'Select or upload image', button: { text: 'Use this image' }, multiple: false });
+            frame.on('select', function(){
+                var att = frame.state().get('selection').first().toJSON();
+                $input.val(att.url).trigger('change');
+                gbRenderPreview($btn.closest('.gb-upload-wrapper'), att.url);
+            });
+            frame.open();
         });
     });
     </script>
