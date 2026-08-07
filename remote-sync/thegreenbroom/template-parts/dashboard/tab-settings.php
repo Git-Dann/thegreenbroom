@@ -22,15 +22,34 @@ $support_email = get_post_meta($settings_id, '_gb_support_email', true) ?: 'info
 $support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '07974 903568';
 $from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
 $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
+$active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
+$settings_sections = ['env', 'safeguarding', 'email', 'social', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
+if (!in_array($active_settings_section, $settings_sections, true)) {
+    $active_settings_section = 'env';
+}
 ?>
 
 <style>
-    /* Ensure the tab uses the same Layout Tokens as tab-pages.php */
-    .gb-builder-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
-    .gb-builder-layout { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
-    .gb-builder-nav { display: none; }
-    .gb-nav-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; position: sticky; top: 20px; }
+    .gb-settings-header { align-items: center; }
+    .gb-settings-header__actions { display:flex; align-items:center; gap:12px; }
+    .gb-settings-summary { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+    .gb-settings-summary span { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #e2e8f0; border-radius:999px; background:#fff; color:#475569; font-size:11px; font-weight:700; }
+    .gb-settings-summary span::before { content:""; width:7px; height:7px; border-radius:50%; background:#94a3b8; }
+    .gb-settings-summary .is-good::before { background:#16a34a; }
+    .gb-settings-summary .is-warn::before { background:#d97706; }
+    .gb-settings-shell { display:grid; grid-template-columns:220px minmax(0, 1fr); gap:22px; align-items:start; }
+    .gb-settings-nav { position:sticky; top:20px; }
+    .gb-settings-nav-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; box-shadow:0 1px 3px rgba(15,23,42,.04); }
+    .gb-settings-nav-title { margin:0 8px 10px; color:#0f172a; font-size:13px; font-weight:800; }
+    .gb-settings-nav-link { display:flex; align-items:center; gap:10px; width:100%; padding:10px 9px; border:0; border-radius:8px; background:transparent; color:#64748b; font:inherit; font-size:12px; font-weight:700; text-align:left; text-decoration:none; cursor:pointer; }
+    .gb-settings-nav-link:hover { background:#f8fafc; color:#1b5e20; }
+    .gb-settings-nav-link.is-active { background:#ecfdf3; color:#166534; }
+    .gb-settings-nav-link small { display:block; margin-top:2px; color:#94a3b8; font-size:10px; font-weight:500; }
+    .gb-settings-nav-link.is-active small { color:#4d7c5a; }
+    .gb-settings-nav-icon { width:22px; color:inherit; text-align:center; font-size:14px; }
+    .gb-settings-content { min-width:0; }
     .gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
+    html.gb-settings-js .gb-settings-panel:not(.is-active) { display:none; }
     .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
     .gb-editor-header .dashicons { font-size: 16px; color: #64748b; }
     .gb-editor-body { padding: 25px; }
@@ -39,41 +58,64 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
     .gb-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .gb-btn-small-os { text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; color: #334155; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; transition: all 0.2s ease; background: white; cursor: pointer; }
+    .gb-btn-small-os:hover { background:#f8fafc; border-color:#cbd5e1; }
+    @media (max-width: 900px) {
+        .gb-settings-shell { grid-template-columns:1fr; }
+        .gb-settings-nav { position:static; }
+        .gb-settings-nav-card { display:flex; gap:8px; overflow-x:auto; padding:8px; }
+        .gb-settings-nav-title { display:none; }
+        .gb-settings-nav-link { flex:0 0 auto; width:auto; white-space:nowrap; }
+        .gb-settings-nav-link small { display:none; }
+        .gb-settings-nav-icon { display:none; }
+    }
+    @media (max-width: 640px) {
+        .gb-settings-header { align-items:flex-start; flex-direction:column; gap:16px; }
+        .gb-settings-header__actions { width:100%; }
+        .gb-settings-header__actions button { width:100%; }
+        .gb-editor-body { padding:18px; }
+        .gb-link-row { grid-template-columns:1fr; gap:0; }
+    }
 </style>
 
-<div class="booking-controls">
+<div class="booking-controls gb-settings-header">
     <div>
         <a href="?tab=overview" class="gb-back-link" style="text-decoration:none; color:#2e7d32; font-weight:700; font-size:13px;">← Back to Dashboard</a>
         <h1 class="gb-title" style="margin:10px 0 0; font-size:28px; font-weight:800; color:#0f172a;">Platform Settings</h1>
         <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Control payment environment, safeguarding rules, and platform configuration.</p>
+        <div class="gb-settings-summary" aria-label="Settings status">
+            <span class="<?php echo $stripe_mode === 'live' ? 'is-warn' : 'is-good'; ?>">Stripe: <?php echo esc_html($stripe_mode_label); ?></span>
+            <span class="<?php echo $brevo_enabled && $brevo_key_present ? 'is-good' : 'is-warn'; ?>">Brevo: <?php echo $brevo_enabled && $brevo_key_present ? 'Ready' : 'Needs setup'; ?></span>
+            <span class="<?php echo empty($stripe_missing) ? 'is-good' : 'is-warn'; ?>">Stripe keys: <?php echo empty($stripe_missing) ? 'Complete' : 'Action needed'; ?></span>
+        </div>
     </div>
-    <div style="display:flex; gap:12px;">
+    <div class="gb-settings-header__actions">
         <button type="submit" form="gb-settings-form" class="gb-header-btn" style="height:44px; background:#2e7d32; color:white; border:none; padding:0 30px; border-radius:8px; font-weight:700; cursor:pointer;">Update Settings</button>
     </div>
 </div>
-
-<div class="gb-builder-layout">
-    <aside class="gb-builder-nav">
-        <div class="gb-nav-card">
-            <label class="gb-label">Quick Jump</label>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <a href="#env" class="gb-btn-small-os" style="text-align:left;">🌐 Environment</a>
-                <a href="#safeguarding" class="gb-btn-small-os" style="text-align:left;">🛡️ Safeguarding</a>
-                <a href="#email" class="gb-btn-small-os" style="text-align:left;">✉️ Email</a>
-                <a href="#monetisation" class="gb-btn-small-os" style="text-align:left;">💰 Monetisation</a>
-                <a href="#stripe" class="gb-btn-small-os" style="text-align:left;">🔑 Stripe Keys</a>
-                <a href="#stripe-tools" class="gb-btn-small-os" style="text-align:left;">🛒 Stripe Tools</a>
-            </div>
+<div class="gb-builder-layout gb-settings-shell" data-settings-shell>
+    <aside class="gb-settings-nav" aria-label="Settings sections">
+        <div class="gb-settings-nav-card">
+            <p class="gb-settings-nav-title">Settings</p>
+            <a href="#env" class="gb-settings-nav-link" data-settings-target="env"><span class="gb-settings-nav-icon">🌐</span><span>Environment<small>Stripe mode</small></span></a>
+            <a href="#safeguarding" class="gb-settings-nav-link" data-settings-target="safeguarding"><span class="gb-settings-nav-icon">🛡</span><span>Safeguarding<small>Booking rules</small></span></a>
+            <a href="#email" class="gb-settings-nav-link" data-settings-target="email"><span class="gb-settings-nav-icon">✉</span><span>Email &amp; delivery<small>Brevo and sender</small></span></a>
+            <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
+            <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
+            <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
+            <a href="#stripe" class="gb-settings-nav-link" data-settings-target="stripe"><span class="gb-settings-nav-icon">🔑</span><span>Stripe credentials<small>Keys and webhooks</small></span></a>
+            <a href="#stripe-tools" class="gb-settings-nav-link" data-settings-target="stripe-tools"><span class="gb-settings-nav-icon">🛒</span><span>Stripe tools<small>Storefront preview</small></span></a>
+            <a href="#account" class="gb-settings-nav-link" data-settings-target="account"><span class="gb-settings-nav-icon">●</span><span>Your account<small>Password</small></span></a>
         </div>
     </aside>
 
-    <div class="gb-builder-content">
+    <div class="gb-builder-content gb-settings-content">
         <form method="post" id="gb-settings-form">
             <input type="hidden" name="gb_save_action" value="save_settings">
             <input type="hidden" name="post_id" value="<?php echo $settings_id; ?>">
+            <input type="hidden" name="_gb_settings_section" value="<?php echo esc_attr($active_settings_section); ?>">
             <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
 
-            <div id="env" class="gb-editor-section">
+            <div id="env" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-admin-site"></span> API Environment</div>
                 <div class="gb-editor-body">
                     <div style="margin:0 0 16px; padding:12px 14px; border:1px solid <?php echo $stripe_mode === 'live' ? '#fde68a' : '#bfdbfe'; ?>; border-radius:8px; background:<?php echo $stripe_mode === 'live' ? '#fffbeb' : '#eff6ff'; ?>; color:<?php echo $stripe_mode === 'live' ? '#92400e' : '#1d4ed8'; ?>; font-size:13px;">
@@ -94,7 +136,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="safeguarding" class="gb-editor-section">
+            <div id="safeguarding" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-shield-alt"></span> Standards & Safeguarding</div>
                 <div class="gb-editor-body">
                     <div class="gb-link-row" style="margin-bottom: 20px;">
@@ -127,7 +169,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="email" class="gb-editor-section">
+            <div id="email" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-email-alt"></span> Email & Delivery</div>
                 <div class="gb-editor-body">
                     <div style="margin:0 0 18px; padding:12px 14px; border:1px solid <?php echo $brevo_enabled && $brevo_key_present ? '#bbf7d0' : '#fde68a'; ?>; border-radius:8px; background:<?php echo $brevo_enabled && $brevo_key_present ? '#f0fdf4' : '#fffbeb'; ?>; color:<?php echo $brevo_enabled && $brevo_key_present ? '#166534' : '#92400e'; ?>; font-size:13px;">
@@ -195,7 +237,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="social" class="gb-editor-section">
+            <div id="social" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-share"></span> Social Media & Notifications</div>
                 <div class="gb-editor-body">
                     <div class="gb-form-row" style="margin-bottom:22px;">
@@ -234,7 +276,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="agreement" class="gb-editor-section">
+            <div id="agreement" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-media-document"></span> Cleaner Terms of Association (E-Signature)</div>
                 <div class="gb-editor-body">
                     <div style="margin:0 0 16px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
@@ -248,7 +290,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="monetisation" class="gb-editor-section">
+            <div id="monetisation" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-chart-area"></span> Tax & Monetisation</div>
                 <div class="gb-editor-body">
                     <div class="gb-link-row" style="margin-bottom: 20px;">
@@ -272,7 +314,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
                 </div>
             </div>
 
-            <div id="stripe" class="gb-editor-section">
+            <div id="stripe" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-shield"></span> Stripe Connect Credentials</div>
                 <div class="gb-editor-body">
                     <?php if (!empty($stripe_missing)): ?>
@@ -360,7 +402,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
             </div>
         </form>
 
-        <div id="stripe-tools" class="gb-editor-section">
+        <div id="stripe-tools" class="gb-editor-section gb-settings-panel">
             <div class="gb-editor-header"><span class="dashicons dashicons-cart"></span> Stripe Connect Commerce Toolkit (Sample)</div>
             <div class="gb-editor-body">
                 <?php if ($stripe_notice !== '' && $stripe_msg !== ''): ?>
@@ -377,7 +419,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
             </div>
         </div>
 
-        <div id="account" class="gb-editor-section">
+        <div id="account" class="gb-editor-section gb-settings-panel">
             <div class="gb-editor-header"><span class="dashicons dashicons-admin-users"></span> Your Account &amp; Password</div>
             <div class="gb-editor-body">
                 <?php echo function_exists('gb_password_notice_html') ? gb_password_notice_html() : ''; ?>
@@ -404,3 +446,47 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
         </div>
     </div>
 </div>
+<script>
+(function () {
+    var shell = document.querySelector('[data-settings-shell]');
+    if (!shell) return;
+
+    document.documentElement.classList.add('gb-settings-js');
+    var panels = Array.prototype.slice.call(shell.querySelectorAll('.gb-settings-panel'));
+    var links = Array.prototype.slice.call(shell.querySelectorAll('[data-settings-target]'));
+    var defaultSection = <?php echo wp_json_encode($active_settings_section); ?>;
+
+    function activate(section, updateUrl) {
+        var target = panels.find(function (panel) { return panel.id === section; });
+        if (!target) {
+            section = defaultSection;
+            target = panels.find(function (panel) { return panel.id === section; });
+        }
+
+        panels.forEach(function (panel) {
+            panel.classList.toggle('is-active', panel === target);
+        });
+        links.forEach(function (link) {
+            var active = link.getAttribute('data-settings-target') === section;
+            link.classList.toggle('is-active', active);
+            if (active) link.setAttribute('aria-current', 'page');
+            else link.removeAttribute('aria-current');
+        });
+
+        if (updateUrl) {
+            window.history.replaceState({}, '', window.location.pathname + '?tab=settings&section=' + encodeURIComponent(section));
+        }
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    links.forEach(function (link) {
+        link.addEventListener('click', function (event) {
+            event.preventDefault();
+            activate(link.getAttribute('data-settings-target'), true);
+        });
+    });
+
+    var hashSection = window.location.hash ? window.location.hash.slice(1) : '';
+    activate(hashSection || defaultSection, false);
+})();
+</script>

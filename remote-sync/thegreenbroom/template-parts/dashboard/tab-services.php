@@ -25,6 +25,40 @@ $connected_cleaners = get_posts([
     .gb-pill-ok { background:#dcfce7; color:#166534; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }
     .gb-pill-muted { background:#f1f5f9; color:#475569; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }
     .gb-pill-warn { background:#fffbeb; color:#92400e; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }
+    .gb-services-toolbar { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:24px; }
+    .gb-services-summary { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .gb-services-summary span { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #e2e8f0; border-radius:999px; background:#fff; color:#64748b; font-size:11px; font-weight:700; }
+    .gb-services-summary strong { color:#0f172a; }
+    .gb-service-list { display:grid; gap:12px; }
+    .gb-service-item { display:grid; grid-template-columns:minmax(260px,1.5fr) minmax(240px,1fr) minmax(220px,1fr) auto; gap:20px; align-items:center; padding:20px 22px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 1px 3px rgba(15,23,42,.04); }
+    .gb-service-main { display:flex; align-items:flex-start; gap:14px; min-width:0; }
+    .gb-service-icon { display:flex; align-items:center; justify-content:center; flex:0 0 42px; width:42px; height:42px; border-radius:10px; background:#f0fdf4; font-size:22px; }
+    .gb-service-heading { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+    .gb-service-heading h2 { margin:0; color:#1b5e20; font-size:15px; line-height:1.3; }
+    .gb-service-description { margin:5px 0 0; color:#64748b; font-size:12px; line-height:1.45; }
+    .gb-service-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 18px; }
+    .gb-service-meta-item span, .gb-service-integration span { display:block; color:#94a3b8; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+    .gb-service-meta-item strong { display:block; margin-top:3px; color:#0f172a; font-size:13px; }
+    .gb-service-integrations { display:grid; gap:10px; min-width:0; }
+    .gb-service-integration { min-width:0; }
+    .gb-service-integration strong { display:block; margin-top:3px; color:#334155; font-size:12px; overflow-wrap:anywhere; }
+    .gb-service-integration .gb-pill-ok, .gb-service-integration .gb-pill-muted, .gb-service-integration .gb-pill-warn { display:inline-block; margin-top:4px; }
+    .gb-service-integration small { display:block; margin-top:4px; color:#b45309; font-size:11px; line-height:1.35; }
+    .gb-service-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:7px; min-width:132px; }
+    .gb-service-actions .gb-btn-small-os { justify-content:center; padding:8px 10px; }
+    .gb-service-empty { padding:55px 20px; text-align:center; background:#fff; border:1px solid #e2e8f0; border-radius:12px; color:#64748b; }
+    @media (max-width: 1120px) {
+        .gb-service-item { grid-template-columns:minmax(250px,1.5fr) minmax(210px,1fr) minmax(190px,1fr); }
+        .gb-service-actions { grid-column:1 / -1; justify-content:flex-start; border-top:1px solid #f1f5f9; padding-top:14px; }
+    }
+    @media (max-width: 760px) {
+        .gb-services-toolbar { align-items:flex-start; flex-direction:column; }
+        .gb-services-toolbar > a { width:100%; text-align:center; }
+        .gb-service-item { grid-template-columns:1fr; gap:16px; padding:18px; }
+        .gb-service-meta { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .gb-service-actions { grid-column:auto; }
+        .gb-service-actions .gb-btn-small-os { flex:1 1 calc(50% - 7px); }
+    }
 </style>
 
 <?php if ($stripe_sync_state === 'error' && $stripe_sync_msg !== ''): ?>
@@ -156,38 +190,37 @@ $connected_cleaners = get_posts([
     </form>
 
 <?php else: ?>
-    <div class="booking-controls">
+    <?php
+    $services = new WP_Query([
+        'post_type' => 'gb_service',
+        'posts_per_page' => -1,
+        'post_status' => ['publish', 'draft'],
+        'orderby' => 'date',
+        'order' => 'DESC',
+    ]);
+    $service_total = (int) $services->found_posts;
+    $service_live_total = 0;
+    foreach ($services->posts as $service_post) {
+        if ($service_post->post_status === 'publish') {
+            $service_live_total++;
+        }
+    }
+    ?>
+    <div class="gb-services-toolbar">
         <div>
             <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Service Configuration</h1>
             <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Your services are your product catalog. Add, hide, and sync products here.</p>
+            <div class="gb-services-summary" aria-label="Service catalog summary">
+                <span><strong><?php echo esc_html($service_live_total); ?></strong> live</span>
+                <span><strong><?php echo esc_html($service_total - $service_live_total); ?></strong> hidden</span>
+                <span><strong><?php echo esc_html($service_total); ?></strong> total</span>
+            </div>
         </div>
         <a href="?tab=services&action=edit&id=0" class="gb-btn-primary-os">+ Add Service</a>
     </div>
 
-    <div class="gb-card" style="padding:0; overflow:hidden;">
-        <table class="gb-booking-table">
-            <thead>
-                <tr>
-                    <th style="width:60px; text-align:center;">Icon</th>
-                    <th>Service</th>
-                    <th style="width:110px;">Status</th>
-                    <th style="width:120px;">Duration</th>
-                    <th style="width:120px;">Surcharge</th>
-                    <th style="width:190px;">Stripe Product</th>
-                    <th style="width:170px;">Destination</th>
-                    <th style="text-align:right; width:240px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $services = new WP_Query([
-                    'post_type' => 'gb_service',
-                    'posts_per_page' => -1,
-                    'post_status' => ['publish', 'draft'],
-                    'orderby' => 'date',
-                    'order' => 'DESC', // newest services at the top
-                ]);
-                if ($services->have_posts()):
+    <div class="gb-service-list">
+                <?php if ($services->have_posts()):
                     while ($services->have_posts()): $services->the_post();
                         $service_id = get_the_ID();
                         $dur = (int) get_post_meta($service_id, '_gb_service_duration', true);
@@ -199,11 +232,19 @@ $connected_cleaners = get_posts([
                         $destination_cleaner_id = absint(get_post_meta($service_id, '_gb_service_destination_cleaner_id', true));
                         $destination_account = function_exists('gb_get_service_destination_account_id') ? gb_get_service_destination_account_id($service_id) : '';
                         $destination_label = 'Not mapped';
+                        $destination_state = 'No cleaner account selected';
                         if ($destination_cleaner_id) {
                             $destination_post = get_post($destination_cleaner_id);
                             if ($destination_post) {
-                                $destination_label = $destination_post->post_title . ($destination_account ? ' - ' . $destination_account : '');
+                                $destination_label = $destination_post->post_title;
+                                $destination_state = $destination_account ? 'Connected for storefront payments' : 'Cleaner account not connected';
                             }
+                        }
+                        $stripe_error_label = $stripe_last_error;
+                        if (stripos($stripe_last_error, 'api key') !== false || stripos($stripe_last_error, 'invalid api') !== false) {
+                            $stripe_error_label = 'Stripe rejected the saved API key. Check the active mode credentials in Settings.';
+                        } elseif ($stripe_error_label !== '') {
+                            $stripe_error_label = wp_trim_words($stripe_error_label, 12, '...');
                         }
 
                         $toggle_target = $status === 'publish' ? 'draft' : 'publish';
@@ -233,46 +274,49 @@ $connected_cleaners = get_posts([
                             'gb_manager_action_delete_entity_' . $service_id
                         );
                 ?>
-                    <tr>
-                        <td style="font-size:24px; text-align:center;"><?php echo esc_html($icon ?: '🧹'); ?></td>
-                        <td>
-                            <strong style="color:#1b5e20; font-size:15px;"><?php the_title(); ?></strong>
-                            <div style="color:#64748b; font-size:12px; margin-top:4px;"><?php echo esc_html(wp_trim_words(get_the_content(), 10)); ?></div>
-                        </td>
-                        <td>
-                            <?php if ($status === 'publish'): ?>
-                                <span class="gb-pill-ok">Live</span>
-                            <?php else: ?>
-                                <span class="gb-pill-muted">Hidden</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><span style="font-weight:700; color:#0f172a; font-size:13px;"><?php echo esc_html(max(1, $dur)); ?> Hours</span></td>
-                        <td><span style="font-weight:700; color:#0f172a; font-size:13px;"><?php echo esc_html('£' . number_format($price, 2)); ?>/hr</span></td>
-                        <td>
+                    <article class="gb-service-item">
+                        <div class="gb-service-main">
+                            <div class="gb-service-icon" aria-hidden="true"><?php echo esc_html($icon ?: '🧹'); ?></div>
+                            <div>
+                                <div class="gb-service-heading">
+                                    <h2><?php the_title(); ?></h2>
+                                    <?php if ($status === 'publish'): ?>
+                                        <span class="gb-pill-ok">Live</span>
+                                    <?php else: ?>
+                                        <span class="gb-pill-muted">Hidden</span>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="gb-service-description"><?php echo esc_html(wp_trim_words(get_the_content(), 16)); ?></p>
+                            </div>
+                        </div>
+                        <div class="gb-service-meta">
+                            <div class="gb-service-meta-item"><span>Duration</span><strong><?php echo esc_html(max(1, $dur)); ?> hours</strong></div>
+                            <div class="gb-service-meta-item"><span>Surcharge</span><strong><?php echo esc_html('£' . number_format($price, 2)); ?>/hr</strong></div>
+                        </div>
+                        <div class="gb-service-integrations">
+                            <div class="gb-service-integration">
+                                <span>Stripe product</span>
                             <?php if ($stripe_product_id !== ''): ?>
                                 <span class="gb-pill-ok">Synced</span>
-                                <div style="font-size:11px; color:#64748b; margin-top:4px;"><?php echo esc_html($stripe_product_id); ?></div>
+                                <small><?php echo esc_html($stripe_product_id); ?></small>
                             <?php elseif ($stripe_last_error !== ''): ?>
                                 <span class="gb-pill-warn">Error</span>
-                                <div style="font-size:11px; color:#b45309; margin-top:4px;"><?php echo esc_html($stripe_last_error); ?></div>
+                                <small><?php echo esc_html($stripe_error_label); ?></small>
                             <?php else: ?>
                                 <span class="gb-pill-muted">Pending</span>
                             <?php endif; ?>
-                        </td>
-                        <td style="font-size:12px; color:#334155;"><?php echo esc_html($destination_label); ?></td>
-                        <td style="text-align:right;">
-                            <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
-                                <a href="?tab=services&action=edit&id=<?php echo $service_id; ?>" class="gb-btn-small-os">Edit</a>
-                                <a href="<?php echo esc_url($sync_url); ?>" class="gb-btn-small-os">Sync</a>
-                                <a href="<?php echo esc_url($toggle_url); ?>" class="gb-btn-small-os"><?php echo esc_html($toggle_label); ?></a>
-                                <a href="<?php echo esc_url($delete_url); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Delete this service? It will be moved to trash.');">Delete</a>
                             </div>
-                        </td>
-                    </tr>
+                            <div class="gb-service-integration"><span>Destination</span><strong><?php echo esc_html($destination_label); ?></strong><small style="color:#64748b;"><?php echo esc_html($destination_state); ?></small></div>
+                        </div>
+                        <div class="gb-service-actions">
+                            <a href="?tab=services&action=edit&id=<?php echo $service_id; ?>" class="gb-btn-small-os">Edit</a>
+                            <a href="<?php echo esc_url($sync_url); ?>" class="gb-btn-small-os">Sync</a>
+                            <a href="<?php echo esc_url($toggle_url); ?>" class="gb-btn-small-os"><?php echo esc_html($toggle_label); ?></a>
+                            <a href="<?php echo esc_url($delete_url); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Delete this service? It will be moved to trash.');">Delete</a>
+                        </div>
+                    </article>
                 <?php endwhile; else: ?>
-                    <tr><td colspan="8" style="text-align:center; padding:80px 0;"><h3 style="color:#94a3b8;">No services defined</h3></td></tr>
+                    <div class="gb-service-empty"><h3 style="margin:0 0 6px; color:#475569;">No services defined</h3><p style="margin:0;">Add your first service to start building the booking catalog.</p></div>
                 <?php endif; wp_reset_postdata(); ?>
-            </tbody>
-        </table>
     </div>
 <?php endif; ?>

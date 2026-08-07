@@ -361,7 +361,16 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     }
 
     if ($save_action === 'save_settings') {
-        wp_redirect(home_url('/manager-dashboard?tab=settings&msg=saved')); exit;
+        $settings_section = isset($_POST['_gb_settings_section']) ? sanitize_key(wp_unslash($_POST['_gb_settings_section'])) : 'env';
+        $allowed_settings_sections = ['env', 'safeguarding', 'email', 'social', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
+        if (!in_array($settings_section, $allowed_settings_sections, true)) {
+            $settings_section = 'env';
+        }
+        wp_safe_redirect(add_query_arg([
+            'tab' => 'settings',
+            'section' => $settings_section,
+            'msg' => 'saved',
+        ], home_url('/manager-dashboard'))); exit;
     }
 }
 
