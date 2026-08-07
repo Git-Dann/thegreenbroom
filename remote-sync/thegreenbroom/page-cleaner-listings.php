@@ -55,7 +55,7 @@ if ( count($meta_filters) === 1 ) {
 
 $cleaners = new WP_Query($args);
 
-$listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find a cleaner:';
+$listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find Your Professional';
 $listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Search by Postcode, not by name.';
 $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No professionals found. Try adjusting your search criteria.';
 ?>
