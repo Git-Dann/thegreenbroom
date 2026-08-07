@@ -456,7 +456,21 @@ function gb_notify_support_message( $message_id, $context = 'Contact' ) {
         $headers[] = 'Reply-To: ' . $sender_name . ' <' . $sender_email . '>';
     }
 
-    wp_mail( $to, $subject, $body, $headers );
+    gb_send_brevo_template_email(
+        $to,
+        $subject,
+        $body,
+        $headers,
+        gb_get_brevo_template_id( 'manager_message' ),
+        [
+            'context'       => $context,
+            'sender_name'   => $sender_name,
+            'sender_email'  => $sender_email,
+            'subject'       => $subject_line,
+            'message'       => $body_text,
+            'dashboard_url' => $dashboard_url,
+        ]
+    );
 }
 
 /**
@@ -988,6 +1002,113 @@ function gb_brevo_parse_headers( $headers ) {
 }
 
 /**
+ * Brevo template IDs for the branded transactional flows.
+ * These IDs are account-level Brevo template IDs, not WordPress post IDs.
+ */
+function gb_get_brevo_template_ids() {
+    return [
+        'verification'         => 1,
+        'password_reset'       => 2,
+        'booking_customer'     => 3,
+        'booking_cleaner'      => 4,
+        'support_reply'        => 5,
+        'manager_message'      => 6,
+        'subscription_expired' => 7,
+    ];
+}
+
+function gb_get_brevo_template_id( $key ) {
+    $ids = gb_get_brevo_template_ids();
+    return isset( $ids[ $key ] ) ? absint( $ids[ $key ] ) : 0;
+}
+
+function gb_brevo_first_name( $name, $fallback = 'there' ) {
+    $name = trim( wp_strip_all_tags( (string) $name ) );
+    if ( $name === '' ) {
+        return $fallback;
+    }
+
+    $parts = preg_split( '/\s+/', $name );
+    return ! empty( $parts[0] ) ? sanitize_text_field( $parts[0] ) : $fallback;
+}
+
+function gb_get_email_recipient_url( $email ) {
+    $user = get_user_by( 'email', sanitize_email( (string) $email ) );
+    if ( $user instanceof WP_User && function_exists( 'gb_get_user_dashboard_url' ) ) {
+        return gb_get_user_dashboard_url( $user );
+    }
+
+    return home_url( '/contact-support' );
+}
+
+/**
+ * Send a named Brevo template while retaining wp_mail as the local fallback
+ * when Brevo is disabled or not configured.
+ */
+function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers = [], $template_id = 0, $params = [] ) {
+    if ( ! gb_is_brevo_configured() ) {
+        return wp_mail( $to, $subject, $plain_message, $headers );
+    }
+
+    $settings = gb_get_brevo_settings();
+    $recipients = gb_brevo_recipients( $to );
+    if ( empty( $recipients ) || absint( $template_id ) < 1 ) {
+        return false;
+    }
+
+    $parsed_headers = gb_brevo_parse_headers( $headers );
+    $payload = [
+        'sender'     => [
+            'name'  => $settings['from_name'],
+            'email' => $settings['from_address'],
+        ],
+        'to'         => $recipients,
+        'templateId' => absint( $template_id ),
+        'subject'    => sanitize_text_field( (string) $subject ),
+        'params'     => is_array( $params ) ? $params : [],
+    ];
+
+    $reply_to = ! empty( $parsed_headers['reply_to'] ) ? $parsed_headers['reply_to'][0] : gb_get_email_reply_to();
+    if ( is_array( $reply_to ) && is_email( $reply_to['email'] ?? '' ) ) {
+        $payload['replyTo'] = $reply_to;
+    } elseif ( is_email( $reply_to ) ) {
+        $payload['replyTo'] = [ 'email' => $reply_to ];
+    }
+    if ( ! empty( $parsed_headers['cc'] ) ) {
+        $payload['cc'] = $parsed_headers['cc'];
+    }
+    if ( ! empty( $parsed_headers['bcc'] ) ) {
+        $payload['bcc'] = $parsed_headers['bcc'];
+    }
+
+    $result = gb_brevo_api_request( 'smtp/email', $payload, 'POST' );
+    return ! is_wp_error( $result );
+}
+
+/**
+ * WordPress core builds the password-reset message internally. Capture its
+ * one-time URL so the pre_wp_mail bridge can use the branded Brevo template.
+ */
+add_filter( 'retrieve_password_message', function ( $message, $key, $user_login, $user_data = null ) {
+    if ( ! ( $user_data instanceof WP_User ) ) {
+        $user_data = get_user_by( 'login', $user_login );
+    }
+
+    if ( $user_data instanceof WP_User ) {
+        $GLOBALS['gb_pending_password_reset'] = [
+            'email'      => $user_data->user_email,
+            'first_name' => gb_brevo_first_name( $user_data->first_name ?: $user_data->display_name ),
+            'reset_url'  => network_site_url(
+                'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user_login ),
+                'login'
+            ),
+        ];
+    }
+
+    return $message;
+}, 10, 4 );
+
+/**
  * Send all existing wp_mail calls through Brevo when enabled. This keeps the
  * site's verification, support, booking, and password email flows together.
  */
@@ -1003,6 +1124,24 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
     }
 
     $headers = gb_brevo_parse_headers( $atts['headers'] ?? [] );
+    $subject = sanitize_text_field( (string) ( $atts['subject'] ?? '' ) );
+
+    $pending_reset = $GLOBALS['gb_pending_password_reset'] ?? [];
+    if ( ! empty( $pending_reset['reset_url'] ) && stripos( $subject, 'password reset' ) !== false ) {
+        unset( $GLOBALS['gb_pending_password_reset'] );
+        return gb_send_brevo_template_email(
+            $recipients[0]['email'],
+            $subject,
+            (string) ( $atts['message'] ?? '' ),
+            $atts['headers'] ?? [],
+            gb_get_brevo_template_id( 'password_reset' ),
+            [
+                'first_name' => $pending_reset['first_name'] ?? 'there',
+                'reset_url'  => $pending_reset['reset_url'],
+            ]
+        );
+    }
+
     $message = (string) ( $atts['message'] ?? '' );
     $payload = [
         'sender'      => [
@@ -1010,7 +1149,7 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
             'email' => $settings['from_address'],
         ],
         'to'          => $recipients,
-        'subject'     => sanitize_text_field( (string) ( $atts['subject'] ?? '' ) ),
+        'subject'     => $subject,
         'htmlContent' => $headers['is_html'] ? $message : wpautop( esc_html( $message ) ),
         'textContent' => wp_strip_all_tags( $message ),
     ];
@@ -1329,7 +1468,17 @@ function gb_send_email_verification( $user_id, $respect_rate_limit = false ) {
 
     $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
 
-    $sent = wp_mail( $user->user_email, $subject, $message, $headers );
+    $sent = gb_send_brevo_template_email(
+        $user->user_email,
+        $subject,
+        $message,
+        $headers,
+        gb_get_brevo_template_id( 'verification' ),
+        [
+            'first_name'        => gb_brevo_first_name( $user->first_name ?: $user->display_name ),
+            'verification_url'  => $verification_url,
+        ]
+    );
     update_user_meta( $user->ID, 'gb_email_verification_last_sent_at', current_time( 'mysql' ) );
 
     if ( ! $sent ) {
@@ -2515,7 +2664,18 @@ add_action('init', function () {
         if (is_email($reply_to)) {
             $headers[] = 'Reply-To: ' . $reply_to;
         }
-        $sent = wp_mail($to, $subject, $body, $headers);
+        $sent = gb_send_brevo_template_email(
+            $to,
+            $subject,
+            $body,
+            $headers,
+            gb_get_brevo_template_id( 'support_reply' ),
+            [
+                'first_name'     => gb_brevo_first_name( (string) get_post_meta($mid, '_gb_sender_name', true) ),
+                'reply_message'  => $reply_body,
+                'inbox_url'      => gb_get_email_recipient_url( $to ),
+            ]
+        );
     }
 
     update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
@@ -3405,7 +3565,27 @@ function gb_send_booking_confirmation_emails($booking_id) {
                  . ($total_fmt ? "Total paid:   {$total_fmt}\n" : '')
                  . "\nView your booking: {$booking_url}\n\n"
                  . "Thank you for booking with {$site_name}.";
-        wp_mail($customer_email, $subject, $body);
+        $customer_duration = $duration > 0
+            ? $duration . ' hour' . ($duration === 1 ? '' : 's')
+            : '';
+        gb_send_brevo_template_email(
+            $customer_email,
+            $subject,
+            $body,
+            [],
+            gb_get_brevo_template_id( 'booking_customer' ),
+            [
+                'first_name'         => gb_brevo_first_name( $customer_name ),
+                'booking_url'        => $booking_url,
+                'service'            => $service,
+                'professional_name'  => $cleaner_name,
+                'date'               => $date_fmt,
+                'time'               => $time_fmt,
+                'duration'           => $customer_duration,
+                'address'            => $address,
+                'total'              => $total_fmt,
+            ]
+        );
     }
 
     // — Cleaner email —
@@ -3422,7 +3602,26 @@ function gb_send_booking_confirmation_emails($booking_id) {
                      . "Address:  {$address}\n\n"
                      . "Log in to your dashboard to view full details: " . home_url('/cleaner-dashboard') . "\n\n"
                      . $site_name;
-            wp_mail($cleaner_user->user_email, $subject, $body);
+            $cleaner_duration = $duration > 0
+                ? $duration . ' hour' . ($duration === 1 ? '' : 's')
+                : '';
+            gb_send_brevo_template_email(
+                $cleaner_user->user_email,
+                $subject,
+                $body,
+                [],
+                gb_get_brevo_template_id( 'booking_cleaner' ),
+                [
+                    'first_name'     => gb_brevo_first_name( $cleaner_name ),
+                    'booking_url'    => home_url( '/cleaner-dashboard' ),
+                    'service'        => $service,
+                    'customer_name'  => $customer_name,
+                    'date'           => $date_fmt,
+                    'time'           => $time_fmt,
+                    'duration'       => $cleaner_duration,
+                    'address'        => $address,
+                ]
+            );
         }
     }
 }

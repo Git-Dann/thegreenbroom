@@ -85,11 +85,27 @@ class GB_Roles {
             return;
         }
 
-        wp_mail(
-            $user->user_email,
-            'Your Green Broom subscription has expired',
-            "Hi {$user->display_name},\n\nYour subscription has expired and your listing is no longer visible to clients.\n\nTo reactivate, please contact us at " . get_option( 'admin_email' ) . ".\n\nThe Green Broom"
-        );
+        $subject = 'Your Green Broom subscription has expired';
+        $message = "Hi {$user->display_name},\n\nYour subscription has expired and your listing is no longer visible to clients.\n\nTo reactivate, please contact us at " . get_option( 'admin_email' ) . ".\n\nThe Green Broom";
+        $params = [
+            'first_name'  => function_exists( 'gb_brevo_first_name' )
+                ? gb_brevo_first_name( $user->first_name ?: $user->display_name )
+                : $user->display_name,
+            'support_url' => home_url( '/contact-support' ),
+        ];
+
+        if ( function_exists( 'gb_send_brevo_template_email' ) && function_exists( 'gb_get_brevo_template_id' ) ) {
+            gb_send_brevo_template_email(
+                $user->user_email,
+                $subject,
+                $message,
+                [],
+                gb_get_brevo_template_id( 'subscription_expired' ),
+                $params
+            );
+        } else {
+            wp_mail( $user->user_email, $subject, $message );
+        }
     }
 
     // --- Cron Logic --- //
