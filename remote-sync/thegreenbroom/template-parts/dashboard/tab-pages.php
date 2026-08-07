@@ -27,7 +27,25 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-textarea { min-height: 70px; resize: vertical; }
-    .gb-upload-wrapper { display: flex; gap: 10px; margin-top: 5px; }
+    .gb-upload-wrapper { margin-top: 5px; }
+    .gb-media-field { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 14px; align-items: stretch; }
+    .gb-media-controls { min-width: 0; }
+    .gb-media-input-row { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
+    .gb-media-input-row:focus-within { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
+    .gb-media-input-row .dashicons { flex: 0 0 auto; color: #94a3b8; }
+    .gb-media-input { min-width: 0; width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: #334155; font-size: 13px; }
+    .gb-media-input::placeholder { color: #94a3b8; }
+    .gb-media-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+    .gb-media-actions .gb-upload-btn { border-color: #2e7d32; color: #2e7d32; }
+    .gb-media-actions .gb-upload-btn:hover { border-color: #256b2a; background: #f0fdf4; }
+    .gb-media-clear { display: none; }
+    .gb-media-field.has-value .gb-media-clear { display: inline-flex; }
+    .gb-media-help { margin: 8px 0 0; color: #94a3b8; font-size: 11px; }
+    .gb-media-preview { display: flex; align-items: center; justify-content: center; min-height: 92px; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 9px; background: #f8fafc; }
+    .gb-media-preview img { display: block; width: 100%; height: 100%; min-height: 92px; max-height: 116px; object-fit: cover; }
+    .gb-media-preview.is-empty::before { content: '\f128'; font-family: dashicons; color: #cbd5e1; font-size: 24px; }
+    .gb-media-preview.is-error::before { content: '\f534'; font-family: dashicons; color: #f59e0b; font-size: 24px; }
+    @media (max-width: 700px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 140px; } .gb-media-preview img { min-height: 140px; max-height: 190px; } }
     .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .gb-sub-head { font-size: 11px; font-weight: 800; color: #2e7d32; margin: 25px 0 10px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
     
@@ -276,6 +294,33 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
 
         return $fallback;
     };
+
+    $gb_render_media_field = static function($field_name, $label, $value) {
+        $field_value = is_scalar($value) ? (string) $value : '';
+        ?>
+        <div class="gb-form-row">
+            <label class="gb-label"><?php echo esc_html($label); ?></label>
+            <div class="gb-upload-wrapper">
+                <div class="gb-media-field<?php echo $field_value !== '' ? ' has-value' : ''; ?>" data-media-field>
+                    <div class="gb-media-controls">
+                        <div class="gb-media-input-row">
+                            <span class="dashicons dashicons-format-image" aria-hidden="true"></span>
+                            <input type="text" name="<?php echo esc_attr($field_name); ?>" class="gb-media-input" value="<?php echo esc_attr($field_value); ?>" placeholder="Paste an image URL or choose from the library">
+                        </div>
+                        <div class="gb-media-actions">
+                            <button type="button" class="gb-upload-btn gb-btn-small-os"><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span> Choose image</button>
+                            <button type="button" class="gb-media-clear gb-btn-small-os">Clear</button>
+                        </div>
+                        <p class="gb-media-help">Choose an image from the WordPress media library, or paste a public image URL.</p>
+                    </div>
+                    <div class="gb-media-preview<?php echo $field_value === '' ? ' is-empty' : ''; ?>" data-media-preview>
+                        <?php if ($field_value !== ''): ?><img src="<?php echo esc_url($field_value); ?>" alt="" data-media-preview-image><?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    };
 ?>
     
     <div class="gb-builder-header">
@@ -335,13 +380,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                                 : ($slug == 'join' ? '_gb_join_hero_sub' : '')))));
                         ?>
                         <?php if ($h_bg_k): ?>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Background URL</label>
-                                <div class="gb-upload-wrapper">
-                                    <input type="text" name="<?php echo esc_attr($h_bg_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_bg_k)); ?>">
-                                    <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
-                                </div>
-                            </div>
+                            <?php $gb_render_media_field($h_bg_k, 'Background image', $gb_field_value($h_bg_k)); ?>
                         <?php endif; ?>
                         <?php if ($h_title_k && $h_sub_k): ?>
                             <div class="gb-form-row"><label class="gb-label">Headline</label><input type="text" name="<?php echo esc_attr($h_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_title_k)); ?>"></div>
@@ -393,7 +432,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                         <div class="gb-editor-section">
                             <div class="gb-editor-header"><span class="dashicons dashicons-megaphone"></span> Value Proposition & Trust</div>
                             <div class="gb-editor-body">
-                                <div class="gb-form-row"><label class="gb-label">Image</label><div class="gb-upload-wrapper"><input type="text" name="_gb_split_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_split_img')); ?>"><button type="button" class="gb-upload-btn gb-btn-small-os">Select</button></div></div>
+                                <?php $gb_render_media_field('_gb_split_img', 'Image', $gb_field_value('_gb_split_img')); ?>
                                 <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_split_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_split_head')); ?>"></div>
                                 <div class="gb-form-row"><label class="gb-label">Body Text</label><textarea name="_gb_split_body" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_split_body')); ?></textarea></div>
                                 <div class="gb-form-row"><label class="gb-label">Bullet Items</label>
@@ -439,13 +478,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         <input type="text" name="_gb_testi<?php echo $i; ?>_auth" class="gb-input" style="margin-top:8px;" placeholder="Author" value="<?php echo esc_attr($gb_field_value("_gb_testi{$i}_auth")); ?>">
                                     </div>
                                 <?php endfor; ?>
-                                <div class="gb-form-row">
-                                    <label class="gb-label">Middle Showcase Image</label>
-                                    <div class="gb-upload-wrapper">
-                                        <input type="text" name="_gb_mid_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_mid_img')); ?>">
-                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
-                                    </div>
-                                </div>
+                                <?php $gb_render_media_field('_gb_mid_img', 'Middle showcase image', $gb_field_value('_gb_mid_img')); ?>
                             </div>
                         </div>
 
@@ -455,7 +488,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                             <div class="gb-editor-body">
                                 <?php for($i=1;$i<=3;$i++): ?>
                                     <div class="gb-sub-head">Step <?php echo $i; ?></div>
-                                    <div class="gb-form-row"><label class="gb-label">Image</label><div class="gb-upload-wrapper"><input type="text" name="_gb_hiw_s<?php echo $i; ?>_img" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_hiw_s{$i}_img")); ?>"><button type="button" class="gb-upload-btn gb-btn-small-os">Select</button></div></div>
+                                    <?php $gb_render_media_field("_gb_hiw_s{$i}_img", "Step {$i} image", $gb_field_value("_gb_hiw_s{$i}_img")); ?>
                                     <div class="gb-form-row"><input type="text" name="_gb_hiw_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_hiw_s{$i}_title")); ?>"><textarea name="_gb_hiw_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_hiw_s{$i}_desc")); ?></textarea></div>
                                 <?php endfor; ?>
                             </div>
@@ -485,13 +518,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 <div class="gb-form-row"><label class="gb-label">Story Headline</label><input type="text" name="_gb_story_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_story_head')); ?>"></div>
                                 <div class="gb-form-row"><label class="gb-label">Story Lead Paragraph</label><textarea name="_gb_story_lead" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_story_lead')); ?></textarea></div>
                                 <div class="gb-form-row"><label class="gb-label">Story Body</label><textarea name="_gb_story_body" class="gb-textarea" style="height:150px;"><?php echo esc_textarea($gb_field_value('_gb_story_body')); ?></textarea></div>
-                                <div class="gb-form-row">
-                                    <label class="gb-label">Story Image</label>
-                                    <div class="gb-upload-wrapper">
-                                        <input type="text" name="_gb_story_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_story_img')); ?>">
-                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
-                                    </div>
-                                </div>
+                                <?php $gb_render_media_field('_gb_story_img', 'Story image', $gb_field_value('_gb_story_img')); ?>
 
                                 <div class="gb-sub-head">Stats Bar</div>
                                 <div class="gb-link-row">
@@ -534,13 +561,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     </div>
                                 <?php endfor; ?>
                                 <div class="gb-sub-head">Our Mission</div>
-                                <div class="gb-form-row">
-                                    <label class="gb-label">Mission Image</label>
-                                    <div class="gb-upload-wrapper">
-                                        <input type="text" name="_gb_svc_mis_img" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_img')); ?>">
-                                        <button type="button" class="gb-upload-btn gb-btn-small-os">Select</button>
-                                    </div>
-                                </div>
+                                <?php $gb_render_media_field('_gb_svc_mis_img', 'Mission image', $gb_field_value('_gb_svc_mis_img')); ?>
                                 <div class="gb-form-row"><label class="gb-label">Mission Headline</label><input type="text" name="_gb_svc_mis_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_title')); ?>"></div>
                                 <div class="gb-form-row"><label class="gb-label">Mission Subheading</label><textarea name="_gb_svc_mis_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_sub')); ?></textarea></div>
                                 <div class="gb-form-row"><label class="gb-label">Mission Body</label><textarea name="_gb_svc_mis_body" class="gb-textarea" style="height:120px;"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_body')); ?></textarea></div>
@@ -694,35 +715,52 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     </div>
     <script>
     jQuery(document).ready(function($){
-        function gbRenderPreview($wrap, url){
-            if(!$wrap.length) return;
-            var $prev = $wrap.find('.gb-img-preview');
-            if(!url){ $prev.remove(); return; }
-            if(!$prev.length){
-                $prev = $('<div class="gb-img-preview" style="margin-top:8px;"></div>').appendTo($wrap);
+        function gbUpdateMediaField($field, url) {
+            var $preview = $field.find('[data-media-preview]');
+            var cleanUrl = $.trim(url || '');
+
+            $field.toggleClass('has-value', !!cleanUrl);
+            $preview.removeClass('is-empty is-error').empty();
+            if (!cleanUrl) {
+                $preview.addClass('is-empty');
+                return;
             }
-            $prev.html('<img src="'+url+'" alt="" style="max-width:140px; height:auto; border-radius:6px; border:1px solid #e2e8f0; display:block;">');
+
+            $('<img>', { src: cleanUrl, alt: '' })
+                .on('error', function() {
+                    $preview.empty().removeClass('is-empty').addClass('is-error');
+                })
+                .appendTo($preview);
         }
 
-        // Show a preview for any image field that already has a URL saved.
-        $('.gb-upload-wrapper').each(function(){
-            var $wrap = $(this);
-            gbRenderPreview($wrap, $wrap.find('input').val());
+        $('[data-media-field]').each(function(){
+            var $field = $(this);
+            gbUpdateMediaField($field, $field.find('.gb-media-input').val());
         });
 
         $('.gb-upload-btn').on('click', function(e){
             e.preventDefault();
             var $btn = $(this);
-            var $input = $btn.closest('.gb-upload-wrapper').find('input').first();
-            if(!$input.length){ $input = $btn.prev('input'); }
+            var $field = $btn.closest('[data-media-field]');
+            var $input = $field.find('.gb-media-input');
             // A fresh frame per click avoids stale selection state between fields.
             var frame = wp.media({ title: 'Select or upload image', button: { text: 'Use this image' }, multiple: false });
             frame.on('select', function(){
                 var att = frame.state().get('selection').first().toJSON();
                 $input.val(att.url).trigger('change');
-                gbRenderPreview($btn.closest('.gb-upload-wrapper'), att.url);
             });
             frame.open();
+        });
+
+        $('.gb-media-clear').on('click', function(e){
+            e.preventDefault();
+            var $field = $(this).closest('[data-media-field]');
+            $field.find('.gb-media-input').val('').trigger('change');
+        });
+
+        $('.gb-media-input').on('input change', function(){
+            var $input = $(this);
+            gbUpdateMediaField($input.closest('[data-media-field]'), $input.val());
         });
     });
     </script>

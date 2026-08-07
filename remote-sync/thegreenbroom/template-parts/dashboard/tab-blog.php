@@ -19,6 +19,10 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
     .dot-fail { background: #ef4444; }
     .gb-featured-preview { width: 100%; height: 160px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
     .gb-featured-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .gb-featured-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .gb-featured-actions .gb-btn-small-os { align-items:center; gap:6px; }
+    .gb-featured-actions .gb-btn-small-os:first-child { border-color:#2e7d32; color:#2e7d32; }
+    .gb-featured-actions .gb-btn-small-os:first-child:hover { background:#f0fdf4; border-color:#256b2a; }
     .gb-blog-table { width: 100%; border-collapse: collapse; }
     .gb-blog-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; }
     .gb-blog-table td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; }
@@ -94,7 +98,11 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
                                 <span style="color:#94a3b8; font-size:12px; font-weight:600;">+ Click to Upload</span>
                             <?php endif; ?>
                         </div>
-                        <p style="font-size: 11px; color: #94a3b8; margin: 0; text-align: center;">Click box to use media picker</p>
+                        <div class="gb-featured-actions">
+                            <button type="button" class="gb-btn-small-os" id="gb-choose-featured"><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span> Choose image</button>
+                            <button type="button" class="gb-btn-small-os" id="gb-clear-featured" style="<?php echo $image_id ? '' : 'display:none;'; ?>">Remove</button>
+                        </div>
+                        <p style="font-size: 11px; color: #94a3b8; margin: 8px 0 0;">Choose from the media library or remove the current image.</p>
                     </div>
                 </div>
 
@@ -132,14 +140,30 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
             }
         });
 
-        $('#gb-preview-wrapper').click(function(e) {
+        function updateFeaturedPreview(url) {
+            if (url) {
+                $('#gb-preview-wrapper').html($('<img>', { src: url, id: 'gb-img-preview', alt: '' }));
+                $('#gb-clear-featured').show();
+            } else {
+                $('#gb-preview-wrapper').html('<span style="color:#94a3b8; font-size:12px; font-weight:600;">No featured image selected</span>');
+                $('#gb-clear-featured').hide();
+            }
+        }
+
+        $('#gb-preview-wrapper, #gb-choose-featured').click(function(e) {
             e.preventDefault();
             var image = wp.media({ title: 'Select Image', multiple: false }).open()
             .on('select', function(e){
                 var uploaded = image.state().get('selection').first().toJSON();
-                $('#gb-preview-wrapper').html('<img src="'+uploaded.url+'" id="gb-img-preview">');
+                updateFeaturedPreview(uploaded.url);
                 $('#_thumbnail_id').val(uploaded.id); // Captures ID for Save
             });
+        });
+
+        $('#gb-clear-featured').click(function(e) {
+            e.preventDefault();
+            $('#_thumbnail_id').val('');
+            updateFeaturedPreview('');
         });
 
         function runSEO() {
