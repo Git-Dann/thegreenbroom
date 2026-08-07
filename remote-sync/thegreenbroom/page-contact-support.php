@@ -4,6 +4,7 @@ get_header();
 $user = wp_get_current_user();
 $sent = isset($_GET['contact_success']);
 $error = isset($_GET['contact_error']);
+$support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone() : '';
 ?>
 
 <style>
@@ -24,7 +25,8 @@ $error = isset($_GET['contact_error']);
 
     <div class="gb-support-card">
         <h1 style="margin-top:0; color:#1b5e20;">Contact Support</h1>
-        <p style="color:#666; margin-bottom:30px;">Having trouble? Our team in Manchester is here to help.</p>
+        <p style="color:#666; margin-bottom:12px;">Having trouble? Our team in Liverpool is here to help.</p>
+        <p style="color:#2e7d32; font-weight:700; margin:0 0 30px;">Phone support: <?php echo $support_phone ? '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $support_phone)) . '">' . esc_html($support_phone) . '</a>' : 'Monday to Friday, 9 am to 5 pm'; ?></p>
 
         <?php if($sent): ?>
             <div style="background:#e8f5e9; color:#2e7d32; padding:15px; border-radius:6px; text-align:center;">

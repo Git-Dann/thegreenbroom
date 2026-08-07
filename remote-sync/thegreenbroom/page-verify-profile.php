@@ -42,10 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_upload_docs']) && 
             '_gb_cleaner_phone' => 'cleaner_phone',
             '_gb_ref1_name'     => 'ref1_name',
             '_gb_ref1_address'  => 'ref1_address',
-            '_gb_ref1_phone'    => 'ref1_phone',
+            '_gb_ref1_email'    => 'ref1_email',
             '_gb_ref2_name'     => 'ref2_name',
             '_gb_ref2_address'  => 'ref2_address',
-            '_gb_ref2_phone'    => 'ref2_phone',
+            '_gb_ref2_email'    => 'ref2_email',
         ];
         foreach ($text_fields as $meta_key => $post_key) {
             $val = isset($_POST[$post_key]) ? sanitize_text_field(wp_unslash($_POST[$post_key])) : '';
@@ -100,10 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_upload_docs']) && 
 $v_phone       = get_post_meta($cleaner_id, '_gb_cleaner_phone', true);
 $v_ref1_name   = get_post_meta($cleaner_id, '_gb_ref1_name', true);
 $v_ref1_addr   = get_post_meta($cleaner_id, '_gb_ref1_address', true);
-$v_ref1_phone  = get_post_meta($cleaner_id, '_gb_ref1_phone', true);
+$v_ref1_email  = get_post_meta($cleaner_id, '_gb_ref1_email', true);
 $v_ref2_name   = get_post_meta($cleaner_id, '_gb_ref2_name', true);
 $v_ref2_addr   = get_post_meta($cleaner_id, '_gb_ref2_address', true);
-$v_ref2_phone  = get_post_meta($cleaner_id, '_gb_ref2_phone', true);
+$v_ref2_email  = get_post_meta($cleaner_id, '_gb_ref2_email', true);
 
 $toa_signed      = get_post_meta($cleaner_id, '_gb_toa_signed', true) === '1';
 $toa_signed_name = get_post_meta($cleaner_id, '_gb_toa_signed_name', true) ?: $cleaner_post[0]->post_title;
@@ -205,13 +205,13 @@ get_header();
                         <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 1</div>
                         <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref1_name" value="<?php echo esc_attr($v_ref1_name); ?>" required></div>
                         <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref1_address" value="<?php echo esc_attr($v_ref1_addr); ?>" required></div>
-                        <div class="gb-field" style="margin-bottom:0;"><label>Phone Number <span class="gb-req">*</span></label><input type="tel" name="ref1_phone" value="<?php echo esc_attr($v_ref1_phone); ?>" required></div>
+                        <div class="gb-field" style="margin-bottom:0;"><label>Email Address <span class="gb-req">*</span></label><input type="email" name="ref1_email" value="<?php echo esc_attr($v_ref1_email); ?>" required></div>
                     </div>
                     <div class="gb-ref-card">
                         <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 2</div>
                         <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref2_name" value="<?php echo esc_attr($v_ref2_name); ?>" required></div>
                         <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref2_address" value="<?php echo esc_attr($v_ref2_addr); ?>" required></div>
-                        <div class="gb-field" style="margin-bottom:0;"><label>Phone Number <span class="gb-req">*</span></label><input type="tel" name="ref2_phone" value="<?php echo esc_attr($v_ref2_phone); ?>" required></div>
+                        <div class="gb-field" style="margin-bottom:0;"><label>Email Address <span class="gb-req">*</span></label><input type="email" name="ref2_email" value="<?php echo esc_attr($v_ref2_email); ?>" required></div>
                     </div>
 
                     <div class="gb-section-head">Terms of Association <span class="gb-req">*</span></div>

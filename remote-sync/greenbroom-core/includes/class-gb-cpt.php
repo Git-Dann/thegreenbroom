@@ -200,7 +200,9 @@ class GB_CPT {
         if ( isset( $_POST['gb_postcode'] ) ) {
             $old_postcode = get_post_meta( $post_id, 'gb_postcode', true );
             $new_postcode = sanitize_text_field( $_POST['gb_postcode'] );
-            update_post_meta( $post_id, 'gb_postcode', $new_postcode );
+        update_post_meta( $post_id, 'gb_postcode', $new_postcode );
+        update_post_meta( $post_id, '_gb_location', $new_postcode );
+        update_post_meta( $post_id, 'location', $new_postcode );
 
             if ( $new_postcode !== $old_postcode || ! get_post_meta( $post_id, 'gb_lat', true ) ) {
                 $response = wp_remote_get( 'https://api.postcodes.io/postcodes/' . $new_postcode );

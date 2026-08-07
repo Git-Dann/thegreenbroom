@@ -1,4 +1,6 @@
-<?php $action = isset($_GET['action']) ? $_GET['action'] : ''; ?>
+<?php
+$action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['action']) ? sanitize_key($_GET['action']) : '');
+?>
 
 <style>
     /* Green OS Blog Styling - Locked UI */
@@ -22,7 +24,7 @@
     .gb-blog-table td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; }
 </style>
 
-<?php if ($action == 'edit'): 
+<?php if ($action == 'edit'):
     $pid = isset($_GET['id']) ? intval($_GET['id']) : 0;
     $post = $pid ? get_post($pid) : (object)['ID'=>0, 'post_title'=>'', 'post_content'=>'', 'post_status'=>'draft'];
     $keyword = get_post_meta($pid, '_gb_seo_keyword', true);
@@ -31,6 +33,19 @@
     $image_id = get_post_thumbnail_id($pid);
     $image_url = $image_id ? wp_get_attachment_image_url($image_id, 'medium') : '';
 ?>
+    <?php if (isset($_GET['msg']) && sanitize_key($_GET['msg']) === 'security_refresh'): ?>
+        <div style="margin-bottom:16px; padding:12px 16px; background:#fefce8; border:1px solid #fde68a; border-radius:10px; color:#854d0e; font-size:13px; font-weight:600;">
+            Your editor security token was refreshed. Please paste any unsaved body text back in and save again.
+        </div>
+    <?php elseif (isset($_GET['msg']) && sanitize_key($_GET['msg']) === 'draft_created'): ?>
+        <div style="margin-bottom:16px; padding:12px 16px; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; color:#166534; font-size:13px; font-weight:600;">
+            New draft created. Start writing below.
+        </div>
+    <?php elseif (isset($_GET['msg']) && sanitize_key($_GET['msg']) === 'saved'): ?>
+        <div style="margin-bottom:16px; padding:12px 16px; background:#f0fdf4; border:1px solid #86efac; border-radius:10px; color:#166534; font-size:13px; font-weight:600;">
+            Article saved successfully.
+        </div>
+    <?php endif; ?>
     <form method="post" id="gb-blog-form">
         <input type="hidden" name="post_id" value="<?php echo $pid; ?>">
         <input type="hidden" name="gb_save_action" value="save_post">
@@ -111,6 +126,12 @@
 
     <script>
     jQuery(document).ready(function($){
+        $('#gb-blog-form').on('submit', function() {
+            if (typeof tinyMCE !== 'undefined') {
+                tinyMCE.triggerSave();
+            }
+        });
+
         $('#gb-preview-wrapper').click(function(e) {
             e.preventDefault();
             var image = wp.media({ title: 'Select Image', multiple: false }).open()
@@ -147,7 +168,11 @@
             <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a;">Blog Articles</h1>
             <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Manage and publish content directly to your site.</p>
         </div>
-        <a href="?tab=blog&action=edit&id=0" class="gb-header-btn" style="text-decoration:none; height:44px; display:inline-flex; align-items:center; background:#2e7d32; color:white; padding:0 25px; border-radius:8px; font-weight:700;">+ New Article</a>
+        <form method="post" action="<?php echo esc_url(home_url('/manager-dashboard/?tab=blog')); ?>" style="margin:0;">
+            <input type="hidden" name="gb_manager_action" value="create_blog_post">
+            <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
+            <button type="submit" class="gb-header-btn" style="height:44px; display:inline-flex; align-items:center; background:#2e7d32; color:white; padding:0 25px; border:0; border-radius:8px; font-weight:700; cursor:pointer;">+ New Article</button>
+        </form>
     </div>
     <div class="gb-card" style="padding:0; overflow:hidden; border: 1px solid #e2e8f0; border-radius:12px; background: white;">
         <table class="gb-blog-table">
@@ -166,7 +191,7 @@
                     <td style="color:#64748b; font-size:13px;"><?php echo get_the_date('M j, Y', $p->ID); ?></td>
                     <td style="text-align:right;">
                         <div style="display:flex; justify-content:flex-end; gap:8px;">
-                            <a href="?tab=blog&action=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #e2e8f0; border-radius:6px; color:#334155; font-size:12px; font-weight:700;">Edit Article</a>
+                            <a href="?tab=blog&view=edit&id=<?php echo $p->ID; ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #e2e8f0; border-radius:6px; color:#334155; font-size:12px; font-weight:700;">Edit Article</a>
                             <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $p->ID], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $p->ID)); ?>" class="gb-btn-small-os" style="text-decoration:none; padding:8px 16px; border:1px solid #fecaca; border-radius:6px; color:#ef4444; font-size:12px; font-weight:700;" onclick="return confirm('Delete this article? It will be moved to trash.');">Delete</a>
                         </div>
                     </td>

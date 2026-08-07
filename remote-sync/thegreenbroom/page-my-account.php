@@ -181,6 +181,15 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                 <p class="text-center text-muted">No booking history yet.</p>
             <?php endif; ?>
         </div>
+
+        <div class="gb-card" style="margin-top:20px;">
+            <div class="gb-card-head"><span class="gb-card-title">Customer Information</span></div>
+            <p class="text-muted" style="margin-top:0;">Helpful information for preparing for an eco-cleaning visit.</p>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('cleaner-handbook') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Cleaner Information Booklet</a>
+                <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('certificate-of-insurance') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Insurance Certificate</a>
+            </div>
+        </div>
     </div>
 </div>
 <?php get_footer(); ?>

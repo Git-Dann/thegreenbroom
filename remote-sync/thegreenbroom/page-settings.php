@@ -41,7 +41,7 @@ if ( $cleaner_query->have_posts() ) {
         : 'daily';
 }
 
-$settings_page_url = home_url('/settings');
+$settings_page_url = get_permalink() ?: home_url('/settings/');
 $connect_notice = isset($_GET['connect']) ? sanitize_key(wp_unslash($_GET['connect'])) : '';
 $connect_notice_msg = isset($_GET['connect_msg']) ? sanitize_text_field(wp_unslash($_GET['connect_msg'])) : '';
 
@@ -157,9 +157,9 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
                 </div>
             </div>
 
-            <button type="button" class="gb-btn-auth" style="background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
-                Update Membership Plan
-            </button>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; color:#64748b; font-size:13px; line-height:1.5;">
+                Membership plan changes are currently managed by the Green Broom team. Please contact support if you need to change your plan.
+            </div>
         </div>
 
         <div class="gb-card mb-20" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">

@@ -34,6 +34,8 @@ $cl_s2_title = get_post_meta(get_the_ID(), '_gb_hiw_cl_s2_title', true) ?: '2. G
 $cl_s2_desc  = get_post_meta(get_the_ID(), '_gb_hiw_cl_s2_desc', true)  ?: 'Pass our quick ID check to get the Verified badge.';
 $cl_s3_title = get_post_meta(get_the_ID(), '_gb_hiw_cl_s3_title', true) ?: '3. Accept Jobs';
 $cl_s3_desc  = get_post_meta(get_the_ID(), '_gb_hiw_cl_s3_desc', true)  ?: 'Get booking requests and accept the ones that fit your schedule.';
+$cl_s4_title = get_post_meta(get_the_ID(), '_gb_hiw_cl_s4_title', true) ?: '4. Earn More';
+$cl_s4_desc  = get_post_meta(get_the_ID(), '_gb_hiw_cl_s4_desc', true)  ?: 'Earn more from eco-cleaning with loyal clients who share your values.';
 $cl_btn      = get_post_meta(get_the_ID(), '_gb_hiw_cl_btn', true)      ?: 'Become a Cleaner';
 $cl_link     = get_post_meta(get_the_ID(), '_gb_hiw_cl_link', true)     ?: '/register';
 
@@ -84,6 +86,7 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_hiw_cta_link', true)  ?: '/cleaner
     .gb-step-num { font-size: 4rem; font-weight: 800; color: #e8f5e9; line-height: 1; margin-bottom: -20px; display: block; position: relative; z-index: -1; }
     .gb-step-title { font-size: 1.8rem; font-weight: 700; color: #1b5e20; margin-bottom: 15px; }
     .gb-step-desc { font-size: 1.1rem; color: #555; line-height: 1.6; }
+    .gb-cleaner-steps-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:20px; }
 
     /* FAQ */
     .gb-faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; text-align: left; }
@@ -100,7 +103,7 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_hiw_cta_link', true)  ?: '/cleaner
     .gb-btn-primary { background: #2e7d32; color: white !important; }
 
     @media (max-width: 768px) {
-        .gb-step-row, .gb-faq-grid { grid-template-columns: 1fr; gap: 40px; }
+        .gb-step-row, .gb-faq-grid, .gb-cleaner-steps-grid { grid-template-columns: 1fr; gap: 40px; }
         .gb-step-row.reversed { direction: ltr; }
         .gb-hiw-hero h1 { font-size: 2.2rem; }
     }
@@ -140,7 +143,7 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_hiw_cta_link', true)  ?: '/cleaner
         <div class="gb-container gb-text-center">
             <span class="gb-pill-badge" style="background:white;">For Cleaners</span>
             <h2 class="gb-heading-md" style="margin-top:15px; margin-bottom:40px;"><?php echo esc_html($cl_head); ?></h2>
-            <div class="gb-step-row" style="gap:30px; align-items:flex-start;">
+            <div class="gb-cleaner-steps-grid">
                 <div class="gb-bg-light" style="padding:30px; border-radius:12px;">
                     <span style="font-size:2rem;">📝</span><h4 style="margin:10px 0; font-weight:700;"><?php echo esc_html($cl_s1_title); ?></h4><p style="font-size:0.95rem; color:#666;"><?php echo esc_html($cl_s1_desc); ?></p>
                 </div>
@@ -149,6 +152,9 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_hiw_cta_link', true)  ?: '/cleaner
                 </div>
                 <div class="gb-bg-light" style="padding:30px; border-radius:12px;">
                     <span style="font-size:2rem;">📅</span><h4 style="margin:10px 0; font-weight:700;"><?php echo esc_html($cl_s3_title); ?></h4><p style="font-size:0.95rem; color:#666;"><?php echo esc_html($cl_s3_desc); ?></p>
+                </div>
+                <div class="gb-bg-light" style="padding:30px; border-radius:12px;">
+                    <span style="font-size:2rem;">💷</span><h4 style="margin:10px 0; font-weight:700;"><?php echo esc_html($cl_s4_title); ?></h4><p style="font-size:0.95rem; color:#666;"><?php echo esc_html($cl_s4_desc); ?></p>
                 </div>
             </div>
             <a href="<?php echo esc_url($cl_link); ?>" class="gb-btn gb-btn-primary" style="margin-top:30px;"><?php echo esc_html($cl_btn); ?></a>

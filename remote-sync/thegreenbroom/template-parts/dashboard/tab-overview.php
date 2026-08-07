@@ -337,7 +337,7 @@ $active_services_count = (int) $service_post_counts->publish;
         <div class="gb-widget-body">
             <div class="gb-quick-action-grid">
                 <a href="?tab=cleaners&action=edit&id=0" class="gb-btn-small-os">Add Pro</a>
-                <a href="?tab=blog&action=edit&id=0" class="gb-btn-small-os">New Post</a>
+                <a href="?tab=blog" class="gb-btn-small-os">New Post</a>
                 <a href="?tab=bookings" class="gb-btn-small-os">Jobs</a>
                 <a href="?tab=support" class="gb-btn-small-os">Inbox</a>
             </div>
@@ -385,11 +385,11 @@ $active_services_count = (int) $service_post_counts->publish;
                 <?php if ($latest_draft_post): ?>
                     <p style="margin: 0 0 5px; font-weight: 700;">"<?php echo esc_html($latest_draft_post->post_title ?: '(Untitled Draft)'); ?>"</p>
                     <span style="color: #94a3b8; font-size: 10px;">Last edited <?php echo esc_html(human_time_diff((int) get_post_modified_time('U', true, $latest_draft_post), current_time('timestamp', true))); ?> ago</span>
-                    <a href="?tab=blog&action=edit&id=<?php echo (int) $latest_draft_post->ID; ?>" style="color: #10b981; display: block; margin-top: 8px; font-weight: 700; text-decoration: none;">Continue Writing →</a>
+                    <a href="?tab=blog&view=edit&id=<?php echo (int) $latest_draft_post->ID; ?>" style="color: #10b981; display: block; margin-top: 8px; font-weight: 700; text-decoration: none;">Continue Writing →</a>
                 <?php else: ?>
                     <p style="margin: 0 0 5px; font-weight: 700;">No drafts in progress</p>
                     <span style="color: #94a3b8; font-size: 10px;">Create a new article to start writing.</span>
-                    <a href="?tab=blog&action=edit&id=0" style="color: #10b981; display: block; margin-top: 8px; font-weight: 700; text-decoration: none;">Start New Draft →</a>
+                    <a href="?tab=blog" style="color: #10b981; display: block; margin-top: 8px; font-weight: 700; text-decoration: none;">Start New Draft →</a>
                 <?php endif; ?>
             </div>
         </div>

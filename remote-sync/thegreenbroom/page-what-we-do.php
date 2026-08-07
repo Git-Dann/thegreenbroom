@@ -42,7 +42,7 @@ $s3_link    = get_post_meta(get_the_ID(), '_gb_svc_3_link', true)     ?: '/clean
 
 // C. Mission Split
 $mis_img    = get_post_meta(get_the_ID(), '_gb_svc_mis_img', true)    ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png';
-$mis_title  = get_post_meta(get_the_ID(), '_gb_svc_mis_title', true)  ?: 'The "Green" in Green Broom';
+$mis_title  = get_post_meta(get_the_ID(), '_gb_svc_mis_title', true)  ?: 'A cleaner home, a greener choice';
 $mis_sub    = get_post_meta(get_the_ID(), '_gb_svc_mis_sub', true)    ?: "We believe a clean home shouldn't come at the cost of the environment.";
 $mis_body   = get_post_meta(get_the_ID(), '_gb_svc_mis_body', true)   ?: "Traditional cleaning supplies are often packed with volatile organic compounds (VOCs).\n\nWe mandate that every cleaner uses non-toxic, biodegradable products.";
 $mis_btn    = get_post_meta(get_the_ID(), '_gb_svc_mis_btn', true)    ?: 'Join Our Mission';
@@ -63,6 +63,7 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
     .gb-section { padding: 90px 0; }
     .gb-bg-light { background-color: #f9f9f9; }
     .gb-bg-green { background-color: #1b5e20; color: white; }
+    .gb-bg-green .gb-heading-md { color: white; }
     .gb-heading-lg { font-size: 3rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1; }
     .gb-heading-md { font-size: 2.2rem; font-weight: 700; margin-bottom: 20px; color: #1b5e20; }
     .gb-text-lead { font-size: 1.2rem; color: #555; line-height: 1.6; max-width: 700px; margin: 0 auto 40px; }
@@ -162,15 +163,15 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
         </div>
     </section>
 
-    <section class="gb-section">
+    <section class="gb-section gb-bg-green">
         <div class="gb-container">
             <div class="gb-split-mission">
                 <img src="<?php echo esc_url($mis_img); ?>" class="gb-mission-img" alt="Mission">
                 <div>
                     <h2 class="gb-heading-md"><?php echo esc_html($mis_title); ?></h2>
                     <p class="gb-text-lead" style="margin:0 0 20px; text-align:left;"><?php echo esc_html($mis_sub); ?></p>
-                    <div style="color:#666; line-height:1.6; margin-bottom:30px; white-space:pre-line;"><?php echo wp_kses_post($mis_body); ?></div>
-                    <a href="<?php echo esc_url($mis_link); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($mis_btn); ?></a>
+                    <div style="color:rgba(255,255,255,.86); line-height:1.6; margin-bottom:30px; white-space:pre-line;"><?php echo wp_kses_post($mis_body); ?></div>
+                    <a href="<?php echo esc_url($mis_link); ?>" class="gb-btn gb-btn-white"><?php echo esc_html($mis_btn); ?></a>
                 </div>
             </div>
         </div>

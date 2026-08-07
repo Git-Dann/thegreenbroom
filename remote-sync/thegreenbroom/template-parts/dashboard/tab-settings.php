@@ -12,6 +12,16 @@ $stripe_msg_raw = isset($_GET['stripe_msg']) ? sanitize_text_field(wp_unslash($_
 $stripe_msg = $stripe_msg_raw !== '' ? rawurldecode($stripe_msg_raw) : '';
 $stripe_mode = isset($stripe_config['mode']) ? $stripe_config['mode'] : 'test';
 $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
+$brevo_config = function_exists('gb_get_brevo_settings') ? gb_get_brevo_settings() : [];
+$brevo_enabled = ! empty($brevo_config['enabled']);
+$brevo_key_present = ! empty($brevo_config['api_key']);
+$brevo_notice = isset($_GET['brevo_notice']) ? sanitize_key(wp_unslash($_GET['brevo_notice'])) : '';
+$brevo_msg_raw = isset($_GET['brevo_msg']) ? sanitize_text_field(wp_unslash($_GET['brevo_msg'])) : '';
+$brevo_msg = $brevo_msg_raw !== '' ? rawurldecode($brevo_msg_raw) : '';
+$support_email = get_post_meta($settings_id, '_gb_support_email', true) ?: 'info@thegreenbroom.co.uk';
+$support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '07974 903568';
+$from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
+$reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
 ?>
 
 <style>
@@ -119,8 +129,37 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
             <div id="email" class="gb-editor-section">
                 <div class="gb-editor-header"><span class="dashicons dashicons-email-alt"></span> Email & Delivery</div>
                 <div class="gb-editor-body">
-                    <div style="margin:0 0 18px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
-                        The platform sends account verification and password reset emails through WordPress <strong>wp_mail</strong>. Set the sender identity here now, then connect SMTP or a transactional mail service later and these flows will use it automatically.
+                    <div style="margin:0 0 18px; padding:12px 14px; border:1px solid <?php echo $brevo_enabled && $brevo_key_present ? '#bbf7d0' : '#fde68a'; ?>; border-radius:8px; background:<?php echo $brevo_enabled && $brevo_key_present ? '#f0fdf4' : '#fffbeb'; ?>; color:<?php echo $brevo_enabled && $brevo_key_present ? '#166534' : '#92400e'; ?>; font-size:13px;">
+                        <strong>Brevo email delivery:</strong>
+                        <?php if ($brevo_enabled && $brevo_key_present): ?>Enabled and ready to test.<?php elseif ($brevo_enabled): ?>Enabled, but the API key is missing.<?php else: ?>Not connected yet. Add the API key and enable Brevo below.<?php endif; ?>
+                        Verification, support, booking, password reset, and other site emails will use Brevo when it is enabled.
+                    </div>
+                    <?php if ($brevo_notice !== '' && $brevo_msg !== ''): ?>
+                        <div style="margin:0 0 18px; padding:10px 12px; border:1px solid <?php echo $brevo_notice === 'ok' ? '#dcfce7' : '#fecaca'; ?>; border-radius:8px; background:<?php echo $brevo_notice === 'ok' ? '#f0fdf4' : '#fef2f2'; ?>; color:<?php echo $brevo_notice === 'ok' ? '#166534' : '#991b1b'; ?>; font-size:13px;">
+                            <?php echo esc_html($brevo_msg); ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="gb-link-row" style="margin-bottom:20px;">
+                        <div class="gb-form-row">
+                            <label class="gb-label">Use Brevo for Site Emails</label>
+                            <select name="_gb_brevo_enabled" class="gb-input" style="height:45px;">
+                                <option value="yes" <?php selected($brevo_enabled, true); ?>>Enabled</option>
+                                <option value="no" <?php selected($brevo_enabled, false); ?>>Disabled</option>
+                            </select>
+                        </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Brevo API Key</label>
+                            <input type="password" name="_gb_brevo_api_key" class="gb-input" value="" autocomplete="new-password" placeholder="<?php echo $brevo_key_present ? 'Saved key present — leave blank to keep it' : 'Paste your Brevo v3 API key'; ?>">
+                        </div>
+                    </div>
+                    <div style="margin:0 0 20px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
+                        Use a Brevo <strong>v3 API key</strong> from Brevo Settings → SMTP &amp; API. The sender address must be verified in Brevo before messages can be delivered.
+                        <?php if ($brevo_key_present): ?>
+                            <span style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+                                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=connection'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Test Brevo Connection</a>
+                                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=send'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Send Test Email</a>
+                            </span>
+                        <?php endif; ?>
                     </div>
                     <div class="gb-link-row" style="margin-bottom: 20px;">
                         <div class="gb-form-row">
@@ -142,14 +181,14 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                         </div>
                         <div class="gb-form-row">
                             <label class="gb-label">From Address</label>
-                            <input type="email" name="_gb_email_from_address" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_email_from_address', true)); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
+                            <input type="email" name="_gb_email_from_address" class="gb-input" value="<?php echo esc_attr($from_address); ?>" placeholder="info@thegreenbroom.co.uk">
                         </div>
                     </div>
                     <div class="gb-form-row" style="margin-bottom: 0;">
                         <label class="gb-label">Reply-To Address</label>
-                        <input type="email" name="_gb_email_reply_to" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_email_reply_to', true)); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
+                        <input type="email" name="_gb_email_reply_to" class="gb-input" value="<?php echo esc_attr($reply_to); ?>" placeholder="info@thegreenbroom.co.uk">
                         <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
-                            Leave sender fields blank to fall back to the WordPress admin email. Once you connect SMTP or an email API plugin, password reset and verification mail will inherit the same sender identity.
+                            All site email flows inherit this sender identity. Keep the Brevo sender address verified and use the Reply-To address for responses.
                         </p>
                     </div>
                 </div>
@@ -160,8 +199,16 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                 <div class="gb-editor-body">
                     <div class="gb-form-row" style="margin-bottom:22px;">
                         <label class="gb-label">Support Notification Email</label>
-                        <input type="email" name="_gb_support_email" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_support_email', true)); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
-                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">New contact &amp; support messages are emailed here. Leave blank to use the WordPress admin email.</p>
+                        <input type="email" name="_gb_support_email" class="gb-input" value="<?php echo esc_attr($support_email); ?>" placeholder="info@thegreenbroom.co.uk">
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">New contact &amp; support messages are emailed here.</p>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Customer Support Phone</label>
+                        <input type="tel" name="_gb_support_phone" class="gb-input" value="<?php echo esc_attr($support_phone); ?>" placeholder="07974 903568">
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Shown on Contact Us with Monday to Friday, 9 am to 5 pm opening hours.</p>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px;">
+                        <strong>WhatsApp / FaceTime call:</strong> booking link coming soon.
                     </div>
                     <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Social Media Links</div>
                     <p style="margin:0 0 16px; color:#64748b; font-size:12px;">Add a full URL to show that icon in the site footer. Leave a field blank and it stays hidden.</p>
@@ -205,8 +252,9 @@ $stripe_mode_label = $stripe_mode === 'live' ? 'Live Mode' : 'Test Mode';
                 <div class="gb-editor-body">
                     <div class="gb-link-row" style="margin-bottom: 20px;">
                         <div class="gb-form-row">
-                            <label class="gb-label">Platform Application Fee (%)</label>
-                            <input type="number" name="_gb_platform_fee" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_platform_fee', true) ?: '10'); ?>" step="0.1">
+                            <label class="gb-label">Platform Application Fee</label>
+                            <div class="gb-input" style="background:#f8fafc; color:#166534; font-weight:700;">No platform fee</div>
+                            <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Customer payments are passed through without the previous 10% application fee.</p>
                         </div>
                         <div class="gb-form-row">
                             <label class="gb-label">VAT Status</label>

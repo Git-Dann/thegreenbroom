@@ -231,10 +231,10 @@
                 $v_phone      = get_post_meta($pid, '_gb_cleaner_phone', true);
                 $v_ref1_name  = get_post_meta($pid, '_gb_ref1_name', true);
                 $v_ref1_addr  = get_post_meta($pid, '_gb_ref1_address', true);
-                $v_ref1_phone = get_post_meta($pid, '_gb_ref1_phone', true);
+                $v_ref1_email = get_post_meta($pid, '_gb_ref1_email', true);
                 $v_ref2_name  = get_post_meta($pid, '_gb_ref2_name', true);
                 $v_ref2_addr  = get_post_meta($pid, '_gb_ref2_address', true);
-                $v_ref2_phone = get_post_meta($pid, '_gb_ref2_phone', true);
+                $v_ref2_email = get_post_meta($pid, '_gb_ref2_email', true);
                 ?>
                 <div class="gb-os-card">
                     <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Phone &amp; Character References</div></div></div>
@@ -243,14 +243,14 @@
                             <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Cleaner Phone</div>
                             <div style="font-weight:700; color:#0f172a;"><?php echo $v_phone ? esc_html($v_phone) : '<span style="color:#ef4444; font-weight:600;">Not provided</span>'; ?></div>
                         </div>
-                        <?php foreach ([['1', $v_ref1_name, $v_ref1_addr, $v_ref1_phone], ['2', $v_ref2_name, $v_ref2_addr, $v_ref2_phone]] as $ref):
-                            list($rn, $r_name, $r_addr, $r_phone) = $ref; ?>
+                        <?php foreach ([['1', $v_ref1_name, $v_ref1_addr, $v_ref1_email], ['2', $v_ref2_name, $v_ref2_addr, $v_ref2_email]] as $ref):
+                            list($rn, $r_name, $r_addr, $r_email) = $ref; ?>
                             <div style="padding:12px 0; border-bottom:1px solid #f1f5f9;">
                                 <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Reference <?php echo esc_html($rn); ?></div>
-                                <?php if ($r_name || $r_addr || $r_phone): ?>
+                                <?php if ($r_name || $r_addr || $r_email): ?>
                                     <div style="font-weight:700; color:#0f172a;"><?php echo esc_html($r_name ?: '—'); ?></div>
                                     <div style="font-size:13px; color:#475569;"><?php echo esc_html($r_addr ?: '—'); ?></div>
-                                    <div style="font-size:13px; color:#475569;"><?php echo esc_html($r_phone ?: '—'); ?></div>
+                                    <div style="font-size:13px; color:#475569;"><?php echo esc_html($r_email ?: '—'); ?></div>
                                 <?php else: ?>
                                     <div style="color:#ef4444; font-size:13px; font-weight:600;">Not provided</div>
                                 <?php endif; ?>

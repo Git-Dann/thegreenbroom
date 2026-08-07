@@ -9,6 +9,21 @@ function gb_manager_sanitize_meta_value($value) {
     return wp_kses_post(wp_unslash($value));
 }
 
+if (
+    isset($_GET['tab'], $_GET['action'], $_SERVER['REQUEST_METHOD'])
+    && $_SERVER['REQUEST_METHOD'] === 'GET'
+    && sanitize_key(wp_unslash($_GET['tab'])) === 'blog'
+    && sanitize_key(wp_unslash($_GET['action'])) === 'edit'
+) {
+    $legacy_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    $legacy_url = $legacy_id > 0
+        ? home_url('/manager-dashboard/?tab=blog&view=edit&id=' . $legacy_id)
+        : home_url('/manager-dashboard/?tab=blog');
+
+    wp_safe_redirect($legacy_url);
+    exit;
+}
+
 // 1. SECURITY & SETUP
 $current_user = wp_get_current_user();
 if (!in_array('gb_manager', (array) $current_user->roles) && !current_user_can('administrator')) {
@@ -24,6 +39,9 @@ wp_enqueue_media();
 
 $tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview';
 $action = isset($_GET['action']) ? sanitize_key($_GET['action']) : '';
+if ($tab === 'blog' && isset($_GET['view'])) {
+    $action = sanitize_key($_GET['view']);
+}
 $msg = isset($_GET['msg']) ? sanitize_key($_GET['msg']) : '';
 
 // Printable / downloadable signed Terms of Association (opens as a clean doc).
@@ -71,9 +89,41 @@ if (isset($_GET['agreement_id'])) {
 }
 
 // 2. CONTROLLER: HANDLE SAVES & ACTIONS
+if (isset($_POST['gb_manager_action']) && sanitize_key(wp_unslash($_POST['gb_manager_action'])) === 'create_blog_post') {
+    if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
+        wp_safe_redirect(home_url('/manager-dashboard/?tab=blog&msg=security_refresh'));
+        exit;
+    }
+
+    $pid = wp_insert_post([
+        'post_type'    => 'post',
+        'post_title'   => 'Untitled Draft',
+        'post_content' => '',
+        'post_status'  => 'draft',
+        'post_author'  => get_current_user_id(),
+    ], true);
+
+    if (is_wp_error($pid) || !$pid) {
+        wp_safe_redirect(home_url('/manager-dashboard/?tab=blog&msg=create_failed'));
+        exit;
+    }
+
+    wp_safe_redirect(home_url('/manager-dashboard/?tab=blog&view=edit&id=' . (int) $pid . '&msg=draft_created'));
+    exit;
+}
+
 if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
-        wp_die('Security check failed.');
+        $redirect_args = [
+            'tab'    => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview',
+            'view'   => isset($_GET['view']) ? sanitize_key($_GET['view']) : '',
+            'id'     => isset($_POST['post_id']) ? intval($_POST['post_id']) : 0,
+            'msg'    => 'security_refresh',
+        ];
+        wp_safe_redirect(add_query_arg(array_filter($redirect_args, static function ($value) {
+            return $value !== '' && $value !== 0;
+        }), home_url('/manager-dashboard/')));
+        exit;
     }
 
     $pid = intval($_POST['post_id']);
@@ -117,6 +167,10 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     // Global Meta Saver
     foreach ($_POST as $key => $value) {
         if (strpos($key, '_gb_') === 0) {
+            // Secret fields are intentionally blank when a saved key is being kept.
+            if ($key === '_gb_brevo_api_key' && trim((string) wp_unslash($value)) === '') {
+                continue;
+            }
             update_post_meta($pid, $key, gb_manager_sanitize_meta_value($value));
         }
     }
@@ -146,7 +200,8 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
         
         if ($pid === 0) { 
             unset($post_data['ID']); 
-            $post_data['post_type'] = 'post'; 
+            $post_data['post_type'] = 'post';
+            $post_data['post_author'] = get_current_user_id();
             $pid = wp_insert_post($post_data); 
         } else { 
             wp_update_post($post_data); 
@@ -162,7 +217,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             update_post_meta($pid, '_gb_seo_score', intval($_POST['_gb_seo_score']));
         }
         
-        wp_redirect(home_url('/manager-dashboard?tab=blog&action=edit&id='.$pid.'&msg=saved')); exit;
+        wp_safe_redirect(home_url('/manager-dashboard/?tab=blog&view=edit&id='.$pid.'&msg=saved')); exit;
     }
 
     // C. SAVE CLEANERS

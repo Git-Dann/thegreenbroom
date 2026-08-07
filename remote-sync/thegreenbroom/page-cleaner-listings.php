@@ -15,8 +15,17 @@ $args = array(
     'order'          => 'DESC',
 );
 
-// Search Logic
-if ( ! empty($_GET['k']) ) { $args['s'] = sanitize_text_field($_GET['k']); }
+// Search by postcode metadata, not by cleaner name.
+if ( ! empty($_GET['k']) ) {
+    $postcode = sanitize_text_field(wp_unslash($_GET['k']));
+    $args['meta_query'] = [
+        'relation' => 'OR',
+        ['key' => 'gb_postcode', 'value' => $postcode, 'compare' => 'LIKE'],
+        ['key' => '_gb_location', 'value' => $postcode, 'compare' => 'LIKE'],
+        ['key' => 'location', 'value' => $postcode, 'compare' => 'LIKE'],
+        ['key' => 'cleaner_location', 'value' => $postcode, 'compare' => 'LIKE'],
+    ];
+}
 
 $cleaners = new WP_Query($args);
 
@@ -113,7 +122,7 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
     <p class="gb-dir-sub"><?php echo esc_html($listings_sub); ?></p>
     
     <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
-        <input type="text" name="k" class="gb-search-input" placeholder="Search by name..." value="<?php echo isset($_GET['k']) ? esc_attr($_GET['k']) : ''; ?>">
+        <input type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo isset($_GET['k']) ? esc_attr($_GET['k']) : ''; ?>">
         <select name="service" class="gb-search-select">
             <option value="">Any Service</option>
             <option value="standard">Standard Clean</option>

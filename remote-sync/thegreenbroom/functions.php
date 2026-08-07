@@ -18,6 +18,88 @@ function gb_theme_setup() {
 add_action( 'after_setup_theme', 'gb_theme_setup' );
 
 /**
+ * Re-send WordPress auth cookies with an explicit SameSite policy.
+ *
+ * FastHosts/LiteSpeed + modern browsers have been observed omitting the
+ * wordpress_logged_in_* cookie on manager dashboard POSTs unless the policy is
+ * explicit. WordPress core does not currently expose SameSite for auth cookies,
+ * so mirror the core cookie writes with Secure; SameSite=None on HTTPS.
+ */
+function gb_set_auth_cookie_with_samesite_none( $name, $value, $expiration, $path, $domain = '', $httponly = true ) {
+    if ( headers_sent() || ! is_ssl() || $name === '' ) {
+        return false;
+    }
+
+    $options = array(
+        'expires'  => (int) $expiration,
+        'path'     => $path ?: '/',
+        'secure'   => true,
+        'httponly' => (bool) $httponly,
+        'samesite' => 'None',
+    );
+
+    if ( ! empty( $domain ) ) {
+        $options['domain'] = $domain;
+    }
+
+    return setcookie( $name, $value, $options );
+}
+
+function gb_force_secure_auth_cookies_on_https( $secure, $user_id ) {
+    return is_ssl() ? true : $secure;
+}
+add_filter( 'secure_auth_cookie', 'gb_force_secure_auth_cookies_on_https', 10, 2 );
+add_filter( 'secure_logged_in_cookie', 'gb_force_secure_auth_cookies_on_https', 10, 2 );
+
+function gb_reissue_auth_cookie_with_samesite_none( $auth_cookie, $expire, $expiration, $user_id, $scheme, $token ) {
+    $cookie_name = ( 'secure_auth' === $scheme ) ? SECURE_AUTH_COOKIE : AUTH_COOKIE;
+
+    gb_set_auth_cookie_with_samesite_none( $cookie_name, $auth_cookie, $expire, PLUGINS_COOKIE_PATH, COOKIE_DOMAIN );
+    gb_set_auth_cookie_with_samesite_none( $cookie_name, $auth_cookie, $expire, ADMIN_COOKIE_PATH, COOKIE_DOMAIN );
+}
+add_action( 'set_auth_cookie', 'gb_reissue_auth_cookie_with_samesite_none', 10, 6 );
+
+function gb_reissue_logged_in_cookie_with_samesite_none( $logged_in_cookie, $expire, $expiration, $user_id, $scheme, $token ) {
+    gb_set_auth_cookie_with_samesite_none( LOGGED_IN_COOKIE, $logged_in_cookie, $expire, COOKIEPATH, COOKIE_DOMAIN );
+
+    if ( COOKIEPATH !== SITECOOKIEPATH ) {
+        gb_set_auth_cookie_with_samesite_none( LOGGED_IN_COOKIE, $logged_in_cookie, $expire, SITECOOKIEPATH, COOKIE_DOMAIN );
+    }
+}
+add_action( 'set_logged_in_cookie', 'gb_reissue_logged_in_cookie_with_samesite_none', 10, 6 );
+
+function gb_prevent_duplicate_core_auth_cookie_headers( $send, $expire, $expiration, $user_id, $scheme, $token ) {
+    if ( ! headers_sent() && is_ssl() && (int) $user_id > 0 && (int) $expiration > 0 ) {
+        return false;
+    }
+
+    return $send;
+}
+add_filter( 'send_auth_cookies', 'gb_prevent_duplicate_core_auth_cookie_headers', 10, 6 );
+
+function gb_refresh_manager_dashboard_auth_cookie_policy() {
+    if ( headers_sent() || ! is_user_logged_in() ) {
+        return;
+    }
+
+    $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+    if ( strpos( $request_uri, 'manager-dashboard' ) === false ) {
+        return;
+    }
+
+    $user = wp_get_current_user();
+    if ( ! in_array( 'gb_manager', (array) $user->roles, true ) && ! current_user_can( 'administrator' ) ) {
+        return;
+    }
+
+    $token = wp_get_session_token();
+    if ( $token !== '' ) {
+        wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
+    }
+}
+add_action( 'template_redirect', 'gb_refresh_manager_dashboard_auth_cookie_policy', -200 );
+
+/**
  * Ensure the cleaner-recruitment "Join" page exists.
  * Creates a published page with slug 'join' if one does not already exist,
  * so it appears in the manager dashboard Pages tab and uses page-join.php.
@@ -49,6 +131,173 @@ function gb_ensure_join_page() {
     update_option( 'gb_join_page_created', 1 );
 }
 add_action( 'init', 'gb_ensure_join_page' );
+
+/**
+ * Ensure the public Eco Products page exists so it can be linked from the
+ * header menu and managed as a normal WordPress page.
+ */
+function gb_ensure_eco_products_page() {
+    if ( get_option( 'gb_eco_products_page_created' ) ) {
+        return;
+    }
+
+    $existing = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'eco-products',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( empty( $existing ) ) {
+        wp_insert_post( array(
+            'post_title'   => 'Eco Products',
+            'post_name'    => 'eco-products',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_content' => '',
+        ) );
+    }
+
+    update_option( 'gb_eco_products_page_created', 1 );
+}
+add_action( 'init', 'gb_ensure_eco_products_page' );
+
+/**
+ * Keep customer-facing resource files behind a signed-in WordPress route.
+ */
+function gb_get_resource_definitions() {
+    return array(
+        'cleaner-handbook' => array(
+            'label' => 'Cleaner Information Booklet',
+            'file'  => 'cleaner-handbook.pdf',
+        ),
+        'eco-cleaning-products' => array(
+            'label' => 'Eco Cleaning Products Guide',
+            'file'  => 'eco-cleaning-products.pdf',
+        ),
+        'make-the-most-of-your-eco-cleaner' => array(
+            'label' => 'Make the Most of Your Eco-Cleaner',
+            'file'  => 'make-the-most-of-your-eco-cleaner.pdf',
+        ),
+        'certificate-of-insurance' => array(
+            'label' => 'Certificate of Insurance',
+            'file'  => 'certificate-of-insurance.pdf',
+        ),
+    );
+}
+
+function gb_get_resource_url( $resource ) {
+    $resource = sanitize_key( (string) $resource );
+    return wp_nonce_url(
+        add_query_arg(
+            array(
+                'action'   => 'gb_download_resource',
+                'resource' => $resource,
+            ),
+            admin_url( 'admin-post.php' )
+        ),
+        'gb_download_resource_' . $resource
+    );
+}
+
+function gb_handle_resource_download() {
+    $resource = isset( $_GET['resource'] ) ? sanitize_key( wp_unslash( $_GET['resource'] ) ) : '';
+    $resources = gb_get_resource_definitions();
+    if ( ! isset( $resources[ $resource ] ) ) {
+        wp_die( 'Resource not found.', 'Resource not found', array( 'response' => 404 ) );
+    }
+
+    $protected_resources = array( 'cleaner-handbook', 'certificate-of-insurance' );
+    if ( in_array( $resource, $protected_resources, true ) && ! is_user_logged_in() ) {
+        auth_redirect();
+    }
+
+    check_admin_referer( 'gb_download_resource_' . $resource );
+
+    $file = trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'];
+    if ( ! is_readable( $file ) ) {
+        wp_die( 'This resource is not available yet.', 'Resource unavailable', array( 'response' => 404 ) );
+    }
+
+    nocache_headers();
+    header( 'Content-Type: application/pdf' );
+    header( 'Content-Disposition: inline; filename="' . basename( $file ) . '"' );
+    header( 'Content-Length: ' . (string) filesize( $file ) );
+    readfile( $file );
+    exit;
+}
+add_action( 'admin_post_gb_download_resource', 'gb_handle_resource_download' );
+add_action( 'admin_post_nopriv_gb_download_resource', 'gb_handle_resource_download' );
+
+function gb_get_support_phone() {
+    $settings_id = (int) get_option( 'page_on_front' );
+    $phone = $settings_id ? sanitize_text_field( (string) get_post_meta( $settings_id, '_gb_support_phone', true ) ) : '';
+
+    return $phone !== '' ? $phone : '07974 903568';
+}
+
+function gb_apply_contact_defaults() {
+    if ( get_option( 'gb_contact_defaults_v1_applied' ) ) {
+        return;
+    }
+
+    $settings_id = (int) get_option( 'page_on_front' );
+    if ( $settings_id ) {
+        update_post_meta( $settings_id, '_gb_support_phone', '07974 903568' );
+        update_post_meta( $settings_id, '_gb_support_email', 'info@thegreenbroom.co.uk' );
+        update_post_meta( $settings_id, '_gb_email_from_address', 'info@thegreenbroom.co.uk' );
+        update_post_meta( $settings_id, '_gb_email_reply_to', 'info@thegreenbroom.co.uk' );
+        update_option( 'gb_contact_defaults_v1_applied', 1, false );
+    }
+}
+add_action( 'init', 'gb_apply_contact_defaults', 20 );
+
+function gb_get_support_email() {
+    $settings_id = (int) get_option( 'page_on_front' );
+    $email = $settings_id ? sanitize_email( (string) get_post_meta( $settings_id, '_gb_support_email', true ) ) : '';
+
+    return is_email( $email ) ? $email : 'info@thegreenbroom.co.uk';
+}
+
+/**
+ * The platform fee is no longer part of the requested business model.
+ * Clear the old default once so existing installations do not keep charging 10%.
+ */
+function gb_remove_platform_fee_setting() {
+    if ( get_option( 'gb_platform_fee_removed' ) ) {
+        return;
+    }
+
+    $settings_id = (int) get_option( 'page_on_front' );
+    if ( $settings_id ) {
+        update_post_meta( $settings_id, '_gb_platform_fee', '0' );
+    }
+    update_option( 'gb_platform_fee_removed', 1 );
+}
+add_action( 'init', 'gb_remove_platform_fee_setting' );
+
+function gb_migrate_mission_title() {
+    if ( get_option( 'gb_mission_title_migrated' ) ) {
+        return;
+    }
+
+    $page_ids = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'what-we-do',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+    if ( ! empty( $page_ids ) ) {
+        $current = get_post_meta( (int) $page_ids[0], '_gb_svc_mis_title', true );
+        if ( $current === '' || $current === 'The "Green" in Green Broom' ) {
+            update_post_meta( (int) $page_ids[0], '_gb_svc_mis_title', 'A cleaner home, a greener choice' );
+        }
+    }
+    update_option( 'gb_mission_title_migrated', 1 );
+}
+add_action( 'init', 'gb_migrate_mission_title' );
 
 /**
  * One-time migration: point existing "Join" buttons at the new /join page.
@@ -182,17 +431,10 @@ add_action( 'init', 'gb_ensure_legal_pages' );
 /**
  * Email the manager when a new support/contact message arrives.
  * Destination is the "Support Notification Email" setting, falling back to
- * the WordPress admin email.
+ * the Green Broom support inbox.
  */
 function gb_notify_support_message( $message_id, $context = 'Contact' ) {
-    $settings_id = (int) get_option( 'page_on_front' );
-    $to = $settings_id ? get_post_meta( $settings_id, '_gb_support_email', true ) : '';
-    if ( ! is_email( $to ) ) {
-        $to = get_option( 'admin_email' );
-    }
-    if ( ! is_email( $to ) ) {
-        return;
-    }
+    $to = gb_get_support_email();
 
     $sender_name  = (string) get_post_meta( $message_id, '_gb_sender_name', true );
     $sender_email = (string) get_post_meta( $message_id, '_gb_sender_email', true );
@@ -273,7 +515,7 @@ function gb_cleaner_verification_missing( $cleaner_id ) {
     foreach ( array( '1', '2' ) as $n ) {
         $ok = get_post_meta( $cleaner_id, "_gb_ref{$n}_name", true )
            && get_post_meta( $cleaner_id, "_gb_ref{$n}_address", true )
-           && get_post_meta( $cleaner_id, "_gb_ref{$n}_phone", true );
+           && is_email( get_post_meta( $cleaner_id, "_gb_ref{$n}_email", true ) );
         if ( ! $ok ) {
             $missing[] = "Reference {$n}";
         }
@@ -302,7 +544,7 @@ function gb_get_terms_of_association() {
         . "2. Conduct & standards. The Associate agrees to carry out all work professionally, honestly, and to the standards expected by the Platform and its customers.\n\n"
         . "3. Insurance & compliance. The Associate confirms the information and documents provided (including DBS certificate and references) are true, and agrees to hold appropriate insurance where required.\n\n"
         . "4. Verification. The Associate agrees to the Platform verifying their identity, DBS status, and references.\n\n"
-        . "5. Payments. Fees are handled through the Platform, subject to the applicable platform fee and an active monthly subscription.\n\n"
+        . "5. Payments. Payments are handled securely through the Platform, with any applicable charges disclosed before payment.\n\n"
         . "6. Data. The Associate consents to the Platform storing the information provided for the purposes of running the service, in line with the Privacy Policy.\n\n"
         . "By typing my name and title and ticking the box, I confirm I have read and agree to these Terms of Association.";
 }
@@ -558,12 +800,14 @@ function gb_get_site_settings_id() {
 function gb_get_email_settings() {
     $settings_id = gb_get_site_settings_id();
     $verification_setting = get_post_meta( $settings_id, '_gb_require_email_verification', true );
+    $from_address = sanitize_email( (string) get_post_meta( $settings_id, '_gb_email_from_address', true ) );
+    $reply_to = sanitize_email( (string) get_post_meta( $settings_id, '_gb_email_reply_to', true ) );
 
     return [
         'verification_required' => $verification_setting === '' ? true : $verification_setting === 'yes',
         'from_name'             => sanitize_text_field( (string) get_post_meta( $settings_id, '_gb_email_from_name', true ) ),
-        'from_address'          => sanitize_email( (string) get_post_meta( $settings_id, '_gb_email_from_address', true ) ),
-        'reply_to'              => sanitize_email( (string) get_post_meta( $settings_id, '_gb_email_reply_to', true ) ),
+        'from_address'          => $from_address !== '' ? $from_address : 'info@thegreenbroom.co.uk',
+        'reply_to'              => $reply_to !== '' ? $reply_to : 'info@thegreenbroom.co.uk',
         'verification_subject'  => sanitize_text_field( (string) get_post_meta( $settings_id, '_gb_email_verification_subject', true ) ),
     ];
 }
@@ -576,13 +820,7 @@ function gb_get_email_from_name() {
 
 function gb_get_email_from_address() {
     $settings = gb_get_email_settings();
-    if ( $settings['from_address'] !== '' ) {
-        return $settings['from_address'];
-    }
-
-    $admin_email = get_option( 'admin_email' );
-
-    return is_email( $admin_email ) ? $admin_email : '';
+    return is_email( $settings['from_address'] ) ? $settings['from_address'] : 'info@thegreenbroom.co.uk';
 }
 
 function gb_get_email_reply_to() {
@@ -593,6 +831,277 @@ function gb_get_email_reply_to() {
 
     return gb_get_email_from_address();
 }
+
+/**
+ * Read the Brevo transactional email settings stored with the site settings.
+ * The API key is deliberately never returned to the dashboard markup.
+ */
+function gb_get_brevo_settings() {
+    $settings_id = gb_get_site_settings_id();
+    $enabled = get_post_meta( $settings_id, '_gb_brevo_enabled', true );
+    $api_key = trim( (string) get_post_meta( $settings_id, '_gb_brevo_api_key', true ) );
+    $email_settings = gb_get_email_settings();
+
+    return [
+        'enabled'      => $enabled === 'yes',
+        'api_key'      => $api_key,
+        'from_name'    => gb_get_email_from_name(),
+        'from_address' => $email_settings['from_address'],
+        'reply_to'     => $email_settings['reply_to'],
+    ];
+}
+
+function gb_is_brevo_configured() {
+    $settings = gb_get_brevo_settings();
+
+    return ! empty( $settings['enabled'] ) && $settings['api_key'] !== '' && is_email( $settings['from_address'] );
+}
+
+/**
+ * Make a small authenticated request to Brevo's API. This is used both by
+ * the wp_mail bridge and by the manager's connection check.
+ */
+function gb_brevo_api_request( $endpoint, $body = [], $method = 'GET' ) {
+    $settings = gb_get_brevo_settings();
+    if ( $settings['api_key'] === '' ) {
+        return new WP_Error( 'gb_brevo_missing_key', 'Add a Brevo API key before testing the connection.' );
+    }
+
+    $args = [
+        'method'  => strtoupper( (string) $method ),
+        'timeout' => 20,
+        'headers' => [
+            'accept'  => 'application/json',
+            'api-key' => $settings['api_key'],
+        ],
+    ];
+
+    if ( strtoupper( (string) $method ) !== 'GET' ) {
+        $args['headers']['content-type'] = 'application/json';
+        $args['body'] = wp_json_encode( $body );
+    }
+
+    $response = wp_remote_request( 'https://api.brevo.com/v3/' . ltrim( (string) $endpoint, '/' ), $args );
+    if ( is_wp_error( $response ) ) {
+        return new WP_Error( 'gb_brevo_request_failed', 'Brevo could not be reached: ' . $response->get_error_message() );
+    }
+
+    $status = (int) wp_remote_retrieve_response_code( $response );
+    $raw_body = (string) wp_remote_retrieve_body( $response );
+    $decoded = json_decode( $raw_body, true );
+    if ( $status < 200 || $status >= 300 ) {
+        $message = is_array( $decoded ) && ! empty( $decoded['message'] )
+            ? sanitize_text_field( (string) $decoded['message'] )
+            : 'Brevo returned HTTP ' . $status . '.';
+
+        return new WP_Error( 'gb_brevo_api_error', $message, [ 'status' => $status ] );
+    }
+
+    return is_array( $decoded ) ? $decoded : [];
+}
+
+function gb_brevo_recipient( $recipient ) {
+    if ( is_array( $recipient ) ) {
+        $email = isset( $recipient['email'] ) ? sanitize_email( $recipient['email'] ) : '';
+        $name = isset( $recipient['name'] ) ? sanitize_text_field( $recipient['name'] ) : '';
+    } else {
+        $recipient = trim( (string) $recipient );
+        $name = '';
+        $email = $recipient;
+        if ( preg_match( '/^(.*?)\s*<([^>]+)>$/', $recipient, $matches ) ) {
+            $name = sanitize_text_field( trim( $matches[1], " \t\"'" ) );
+            $email = sanitize_email( $matches[2] );
+        } else {
+            $email = sanitize_email( $email );
+        }
+    }
+
+    if ( ! is_email( $email ) ) {
+        return [];
+    }
+
+    $result = [ 'email' => $email ];
+    if ( $name !== '' ) {
+        $result['name'] = $name;
+    }
+
+    return $result;
+}
+
+function gb_brevo_recipients( $recipients ) {
+    if ( ! is_array( $recipients ) ) {
+        $recipients = preg_split( '/[,;]+/', (string) $recipients );
+    }
+
+    $parsed = [];
+    foreach ( (array) $recipients as $recipient ) {
+        $value = gb_brevo_recipient( $recipient );
+        if ( ! empty( $value ) ) {
+            $parsed[] = $value;
+        }
+    }
+
+    return $parsed;
+}
+
+function gb_brevo_parse_headers( $headers ) {
+    if ( is_array( $headers ) ) {
+        $lines = [];
+        foreach ( $headers as $key => $header ) {
+            if ( is_string( $header ) ) {
+                $lines[] = $header;
+            } elseif ( is_array( $header ) && isset( $header[0], $header[1] ) ) {
+                $lines[] = $header[0] . ': ' . $header[1];
+            } elseif ( is_string( $key ) ) {
+                $lines[] = $key . ': ' . $header;
+            }
+        }
+    } else {
+        $lines = preg_split( "/\r\n|\n|\r/", (string) $headers );
+    }
+
+    $parsed = [
+        'cc'       => [],
+        'bcc'      => [],
+        'reply_to' => [],
+        'is_html'  => false,
+    ];
+    foreach ( (array) $lines as $line ) {
+        if ( strpos( (string) $line, ':' ) === false ) {
+            continue;
+        }
+
+        [ $name, $value ] = array_map( 'trim', explode( ':', (string) $line, 2 ) );
+        $name = strtolower( $name );
+        if ( $name === 'cc' ) {
+            $parsed['cc'] = array_merge( $parsed['cc'], gb_brevo_recipients( $value ) );
+        } elseif ( $name === 'bcc' ) {
+            $parsed['bcc'] = array_merge( $parsed['bcc'], gb_brevo_recipients( $value ) );
+        } elseif ( $name === 'reply-to' ) {
+            $parsed['reply_to'] = gb_brevo_recipients( $value );
+        } elseif ( $name === 'content-type' && stripos( $value, 'text/html' ) !== false ) {
+            $parsed['is_html'] = true;
+        }
+    }
+
+    return $parsed;
+}
+
+/**
+ * Send all existing wp_mail calls through Brevo when enabled. This keeps the
+ * site's verification, support, booking, and password email flows together.
+ */
+function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
+    if ( $pre_wp_mail !== null || ! gb_is_brevo_configured() ) {
+        return $pre_wp_mail;
+    }
+
+    $settings = gb_get_brevo_settings();
+    $recipients = gb_brevo_recipients( $atts['to'] ?? [] );
+    if ( empty( $recipients ) ) {
+        return false;
+    }
+
+    $headers = gb_brevo_parse_headers( $atts['headers'] ?? [] );
+    $message = (string) ( $atts['message'] ?? '' );
+    $payload = [
+        'sender'      => [
+            'name'  => $settings['from_name'],
+            'email' => $settings['from_address'],
+        ],
+        'to'          => $recipients,
+        'subject'     => sanitize_text_field( (string) ( $atts['subject'] ?? '' ) ),
+        'htmlContent' => $headers['is_html'] ? $message : wpautop( esc_html( $message ) ),
+        'textContent' => wp_strip_all_tags( $message ),
+    ];
+
+    $reply_to = ! empty( $headers['reply_to'] ) ? $headers['reply_to'][0] : gb_get_email_reply_to();
+    if ( is_array( $reply_to ) && is_email( $reply_to['email'] ?? '' ) ) {
+        $payload['replyTo'] = $reply_to;
+    } elseif ( is_email( $reply_to ) ) {
+        $payload['replyTo'] = [ 'email' => $reply_to ];
+    }
+    if ( ! empty( $headers['cc'] ) ) {
+        $payload['cc'] = $headers['cc'];
+    }
+    if ( ! empty( $headers['bcc'] ) ) {
+        $payload['bcc'] = $headers['bcc'];
+    }
+
+    $attachments = isset( $atts['attachments'] ) ? (array) $atts['attachments'] : [];
+    foreach ( $attachments as $attachment ) {
+        if ( ! is_string( $attachment ) || ! is_readable( $attachment ) ) {
+            continue;
+        }
+
+        $contents = file_get_contents( $attachment );
+        if ( $contents === false ) {
+            continue;
+        }
+
+        $payload['attachment'][] = [
+            'name'    => basename( $attachment ),
+            'content' => base64_encode( $contents ),
+        ];
+    }
+
+    $result = gb_brevo_api_request( 'smtp/email', $payload, 'POST' );
+
+    return is_wp_error( $result ) ? false : true;
+}
+add_filter( 'pre_wp_mail', 'gb_send_wp_mail_through_brevo', 10, 2 );
+
+function gb_redirect_manager_settings_with_brevo_notice( $status, $message ) {
+    $status = $status === 'ok' ? 'ok' : 'error';
+    $message = sanitize_text_field( (string) $message );
+    wp_safe_redirect( gb_get_manager_settings_url( [ 'brevo_notice' => $status, 'brevo_msg' => $message ] ) );
+    exit;
+}
+
+function gb_handle_brevo_test_connection() {
+    if ( ! is_user_logged_in() ) {
+        wp_safe_redirect( home_url( '/login' ) );
+        exit;
+    }
+
+    $user = wp_get_current_user();
+    if ( ! current_user_can( 'manage_options' ) && ! in_array( 'gb_manager', (array) $user->roles, true ) ) {
+        wp_die( 'You do not have permission to test the email connection.' );
+    }
+
+    check_admin_referer( 'gb_brevo_test' );
+    $mode = isset( $_GET['mode'] ) ? sanitize_key( wp_unslash( $_GET['mode'] ) ) : 'connection';
+    if ( $mode === 'send' ) {
+        $settings = gb_get_brevo_settings();
+        $recipient = gb_get_support_email();
+        $payload = [
+            'sender'      => [
+                'name'  => $settings['from_name'],
+                'email' => $settings['from_address'],
+            ],
+            'to'          => [ [ 'email' => $recipient ] ],
+            'replyTo'     => [ 'email' => $settings['reply_to'] ],
+            'subject'     => 'The Green Broom Brevo test email',
+            'htmlContent' => '<p>This is a test email from The Green Broom. Brevo email delivery is working.</p>',
+            'textContent' => 'This is a test email from The Green Broom. Brevo email delivery is working.',
+        ];
+        $send_result = gb_brevo_api_request( 'smtp/email', $payload, 'POST' );
+        if ( is_wp_error( $send_result ) ) {
+            gb_redirect_manager_settings_with_brevo_notice( 'error', $send_result->get_error_message() );
+        }
+
+        gb_redirect_manager_settings_with_brevo_notice( 'ok', 'A Brevo test email was sent to ' . $recipient . '.' );
+    }
+
+    $result = gb_brevo_api_request( 'account' );
+    if ( is_wp_error( $result ) ) {
+        gb_redirect_manager_settings_with_brevo_notice( 'error', $result->get_error_message() );
+    }
+
+    $account_name = ! empty( $result['companyName'] ) ? sanitize_text_field( $result['companyName'] ) : 'account';
+    gb_redirect_manager_settings_with_brevo_notice( 'ok', 'Brevo connection verified for ' . $account_name . '.' );
+}
+add_action( 'admin_post_gb_brevo_test', 'gb_handle_brevo_test_connection' );
 
 function gb_is_email_verification_enabled() {
     $settings = gb_get_email_settings();
@@ -2320,7 +2829,7 @@ function gb_get_stripe_config() {
         'secret_key'      => trim((string) $secret_key),
         'webhook_secret'  => trim((string) $webhook_secret),
         'connect_webhook_secret' => trim((string) $connect_webhook_secret),
-        'platform_fee'    => get_post_meta($settings_id, '_gb_platform_fee', true) ?: '10',
+        'platform_fee'    => get_post_meta($settings_id, '_gb_platform_fee', true) !== '' ? get_post_meta($settings_id, '_gb_platform_fee', true) : '0',
         'webhook_url'     => gb_get_stripe_webhook_url(),
     ];
 }
@@ -2561,7 +3070,6 @@ function gb_send_booking_confirmation_emails($booking_id) {
     $access_token     = (string) get_post_meta($booking_id, '_gb_booking_access_token_raw', true);
 
     $site_name  = get_bloginfo('name');
-    $from_email = get_option('admin_email');
     $date_fmt   = $date ? date_i18n('l j F Y', strtotime($date)) : $date;
     $time_fmt   = $time ? date_i18n('g:i A', strtotime($time)) : $time;
     $total_fmt  = $total_gbp > 0 ? '£' . number_format($total_gbp, 2) : '';

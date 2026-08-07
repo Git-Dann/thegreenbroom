@@ -121,7 +121,6 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_join_cta_link', true)  ?: '/regist
             <p><?php echo esc_html($hero_sub); ?></p>
             <div class="gb-hero-btns">
                 <a href="<?php echo esc_url($hero_link); ?>" class="gb-btn gb-btn-white"><?php echo esc_html($hero_btn); ?></a>
-                <a href="<?php echo esc_url($hero_link2); ?>" class="gb-btn gb-btn-outline"><?php echo esc_html($hero_btn2); ?></a>
             </div>
         </div>
     </section>

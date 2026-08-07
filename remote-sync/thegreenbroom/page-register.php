@@ -8,9 +8,10 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
         $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Security check failed. Please refresh and try again.</div>';
     } else {
         $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
-        $name = isset($_POST['first_name']) ? sanitize_text_field(wp_unslash($_POST['first_name'])) : '';
+        $name = isset($_POST['full_name']) ? sanitize_text_field(wp_unslash($_POST['full_name'])) : (isset($_POST['first_name']) ? sanitize_text_field(wp_unslash($_POST['first_name'])) : '');
         $pass = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
         $type = isset($_POST['user_type']) ? sanitize_text_field(wp_unslash($_POST['user_type'])) : 'customer';
+        $terms_accepted = ! empty($_POST['terms_acceptance']);
         $rate_state = gb_rate_limit_check('register', 5, HOUR_IN_SECONDS, $email);
         $password_check = gb_validate_account_password($pass);
 
@@ -18,6 +19,8 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ ' . esc_html(gb_get_rate_limit_message($rate_state)) . '</div>';
         } elseif ( ! is_email($email) ) {
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Please enter a valid email address.</div>';
+        } elseif ( ! $terms_accepted ) {
+            $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Please confirm that you have read and agree to the Terms of Business.</div>';
         } elseif ( is_wp_error($password_check) ) {
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ ' . esc_html($password_check->get_error_message()) . '</div>';
         } elseif ( email_exists($email) ) {
@@ -28,6 +31,8 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
             $uid = wp_create_user($email, $pass, $email);
             if(!is_wp_error($uid)) {
                 wp_update_user(['ID'=>$uid, 'first_name'=>$name, 'display_name'=>$name]);
+                update_user_meta($uid, '_gb_terms_accepted', '1');
+                update_user_meta($uid, '_gb_terms_accepted_at', current_time('mysql'));
                 $u = new WP_User($uid);
                 
                 if($type === 'cleaner') {
@@ -69,13 +74,18 @@ get_header();
                     <option value="cleaner">Work as Cleaner</option>
                 </select>
             </div>
-            <div class="gb-form-group"><label class="gb-label">First Name</label><input type="text" name="first_name" class="gb-input" required></div>
+            <div class="gb-form-group"><label class="gb-label">Full Name</label><input type="text" name="full_name" class="gb-input" required></div>
             <div class="gb-form-group"><label class="gb-label">Email Address</label><input type="email" name="email" class="gb-input" required></div>
+            <p id="gb-cleaner-signup-note" style="display:none; margin:0 0 18px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.5;">Cleaner applications include email references and a 15-minute WhatsApp or FaceTime call. Booking link coming soon.</p>
             <div class="gb-form-group">
                 <label class="gb-label">Password</label>
                 <input type="password" name="password" class="gb-input" required>
                 <p style="margin:8px 0 0; font-size:12px; color:#64748b;">Use at least 10 characters with upper and lower case letters plus a number.</p>
             </div>
+            <label style="display:flex; gap:10px; align-items:flex-start; margin:0 0 18px; font-size:13px; line-height:1.5; color:#334155;">
+                <input type="checkbox" name="terms_acceptance" value="1" required style="margin-top:3px;">
+                <span>I have read and agree to the <a href="<?php echo esc_url(function_exists('gb_get_terms_page_url') ? gb_get_terms_page_url() : home_url('/terms/')); ?>" target="_blank" rel="noopener">Terms of Business</a>.</span>
+            </label>
             <button type="submit" class="gb-btn gb-btn-primary gb-btn-block">Sign Up</button>
         </form>
         
@@ -84,4 +94,14 @@ get_header();
         </p>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var typeSelect = document.querySelector('select[name="user_type"]');
+    var cleanerNote = document.getElementById('gb-cleaner-signup-note');
+    if (!typeSelect || !cleanerNote) return;
+    var updateCleanerNote = function () { cleanerNote.style.display = typeSelect.value === 'cleaner' ? 'block' : 'none'; };
+    typeSelect.addEventListener('change', updateCleanerNote);
+    updateCleanerNote();
+});
+</script>
 <?php get_footer(); ?>

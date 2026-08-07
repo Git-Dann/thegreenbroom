@@ -127,12 +127,13 @@
                         'children' => [
                             ['label' => 'How it Works', 'url' => '/how-it-works'],
                             ['label' => 'What We Do', 'url' => '/what-we-do'],
-                            ['label' => 'How We Do It', 'url' => '/how-we-do-it']
+                            ['label' => 'How We Do It', 'url' => '/how-we-do-it'],
+                            ['label' => 'Eco Products', 'url' => '/eco-products']
                         ]
                     ],
                     ['label' => 'Cleaner Listings', 'url' => '/cleaner-listings'],
                     ['label' => 'Blog', 'url' => '/blog'],
-                    ['label' => 'Join', 'url' => '/join']
+                    ['label' => 'Create Account', 'url' => '/register']
                 ];
                 ?>
                 <ul class="nav-menu">

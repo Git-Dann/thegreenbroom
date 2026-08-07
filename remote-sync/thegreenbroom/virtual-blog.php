@@ -14,7 +14,7 @@ get_header();
 ?>
 
 <style>
-    .gb-blog-hero { background: linear-gradient(135deg, #0f172a 0%, #14532d 100%); color: #fff; padding: 90px 20px 110px; }
+    .gb-blog-hero { background: #1b5e20; color: #fff; padding: 90px 20px 110px; }
     .gb-blog-shell { max-width: 1120px; margin: 0 auto; }
     .gb-blog-kicker { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.72); margin-bottom: 14px; }
     .gb-blog-title { margin: 0; font-size: 46px; font-weight: 800; letter-spacing: -0.04em; color: #fff; }

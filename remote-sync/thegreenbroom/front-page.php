@@ -71,8 +71,6 @@ $cta_heading   = get_post_meta(get_the_ID(), '_gb_cta_heading', true)   ?: 'Read
 $cta_sub       = get_post_meta(get_the_ID(), '_gb_cta_sub', true)       ?: 'Join The Green Broom today.';
 $cta_btn_1     = get_post_meta(get_the_ID(), '_gb_cta_btn_1', true)     ?: 'Get Started Now';
 $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/register';
-$cta_btn_2     = get_post_meta(get_the_ID(), '_gb_cta_btn_2', true)     ?: 'Learn More';
-$cta_link_2    = get_post_meta(get_the_ID(), '_gb_cta_link_2', true)    ?: '/how-it-works';
 ?>
 
 <style>
@@ -243,7 +241,6 @@ $cta_link_2    = get_post_meta(get_the_ID(), '_gb_cta_link_2', true)    ?: '/how
             <p style="font-size:1.3rem; margin-bottom:40px; opacity:0.9;"><?php echo esc_html($cta_sub); ?></p>
             <div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
                 <a href="<?php echo esc_url($cta_link_1); ?>" class="gb-btn gb-btn-white"><?php echo esc_html($cta_btn_1); ?></a>
-                <a href="<?php echo esc_url($cta_link_2); ?>" class="gb-btn" style="border:2px solid white; color:white;"><?php echo esc_html($cta_btn_2); ?></a>
             </div>
         </div>
     </section>

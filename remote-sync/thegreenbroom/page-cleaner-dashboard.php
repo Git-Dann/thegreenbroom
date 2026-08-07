@@ -174,6 +174,30 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                 <p style="color:var(--text-muted); font-size:0.9rem;">Contact the team.</p>
             </a>
         </div>
+
+        <h2 class="mb-20" style="margin-top:35px;">Cleaner Resources</h2>
+        <div class="gb-grid-3">
+            <a href="<?php echo esc_url(home_url('/eco-products')); ?>" class="gb-card">
+                <div style="font-size:2rem; margin-bottom:15px;">🌿</div>
+                <h3 class="gb-card-title">Product Guide &amp; Information Booklet</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Open eco-product guidance and practical cleaner information.</p>
+            </a>
+            <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('cleaner-handbook') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
+                <div style="font-size:2rem; margin-bottom:15px;">📘</div>
+                <h3 class="gb-card-title">Cleaner Handbook</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Read the welcome and information booklet.</p>
+            </a>
+            <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('make-the-most-of-your-eco-cleaner') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
+                <div style="font-size:2rem; margin-bottom:15px;">🧽</div>
+                <h3 class="gb-card-title">Make the Most of Your Eco-Cleaner</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Practical guidance for preparing for each visit.</p>
+            </a>
+            <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('certificate-of-insurance') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
+                <div style="font-size:2rem; margin-bottom:15px;">🛡️</div>
+                <h3 class="gb-card-title">Insurance Certificate</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">View The Green Broom insurance certificate.</p>
+            </a>
+        </div>
     </div>
 </div>
 <?php get_footer(); ?>
