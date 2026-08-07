@@ -333,6 +333,12 @@ a.gb-card:hover {
     background: #f2f8f3;
 }
 
+/* Keep the homepage hero solid green even while an older cached page is served. */
+.gb-hero {
+    background: #1b5e20 !important;
+    background-image: none !important;
+}
+
 @media (max-width: 700px) {
     .gb-article-main { padding: 28px 14px 64px; }
     .gb-article-header { padding: 36px 26px 32px; border-radius: 10px 10px 0 0; }
