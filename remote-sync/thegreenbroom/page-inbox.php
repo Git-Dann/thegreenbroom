@@ -30,7 +30,17 @@ get_header();
 <div class="gb-inbox-wrap">
     <a href="<?php echo home_url('/cleaner-dashboard'); ?>" style="text-decoration:none; color:#666;">← Back to Dashboard</a>
     <br><br>
-    
+
+    <?php
+    $inbox_notice = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
+    if ($inbox_notice === 'reply_sent'): ?>
+        <div style="background:#f0fdf4; border:1px solid #dcfce7; color:#166534; padding:14px 16px; border-radius:8px; margin-bottom:16px;">✅ Reply sent and marked as replied.</div>
+    <?php elseif ($inbox_notice === 'replied_nomail'): ?>
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Marked as replied, but the email could not be sent (no valid sender email, or mail is not configured yet).</div>
+    <?php elseif ($inbox_notice === 'reply_error'): ?>
+        <div style="background:#fef2f2; border:1px solid #fee2e2; color:#991b1b; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Could not send that reply. Please add a message and try again.</div>
+    <?php endif; ?>
+
     <div class="gb-msg-card">
         <div style="padding:20px; border-bottom:1px solid #eee; background:#fafafa; font-weight:bold;">Inbox</div>
         
@@ -47,14 +57,32 @@ get_header();
                 while($msgs->have_posts()): $msgs->the_post(); 
                 $sender = get_post_meta(get_the_ID(), '_gb_sender_name', true);
                 $email = get_post_meta(get_the_ID(), '_gb_sender_email', true);
+                $responded = get_post_meta(get_the_ID(), '_gb_responded_date', true);
         ?>
             <div class="gb-msg-item">
                 <span class="gb-date"><?php echo get_the_date('M j, Y @ g:i a'); ?></span>
-                <div class="gb-sender"><?php echo esc_html($sender); ?></div>
+                <div class="gb-sender">
+                    <?php echo esc_html($sender); ?>
+                    <?php if ($responded): ?>
+                        <span style="font-size:11px; font-weight:700; color:#166534; background:#dcfce7; padding:2px 8px; border-radius:10px; margin-left:8px;">Replied</span>
+                    <?php else: ?>
+                        <span style="font-size:11px; font-weight:700; color:#9a3412; background:#fff7ed; padding:2px 8px; border-radius:10px; margin-left:8px;">Awaiting reply</span>
+                    <?php endif; ?>
+                </div>
                 <a href="mailto:<?php echo esc_attr($email); ?>" class="gb-email">Reply to: <?php echo esc_html($email); ?></a>
-                <div class="gb-body"><?php echo nl2br(get_the_content()); ?></div>
+                <div class="gb-body"><?php echo nl2br(esc_html(get_the_content())); ?></div>
+                <?php if (is_email($email)): ?>
+                <form method="post" action="<?php echo esc_url(home_url('/inbox')); ?>" style="margin-top:12px;">
+                    <input type="hidden" name="gb_reply_action" value="reply_message">
+                    <input type="hidden" name="message_id" value="<?php echo get_the_ID(); ?>">
+                    <input type="hidden" name="gb_reply_redirect" value="<?php echo esc_url(home_url('/inbox')); ?>">
+                    <?php wp_nonce_field('gb_reply_message', 'gb_reply_nonce'); ?>
+                    <textarea name="gb_reply_body" required placeholder="Type your reply&hellip;" style="width:100%; min-height:90px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;"></textarea>
+                    <button type="submit" style="margin-top:8px; background:#2e7d32; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer;">Send Reply</button>
+                </form>
+                <?php endif; ?>
             </div>
-        <?php endwhile; wp_reset_postdata(); 
+        <?php endwhile; wp_reset_postdata();
         else: ?>
             <div style="padding:50px; text-align:center; color:#999;">No messages found.</div>
         <?php endif; 

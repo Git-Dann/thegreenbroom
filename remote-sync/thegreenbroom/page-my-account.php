@@ -120,7 +120,8 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
 
     <div class="gb-container" style="margin-top:-50px; position:relative; z-index:10;">
         <?php echo $msg; ?>
-        
+        <?php echo function_exists('gb_password_notice_html') ? gb_password_notice_html() : ''; ?>
+
         <div class="gb-card mb-20">
             <div class="gb-card-head">
                 <span class="gb-card-title">Upcoming Appointments</span>
@@ -189,6 +190,25 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                 <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('cleaner-handbook') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Cleaner Information Booklet</a>
                 <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('certificate-of-insurance') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Insurance Certificate</a>
             </div>
+        </div>
+
+        <div class="gb-card mb-20" style="margin-top:20px;">
+            <div class="gb-card-head"><span class="gb-card-title">Change Password</span></div>
+            <form method="post" action="<?php echo esc_url(home_url('/my-account')); ?>" style="padding:20px; max-width:420px;">
+                <input type="hidden" name="gb_pw_action" value="change_password">
+                <input type="hidden" name="gb_pw_redirect" value="<?php echo esc_url(home_url('/my-account')); ?>">
+                <?php wp_nonce_field('gb_change_password', 'gb_pw_nonce'); ?>
+                <div style="margin-bottom:12px;">
+                    <input type="password" name="gb_current_password" placeholder="Current Password" required autocomplete="current-password" style="width:100%; padding:12px 15px; border:1px solid #e2e8f0; border-radius:8px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <input type="password" name="gb_new_password" placeholder="New Password (min. 8 characters)" required minlength="8" autocomplete="new-password" style="width:100%; padding:12px 15px; border:1px solid #e2e8f0; border-radius:8px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:16px;">
+                    <input type="password" name="gb_confirm_password" placeholder="Confirm New Password" required minlength="8" autocomplete="new-password" style="width:100%; padding:12px 15px; border:1px solid #e2e8f0; border-radius:8px; box-sizing:border-box;">
+                </div>
+                <button type="submit" class="gb-btn gb-btn-primary">Update Password</button>
+            </form>
         </div>
     </div>
 </div>

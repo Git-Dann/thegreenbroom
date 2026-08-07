@@ -1,10 +1,31 @@
 name: Deploy to live site
 
-# NOTE: FastHosts "Hosting for WordPress" only issues temporary 48h SSH creds
-# with a rotating username, so automated push-triggered deploys cannot work.
-# Deploys are done manually via scripts/push-live.sh. Kept for manual dispatch only.
+# FastHosts "Hosting for WordPress" only issues temporary 48h SSH credentials
+# with a rotating username/password, so automated push-triggered deploys can't
+# work. This runs on manual dispatch only.
+#
+# Two auth modes:
+#   * Preferred: store SSH_PRIVATE_KEY + SSH_USER + SSH_HOST secrets (a stable
+#     key never expires; only SSH_USER needs updating when it rotates).
+#   * Fallback: pass the current temporary username + password as run inputs.
+#     The password is registered with ::add-mask:: so it never appears in the
+#     job logs. It is still visible in the run's input summary, so regenerate
+#     the FastHosts credentials afterwards if that matters to you.
 on:
   workflow_dispatch:
+    inputs:
+      ssh_host:
+        description: "SFTP host address"
+        required: false
+        default: "access-5019091254.webspace-host.com"
+      ssh_user:
+        description: "Temporary FastHosts SSH username (blank = use SSH_USER secret + key auth)"
+        required: false
+        default: ""
+      ssh_password:
+        description: "Temporary FastHosts SSH password (blank = use key auth via SSH_PRIVATE_KEY)"
+        required: false
+        default: ""
 
 jobs:
   deploy:
@@ -12,23 +33,75 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SSH key
+      - name: Register password mask
+        if: inputs.ssh_password != ''
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+        run: echo "::add-mask::$SSHPASS"
+
+      - name: Resolve connection settings
+        id: conn
+        env:
+          IN_HOST: ${{ inputs.ssh_host }}
+          IN_USER: ${{ inputs.ssh_user }}
+          SEC_HOST: ${{ secrets.SSH_HOST }}
+          SEC_USER: ${{ secrets.SSH_USER }}
+          USE_PASSWORD: ${{ inputs.ssh_password != '' }}
+        run: |
+          HOST="${IN_HOST:-$SEC_HOST}"
+          USER="${IN_USER:-$SEC_USER}"
+          if [ -z "$HOST" ] || [ -z "$USER" ]; then
+            echo "Missing SSH host or user (provide inputs or set SSH_HOST/SSH_USER secrets)." >&2
+            exit 1
+          fi
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "user=$USER" >> "$GITHUB_OUTPUT"
+          echo "use_password=$USE_PASSWORD" >> "$GITHUB_OUTPUT"
+
+      - name: Install SSH key (key-auth mode)
+        if: inputs.ssh_password == ''
         run: |
           install -m 700 -d ~/.ssh
           install -m 600 /dev/null ~/.ssh/greenbroom
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/greenbroom
           echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
 
+      - name: Install sshpass (password mode)
+        if: inputs.ssh_password != ''
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
       - name: Deploy theme
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+          HOST: ${{ steps.conn.outputs.host }}
+          SSH_LOGIN: ${{ steps.conn.outputs.user }}
         run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/greenbroom -p 22" \
-            remote-sync/thegreenbroom/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:themes/thegreenbroom/
+          if [ "${{ steps.conn.outputs.use_password }}" = "true" ]; then
+            sshpass -e rsync -az --delete \
+              -e "ssh -p 22 -o StrictHostKeyChecking=no" \
+              remote-sync/thegreenbroom/ \
+              "$SSH_LOGIN@$HOST:themes/thegreenbroom/"
+          else
+            rsync -az --delete \
+              -e "ssh -i ~/.ssh/greenbroom -p 22" \
+              remote-sync/thegreenbroom/ \
+              "$SSH_LOGIN@$HOST:themes/thegreenbroom/"
+          fi
 
       - name: Deploy plugin
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+          HOST: ${{ steps.conn.outputs.host }}
+          SSH_LOGIN: ${{ steps.conn.outputs.user }}
         run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/greenbroom -p 22" \
-            remote-sync/greenbroom-core/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:plugins/greenbroom-core/
+          if [ "${{ steps.conn.outputs.use_password }}" = "true" ]; then
+            sshpass -e rsync -az --delete \
+              -e "ssh -p 22 -o StrictHostKeyChecking=no" \
+              remote-sync/greenbroom-core/ \
+              "$SSH_LOGIN@$HOST:plugins/greenbroom-core/"
+          else
+            rsync -az --delete \
+              -e "ssh -i ~/.ssh/greenbroom -p 22" \
+              remote-sync/greenbroom-core/ \
+              "$SSH_LOGIN@$HOST:plugins/greenbroom-core/"
+          fi

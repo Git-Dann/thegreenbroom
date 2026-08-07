@@ -88,6 +88,9 @@ if (isset($_GET['agreement_id'])) {
     wp_die('No signed agreement found for this cleaner.');
 }
 
+// In-dashboard message replies are handled by the shared init handler in
+// functions.php so the manager inbox and cleaner inbox use the same flow.
+
 // 2. CONTROLLER: HANDLE SAVES & ACTIONS
 if (isset($_POST['gb_manager_action']) && sanitize_key(wp_unslash($_POST['gb_manager_action'])) === 'create_blog_post') {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
@@ -447,7 +450,17 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         ];
         $ptype = get_post_type($mid);
         if ($mid && isset($type_to_tab[$ptype])) {
-            wp_trash_post($mid);
+            // Bookings represent a "cancelled" appointment using the 'trash'
+            // post status, and the bookings list intentionally shows trashed
+            // (cancelled) rows. That means wp_trash_post() is a no-op on an
+            // already-cancelled booking and never removes it — so "Delete"
+            // appeared to do nothing for confirmed, pending OR cancelled
+            // bookings. Permanently delete bookings so they actually disappear.
+            if ($ptype === 'gb_booking') {
+                wp_delete_post($mid, true);
+            } else {
+                wp_trash_post($mid);
+            }
             wp_redirect(home_url('/manager-dashboard?tab=' . $type_to_tab[$ptype] . '&msg=deleted')); exit;
         }
         wp_redirect(home_url('/manager-dashboard?msg=delete_failed')); exit;

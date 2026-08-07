@@ -159,7 +159,7 @@ if (isset($_POST['gb_resolve_ticket'])) {
                             </form>
                             <?php endif; ?>
 
-                            <a href="mailto:<?php echo esc_attr($sender_email); ?>?subject=Re: <?php echo rawurlencode(get_the_title()); ?>" class="gb-btn-primary-os">
+                            <a href="?tab=support&action=view_message&id=<?php echo $ticket_id; ?>" class="gb-btn-primary-os">
                                 <span class="dashicons dashicons-undo" style="font-size: 14px; width: 14px; height: 14px; margin-top: 1px;"></span> Reply
                             </a>
                         </div>
@@ -184,7 +184,7 @@ if (isset($_POST['gb_resolve_ticket'])) {
                                     <?php else: ?>
                                         <div></div>
                                     <?php endif; ?>
-                                    <a href="mailto:<?php echo esc_attr($sender_email); ?>?subject=Re: <?php echo rawurlencode(get_the_title()); ?>" class="gb-btn-primary-os" style="justify-content:center; height: 48px; font-size: 14px;">Send Reply</a>
+                                    <a href="?tab=support&action=view_message&id=<?php echo $ticket_id; ?>" class="gb-btn-primary-os" style="justify-content:center; height: 48px; font-size: 14px;">Send Reply</a>
                                 </div>
                             </div>
                         </div>

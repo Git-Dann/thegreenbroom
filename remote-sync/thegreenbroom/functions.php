@@ -1753,8 +1753,8 @@ add_action( 'template_redirect', 'gb_gate_unverified_users', 1 );
  * stale "please log in" response that looks exactly like being logged out,
  * even though their session was never actually invalidated.
  */
-function gb_disable_cache_for_account_pages( $template ) {
-    $gated_templates = array(
+function gb_get_account_gated_templates() {
+    return array(
         'page-manager-dashboard.php',
         'page-cleaner-dashboard.php',
         'page-edit-profile.php',
@@ -1771,17 +1771,78 @@ function gb_disable_cache_for_account_pages( $template ) {
         'page-register.php',
         'page-lost-password.php',
     );
+}
 
-    // Checked against the ACTUAL resolved template file (not just the
-    // '_wp_page_template' meta via is_page_template()) because a page whose
-    // slug matches the "page-{slug}.php" naming convention (e.g. a page at
-    // /cleaner-dashboard/ automatically using page-cleaner-dashboard.php)
-    // is picked up by WordPress's template hierarchy without that meta ever
-    // being set, and is_page_template() alone would miss it.
-    if ( $template && in_array( basename( $template ), $gated_templates, true ) ) {
-        nocache_headers();
-        // LiteSpeed Cache's documented opt-out API — a no-op if the plugin isn't active.
-        do_action( 'litespeed_control_set_nocache', 'gb-account-page' );
+/**
+ * Emit every "do not cache" signal we can from PHP. This is deliberately
+ * belt-and-braces: a stale logged-out redirect being replayed to a logged-in
+ * manager (the "randomly logged out when opening Manage Cleaners" bug) is
+ * caused by a full-page cache storing the anonymous 302→/login response, so we
+ * want to be certain no layer ever stores one of these responses.
+ *
+ * NOTE: PHP-level headers/flags only stop a response from being *stored* on a
+ * cache MISS. They cannot evict a copy already sitting in a server/edge cache,
+ * nor do they run at all on a cache HIT (PHP is skipped). After deploying,
+ * purge the LiteSpeed/host cache once and add a "Do Not Cache URIs" rule for
+ * /manager-dashboard, /cleaner-dashboard, etc. plus "Do Not Cache Logged-in
+ * Users" so the exclusion is enforced before the cache is even consulted.
+ */
+function gb_emit_account_page_nocache() {
+    nocache_headers();
+
+    // Respected by WP Super Cache, W3 Total Cache, WP Rocket, Comet Cache, etc.
+    if ( ! defined( 'DONOTCACHEPAGE' ) )   { define( 'DONOTCACHEPAGE', true ); }
+    if ( ! defined( 'DONOTCACHEOBJECT' ) ) { define( 'DONOTCACHEOBJECT', true ); }
+    if ( ! defined( 'DONOTCACHEDB' ) )     { define( 'DONOTCACHEDB', true ); }
+
+    // LiteSpeed Cache's documented opt-out API — a no-op if the plugin isn't active.
+    do_action( 'litespeed_control_set_nocache', 'gb-account-page' );
+
+    if ( ! headers_sent() ) {
+        header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private', true );
+        header( 'Pragma: no-cache', true );
+        // Ensure any shared cache that ignores the above at least varies by the
+        // auth cookie so a logged-out copy is never served to a logged-in user.
+        header( 'Vary: Cookie', false );
+    }
+}
+
+/**
+ * True when the current main-query request is one of the account-gated pages,
+ * resolved via the ACTUAL template file WordPress will load (not just the
+ * '_wp_page_template' meta) so pages using the "page-{slug}.php" naming
+ * convention are caught even when that meta was never set.
+ */
+function gb_is_account_gated_request() {
+    if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+        return false;
+    }
+    if ( ! is_page() ) {
+        return false;
+    }
+    $template = get_page_template_slug();
+    if ( $template && in_array( basename( $template ), gb_get_account_gated_templates(), true ) ) {
+        return true;
+    }
+    // Fall back to the slug-based convention (e.g. /cleaner-dashboard/ → page-cleaner-dashboard.php).
+    $slug = get_post_field( 'post_name', get_queried_object_id() );
+    return $slug && in_array( 'page-' . $slug . '.php', gb_get_account_gated_templates(), true );
+}
+
+// Fire as early as possible so cache plugins that decide at template_redirect
+// see DONOTCACHEPAGE, and so the anonymous redirect-to-login response these
+// pages emit is itself never cacheable.
+function gb_disable_cache_for_account_pages_early() {
+    if ( gb_is_account_gated_request() ) {
+        gb_emit_account_page_nocache();
+    }
+}
+add_action( 'template_redirect', 'gb_disable_cache_for_account_pages_early', -100 );
+
+// Belt-and-braces second pass against the resolved template file.
+function gb_disable_cache_for_account_pages( $template ) {
+    if ( $template && in_array( basename( $template ), gb_get_account_gated_templates(), true ) ) {
+        gb_emit_account_page_nocache();
     }
 
     return $template;
@@ -1849,15 +1910,18 @@ add_action( 'template_redirect', 'gb_handle_public_route_fixes', 0 );
 
 // Register Custom Roles
 function gb_register_roles() {
-    add_role( 'gb_manager', 'Manager', array('read'=>true, 'edit_posts'=>true, 'upload_files'=>true));
+    add_role( 'gb_manager', 'Manager', array('read'=>true, 'edit_posts'=>true, 'edit_others_posts'=>true, 'upload_files'=>true));
     add_role( 'gb_cleaner', 'Cleaner', array('read'=>true, 'upload_files'=>true, 'edit_posts'=>false));
     add_role( 'gb_customer', 'Customer', array('read'=>true, 'upload_files'=>false, 'edit_posts'=>false));
 
     // add_role() is a no-op if the role already exists in the DB, so any
     // capability added here later would never reach a site whose roles were
     // created before this line was added. Sync the required caps explicitly.
+    // 'edit_others_posts' lets a Manager crop/edit media-library images that
+    // were uploaded by someone else (WordPress checks edit_post on the
+    // attachment during image editing).
     $required_caps = array(
-        'gb_manager'  => array('read', 'edit_posts', 'upload_files'),
+        'gb_manager'  => array('read', 'edit_posts', 'edit_others_posts', 'upload_files'),
         'gb_cleaner'  => array('read', 'upload_files'),
         'gb_customer' => array('read'),
     );
@@ -1894,6 +1958,30 @@ function gb_security_redirect() {
         ];
         if (in_array(sanitize_key(wp_unslash($_REQUEST['action'])), $public_actions, true)) {
             return;
+        }
+    }
+
+    // Front-end managers/cleaners genuinely need the core Media Library and
+    // attachment/image-edit screens to select, upload, edit or crop images for
+    // the page builder and their listings. Without this exemption the guard
+    // below bounced them to their dashboard the moment they opened "Edit Image"
+    // or an attachment details screen, so they could never finish placing an
+    // image. Only media-related screens are allowed through — everything else
+    // in wp-admin still redirects.
+    if ( is_admin() && ! defined('DOING_AJAX') && ! current_user_can('administrator') && current_user_can('upload_files') ) {
+        $pagenow = isset($GLOBALS['pagenow']) ? $GLOBALS['pagenow'] : '';
+        $media_screens = array('upload.php', 'media-new.php', 'media.php', 'async-upload.php');
+        if ( in_array($pagenow, $media_screens, true) ) {
+            return;
+        }
+        // Attachment edit / image-crop screen (post.php?post=ID&action=edit),
+        // scoped strictly to attachments so managers still can't reach the
+        // editor for arbitrary posts/pages.
+        if ( $pagenow === 'post.php' ) {
+            $target = isset($_REQUEST['post']) ? intval($_REQUEST['post']) : 0;
+            if ( $target && get_post_type($target) === 'attachment' ) {
+                return;
+            }
         }
     }
 
@@ -2147,7 +2235,14 @@ function gb_send_cleaner_message() {
     $msg_id = wp_insert_post(['post_type'=>'gb_message', 'post_title'=>'Inquiry from '.$name, 'post_content'=>$body, 'post_status'=>'publish']);
 
     if ($msg_id) {
-        update_post_meta($msg_id, '_gb_related_cleaner', $cleaner_id);
+        // Only attach a related cleaner when we genuinely have a valid cleaner
+        // target. Without this guard a missing/zero cleaner_id (or a manager-
+        // directed message) gets bucketed under whichever cleaner post the
+        // stray ID resolves to in the inbox, which is how manager messages
+        // ended up showing "To: Alston Knight".
+        if ($cleaner_id > 0 && get_post_type($cleaner_id) === 'gb_cleaner') {
+            update_post_meta($msg_id, '_gb_related_cleaner', $cleaner_id);
+        }
         update_post_meta($msg_id, '_gb_sender_name', $name);
         update_post_meta($msg_id, '_gb_sender_email', $email);
         update_post_meta($msg_id, '_gb_responded_date', '');
@@ -2248,6 +2343,225 @@ function gb_redirect_to_custom_lostpassword() {
         exit;
     }
 }
+
+/**
+ * Shared front-end "Change Password" handler.
+ *
+ * Both the cleaner Account Settings page and the manager dashboard post here.
+ * It verifies the current password, applies the new one, and — because
+ * wp_set_password() invalidates the current session — immediately re-issues an
+ * auth cookie so the user is NOT kicked out after changing their password.
+ * Result is reported back via a ?pw= flag on the page they came from.
+ */
+add_action('init', function () {
+    if (!isset($_POST['gb_pw_action']) || $_POST['gb_pw_action'] !== 'change_password') {
+        return;
+    }
+
+    $redirect = '';
+    if (!empty($_POST['gb_pw_redirect'])) {
+        $redirect = wp_validate_redirect(esc_url_raw(wp_unslash($_POST['gb_pw_redirect'])), '');
+    }
+    if ($redirect === '') {
+        $redirect = wp_get_referer() ? wp_get_referer() : home_url('/');
+    }
+    $bounce = function ($status) use ($redirect) {
+        wp_safe_redirect(add_query_arg('pw', $status, remove_query_arg('pw', $redirect)));
+        exit;
+    };
+
+    if (!is_user_logged_in()) {
+        $bounce('error');
+    }
+    if (empty($_POST['gb_pw_nonce']) || !wp_verify_nonce($_POST['gb_pw_nonce'], 'gb_change_password')) {
+        $bounce('error');
+    }
+
+    $user    = wp_get_current_user();
+    $current = isset($_POST['gb_current_password']) ? (string) wp_unslash($_POST['gb_current_password']) : '';
+    $new     = isset($_POST['gb_new_password']) ? (string) wp_unslash($_POST['gb_new_password']) : '';
+    $confirm = isset($_POST['gb_confirm_password']) ? (string) wp_unslash($_POST['gb_confirm_password']) : '';
+
+    if ($current === '' || $new === '' || $confirm === '') {
+        $bounce('missing');
+    }
+    if (!wp_check_password($current, $user->user_pass, $user->ID)) {
+        $bounce('wrong');
+    }
+    if ($new !== $confirm) {
+        $bounce('mismatch');
+    }
+    if (strlen($new) < 8) {
+        $bounce('weak');
+    }
+
+    wp_set_password($new, $user->ID);
+    // Keep the user signed in after the password change.
+    wp_clear_auth_cookie();
+    wp_set_current_user($user->ID);
+    wp_set_auth_cookie($user->ID, true);
+
+    $bounce('success');
+}, 5);
+
+/**
+ * Render a status banner for the shared password handler's ?pw= flag.
+ * Returns an HTML string (empty when there is nothing to show).
+ */
+function gb_password_notice_html() {
+    if (!isset($_GET['pw'])) {
+        return '';
+    }
+    $status = sanitize_key(wp_unslash($_GET['pw']));
+    $map = [
+        'success'  => ['#f0fdf4', '#dcfce7', '#166534', '✅ Your password has been updated.'],
+        'wrong'    => ['#fef2f2', '#fee2e2', '#991b1b', 'Your current password was incorrect.'],
+        'mismatch' => ['#fef2f2', '#fee2e2', '#991b1b', 'The new passwords did not match.'],
+        'weak'     => ['#fffbeb', '#fde68a', '#92400e', 'Please choose a password with at least 8 characters.'],
+        'missing'  => ['#fffbeb', '#fde68a', '#92400e', 'Please fill in all three password fields.'],
+        'error'    => ['#fef2f2', '#fee2e2', '#991b1b', 'Could not change your password. Please try again.'],
+    ];
+    if (!isset($map[$status])) {
+        return '';
+    }
+    list($bg, $border, $color, $text) = $map[$status];
+    return '<div style="background:' . $bg . '; border:1px solid ' . $border . '; color:' . $color . '; padding:14px 16px; border-radius:8px; margin-bottom:20px; font-size:14px;">' . esc_html($text) . '</div>';
+}
+
+/**
+ * Shared in-dashboard message reply handler.
+ *
+ * Used by BOTH the manager inbox/helpdesk and the cleaner inbox: it emails the
+ * message sender and marks the message replied, so the "Replied" status always
+ * reflects a reply actually being sent from within the platform (the old flow
+ * was a bare mailto: that never recorded anything).
+ *
+ * Authorization: managers/admins may reply to any message; a cleaner may only
+ * reply to a message tied to their own cleaner profile.
+ *
+ * NOTE: delivery still depends on wp_mail being backed by a working mail
+ * service. wp_mail() can report success even when the host silently drops the
+ * message, so a "reply_sent" flag means "handed to wp_mail", not "delivered".
+ */
+add_action('init', function () {
+    if (!isset($_POST['gb_reply_action']) || $_POST['gb_reply_action'] !== 'reply_message') {
+        return;
+    }
+    if (empty($_POST['gb_reply_nonce']) || !wp_verify_nonce($_POST['gb_reply_nonce'], 'gb_reply_message')) {
+        wp_die('Security check failed.');
+    }
+    if (!is_user_logged_in()) {
+        wp_safe_redirect(home_url('/login'));
+        exit;
+    }
+
+    $mid = isset($_POST['message_id']) ? intval($_POST['message_id']) : 0;
+    $reply_body = isset($_POST['gb_reply_body']) ? sanitize_textarea_field(wp_unslash($_POST['gb_reply_body'])) : '';
+
+    $redirect = '';
+    if (!empty($_POST['gb_reply_redirect'])) {
+        $redirect = wp_validate_redirect(esc_url_raw(wp_unslash($_POST['gb_reply_redirect'])), '');
+    }
+    if ($redirect === '') {
+        $redirect = home_url('/manager-dashboard?tab=support&action=view_message&id=' . $mid);
+    }
+    $bounce = function ($flag) use ($redirect) {
+        wp_safe_redirect(add_query_arg('msg', $flag, $redirect));
+        exit;
+    };
+
+    if (get_post_type($mid) !== 'gb_message' || $reply_body === '') {
+        $bounce('reply_error');
+    }
+
+    // Authorization.
+    $user = wp_get_current_user();
+    $can_reply = current_user_can('manage_options') || in_array('gb_manager', (array) $user->roles, true);
+    if (!$can_reply) {
+        $related = (int) get_post_meta($mid, '_gb_related_cleaner', true);
+        if ($related) {
+            $owned = get_posts([
+                'post_type'   => 'gb_cleaner',
+                'author'      => $user->ID,
+                'include'     => [$related],
+                'post_status' => ['publish', 'pending', 'draft'],
+                'fields'      => 'ids',
+            ]);
+            $can_reply = !empty($owned);
+        }
+    }
+    if (!$can_reply) {
+        wp_die('You are not allowed to reply to this message.');
+    }
+
+    $to = sanitize_email((string) get_post_meta($mid, '_gb_sender_email', true));
+    $sent = false;
+    if (is_email($to)) {
+        $settings_id = (int) get_option('page_on_front');
+        $from_name = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_from_name', true) : '';
+        $from_name = $from_name !== '' ? $from_name : get_bloginfo('name');
+        $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_email_reply_to', true) : '';
+        if (!is_email($reply_to)) {
+            $reply_to = $settings_id ? (string) get_post_meta($settings_id, '_gb_support_email', true) : '';
+        }
+        if (!is_email($reply_to)) {
+            $reply_to = function_exists('gb_get_support_email') ? gb_get_support_email() : get_option('admin_email');
+        }
+
+        $subject = 'Re: ' . get_the_title($mid);
+        $body = $reply_body . "\n\n—\n" . $from_name;
+        $from_email = function_exists('gb_get_email_from_address') ? gb_get_email_from_address() : get_option('admin_email');
+        $headers = ['From: ' . $from_name . ' <' . $from_email . '>'];
+        if (is_email($reply_to)) {
+            $headers[] = 'Reply-To: ' . $reply_to;
+        }
+        $sent = wp_mail($to, $subject, $body, $headers);
+    }
+
+    update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
+    update_post_meta($mid, '_gb_reply_body', $reply_body);
+
+    $bounce($sent ? 'reply_sent' : 'replied_nomail');
+}, 5);
+
+/**
+ * One-time cleanup of legacy mis-tagged support messages.
+ *
+ * Helpdesk / manager-directed messages (_gb_is_helpdesk = '1') should never
+ * carry a _gb_related_cleaner. Older code paths sometimes attached one, which
+ * made those messages display under a specific cleaner ("To: Alston Knight")
+ * in the manager inbox. Clear that stray meta once so historical tickets show
+ * correctly. Genuine customer→cleaner enquiries (not helpdesk-flagged) are
+ * left untouched. Runs a single time when a manager/admin is on the site.
+ */
+add_action('init', function () {
+    if (get_option('gb_helpdesk_relation_cleanup_v1')) {
+        return;
+    }
+    if (!is_user_logged_in()) {
+        return;
+    }
+    $user = wp_get_current_user();
+    if (!current_user_can('manage_options') && !in_array('gb_manager', (array) $user->roles, true)) {
+        return;
+    }
+
+    $ids = get_posts([
+        'post_type'      => 'gb_message',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => [
+            'relation' => 'AND',
+            ['key' => '_gb_is_helpdesk', 'value' => '1'],
+            ['key' => '_gb_related_cleaner', 'compare' => 'EXISTS'],
+        ],
+    ]);
+    foreach ($ids as $id) {
+        delete_post_meta($id, '_gb_related_cleaner');
+    }
+    update_option('gb_helpdesk_relation_cleanup_v1', 1);
+}, 20);
 
 /* ==========================================================================
    6. STRIPE API SETTINGS ENGINE

@@ -387,10 +387,15 @@ $gb_payment_class = static function($payment_status) {
                     </td>
                     <td><span class="<?php echo esc_attr($gb_payment_class($payment_status)); ?>"><?php echo esc_html($gb_payment_label($payment_status, $payment_provider)); ?></span></td>
                     <td style="font-weight:700; color:#0f172a;"><?php echo $total_gbp > 0 ? '£' . number_format($total_gbp, 2) : '—'; ?></td>
+                    <?php
+                    $gb_del_confirm = ($payment_status === 'paid')
+                        ? 'WARNING: this booking has a recorded PAID payment. Deleting it permanently removes the local record of that charge/payout (this does NOT refund the customer in Stripe). Delete anyway?'
+                        : 'Permanently delete this booking? This cannot be undone.';
+                    ?>
                     <td style="text-align:right;">
                         <div style="display:flex; justify-content:flex-end; gap:8px;">
                             <a href="?tab=bookings&action=edit&id=<?php echo $bid; ?>" class="gb-btn-small-os">Manage</a>
-                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $bid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $bid)); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('Delete this booking? It will be moved to trash.');">Delete</a>
+                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $bid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $bid)); ?>" class="gb-btn-small-os" style="color:#ef4444;" onclick="return confirm('<?php echo esc_js($gb_del_confirm); ?>');">Delete</a>
                         </div>
                     </td>
                 </tr>
