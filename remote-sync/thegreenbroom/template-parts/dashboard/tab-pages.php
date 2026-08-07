@@ -41,6 +41,17 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         transition: all 0.2s ease; background: white; cursor: pointer;
     }
     .gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    .gb-pages-accordion { margin-top: 28px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .gb-pages-accordion > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; color: #64748b; cursor: pointer; list-style: none; }
+    .gb-pages-accordion > summary::-webkit-details-marker { display: none; }
+    .gb-pages-accordion > summary:hover { background: #f8fafc; }
+    .gb-pages-accordion-title { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .gb-pages-accordion-meta { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .gb-pages-accordion-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 800; }
+    .gb-pages-accordion-chevron { transition: transform 0.2s ease; }
+    .gb-pages-accordion[open] .gb-pages-accordion-chevron { transform: rotate(180deg); }
+    .gb-pages-accordion-body { overflow-x: auto; border-top: 1px solid #e2e8f0; }
 </style>
 
 <?php if ($edit_page): 
@@ -732,7 +743,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $pages_by_slug[$page_obj->post_name] = $page_obj;
     }
 
-    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join'];
+    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'eco-products'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr'];
 
     $core_pages = [];
@@ -836,9 +847,15 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     }
     ?>
     <?php if (!empty($other_pages)): ?>
-    <div style="margin-top:28px;">
-        <div style="margin:0 0 10px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Other Pages</div>
-        <div class="gb-card" style="padding:0; overflow:hidden; background: white; border: 1px solid #e2e8f0; border-radius: 12px;">
+    <details class="gb-pages-accordion">
+        <summary>
+            <span>
+                <span class="gb-pages-accordion-title">Other Pages</span>
+                <span class="gb-pages-accordion-meta"><span class="gb-pages-accordion-count"><?php echo count($other_pages); ?></span> available</span>
+            </span>
+            <span class="dashicons dashicons-arrow-down-alt2 gb-pages-accordion-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="gb-pages-accordion-body">
             <table class="gb-booking-table">
                 <thead>
                     <tr><th style="width:40%;">Page Identity</th><th>Status</th><th style="text-align:right;">Action</th></tr>
@@ -860,7 +877,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                 </tbody>
             </table>
         </div>
-    </div>
+    </details>
     <?php endif; ?>
 
 <?php endif; ?>
