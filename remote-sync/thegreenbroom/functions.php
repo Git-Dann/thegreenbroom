@@ -2104,6 +2104,7 @@ function gb_security_redirect() {
         $public_actions = [
             'gb_stripe_webhook',
             'gb_stripe_storefront_checkout',
+            'gb_download_resource',
         ];
         if (in_array(sanitize_key(wp_unslash($_REQUEST['action'])), $public_actions, true)) {
             return;

@@ -26,7 +26,8 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
     <div class="gb-container">
         <h1 style="font-size: 42px; font-weight: 800; color: #0f172a; margin: 0;">Contact Support</h1>
         <p style="color: #64748b; font-size: 18px; margin-top: 10px;">Send a message directly to our management team.</p>
-        <p style="color:#2e7d32; font-weight:700; margin:16px 0 0;">Phone support: <?php echo $support_phone ? '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $support_phone)) . '">' . esc_html($support_phone) . '</a>' : 'Monday to Friday, 9 am to 5 pm'; ?></p>
+        <p style="color:#2e7d32; font-weight:700; margin:16px 0 0;">Phone support: <?php echo $support_phone ? '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $support_phone)) . '">' . esc_html($support_phone) . '</a>' : '07974 903568'; ?></p>
+        <p style="color:#64748b; font-size:14px; margin:6px 0 0;">Monday to Friday, 9 am to 5 pm</p>
     </div>
 </div>
 
