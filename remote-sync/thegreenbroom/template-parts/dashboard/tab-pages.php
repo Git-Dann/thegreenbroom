@@ -30,11 +30,12 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-upload-wrapper { margin-top: 5px; }
     .gb-media-field { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 14px; align-items: stretch; }
     .gb-media-controls { min-width: 0; }
-    .gb-media-input-row { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
-    .gb-media-input-row:focus-within { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
-    .gb-media-input-row .dashicons { flex: 0 0 auto; color: #94a3b8; }
-    .gb-media-input { min-width: 0; width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: #334155; font-size: 13px; }
-    .gb-media-input::placeholder { color: #94a3b8; }
+    .gb-media-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .gb-media-selected { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
+    .gb-media-selected .dashicons { flex: 0 0 auto; width: 28px; height: 28px; padding: 5px; border-radius: 7px; background: #f0fdf4; color: #2e7d32; box-sizing: border-box; }
+    .gb-media-selected-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .gb-media-name { overflow: hidden; color: #334155; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .gb-media-source { color: #94a3b8; font-size: 11px; }
     .gb-media-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
     .gb-media-actions .gb-upload-btn { border-color: #2e7d32; color: #2e7d32; }
     .gb-media-actions .gb-upload-btn:hover { border-color: #256b2a; background: #f0fdf4; }
@@ -303,15 +304,19 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             <div class="gb-upload-wrapper">
                 <div class="gb-media-field<?php echo $field_value !== '' ? ' has-value' : ''; ?>" data-media-field>
                     <div class="gb-media-controls">
-                        <div class="gb-media-input-row">
+                        <div class="gb-media-selected">
                             <span class="dashicons dashicons-format-image" aria-hidden="true"></span>
-                            <input type="text" name="<?php echo esc_attr($field_name); ?>" class="gb-media-input" value="<?php echo esc_attr($field_value); ?>" placeholder="Paste an image URL or choose from the library">
+                            <div class="gb-media-selected-copy">
+                                <span class="gb-media-name" data-media-name><?php echo $field_value !== '' ? 'Selected image' : 'No image selected'; ?></span>
+                                <span class="gb-media-source" data-media-source><?php echo $field_value !== '' ? 'Ready to use' : 'Choose an image to add one'; ?></span>
+                            </div>
                         </div>
+                        <input type="hidden" name="<?php echo esc_attr($field_name); ?>" class="gb-media-input" value="<?php echo esc_attr($field_value); ?>">
                         <div class="gb-media-actions">
                             <button type="button" class="gb-upload-btn gb-btn-small-os"><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span> Choose image</button>
                             <button type="button" class="gb-media-clear gb-btn-small-os">Clear</button>
                         </div>
-                        <p class="gb-media-help">Choose an image from the WordPress media library, or paste a public image URL.</p>
+                        <p class="gb-media-help">Choose an image from the WordPress media library. The image is stored automatically.</p>
                     </div>
                     <div class="gb-media-preview<?php echo $field_value === '' ? ' is-empty' : ''; ?>" data-media-preview>
                         <?php if ($field_value !== ''): ?><img src="<?php echo esc_url($field_value); ?>" alt="" data-media-preview-image><?php endif; ?>
@@ -720,11 +725,20 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             var cleanUrl = $.trim(url || '');
 
             $field.toggleClass('has-value', !!cleanUrl);
+            var $name = $field.find('[data-media-name]');
+            var $source = $field.find('[data-media-source]');
             $preview.removeClass('is-empty is-error').empty();
             if (!cleanUrl) {
+                $name.text('No image selected');
+                $source.text('Choose an image to add one');
                 $preview.addClass('is-empty');
                 return;
             }
+
+            var filename = cleanUrl.split('?')[0].split('/').pop() || 'Selected image';
+            try { filename = decodeURIComponent(filename); } catch (error) {}
+            $name.text(filename);
+            $source.text('Selected image');
 
             $('<img>', { src: cleanUrl, alt: '' })
                 .on('error', function() {
