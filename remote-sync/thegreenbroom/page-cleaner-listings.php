@@ -16,21 +16,47 @@ $args = array(
 );
 
 // Search by postcode metadata, not by cleaner name.
-if ( ! empty($_GET['k']) ) {
-    $postcode = sanitize_text_field(wp_unslash($_GET['k']));
-    $args['meta_query'] = [
+$search_term = isset($_GET['k']) ? strtoupper(trim(preg_replace('/\s+/', ' ', sanitize_text_field(wp_unslash($_GET['k']))))) : '';
+$search_error = '';
+if ( $search_term !== '' && ! preg_match('/^[A-Z0-9 ]{2,10}$/', $search_term) ) {
+    $search_error = 'Please enter a valid postcode using letters and numbers.';
+    $search_term = '';
+}
+
+$meta_filters = [];
+if ( $search_term !== '' ) {
+    $meta_filters[] = [
         'relation' => 'OR',
-        ['key' => 'gb_postcode', 'value' => $postcode, 'compare' => 'LIKE'],
-        ['key' => '_gb_location', 'value' => $postcode, 'compare' => 'LIKE'],
-        ['key' => 'location', 'value' => $postcode, 'compare' => 'LIKE'],
-        ['key' => 'cleaner_location', 'value' => $postcode, 'compare' => 'LIKE'],
+        ['key' => 'gb_postcode', 'value' => $search_term, 'compare' => 'LIKE'],
+        ['key' => '_gb_location', 'value' => $search_term, 'compare' => 'LIKE'],
+        ['key' => 'location', 'value' => $search_term, 'compare' => 'LIKE'],
+        ['key' => 'cleaner_location', 'value' => $search_term, 'compare' => 'LIKE'],
     ];
+}
+
+$service_filter = isset($_GET['service']) ? sanitize_key(wp_unslash($_GET['service'])) : '';
+$service_filters = [
+    'standard' => 'Standard Clean',
+    'deep'     => 'Deep Clean',
+    'moving'   => 'End of Tenancy',
+];
+if ( isset($service_filters[$service_filter]) ) {
+    $meta_filters[] = [
+        'key'     => 'gb_services',
+        'value'   => $service_filters[$service_filter],
+        'compare' => 'LIKE',
+    ];
+}
+if ( count($meta_filters) === 1 ) {
+    $args['meta_query'] = $meta_filters[0];
+} elseif ( count($meta_filters) > 1 ) {
+    $args['meta_query'] = array_merge(['relation' => 'AND'], $meta_filters);
 }
 
 $cleaners = new WP_Query($args);
 
-$listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find Your Professional';
-$listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Trusted, vetted, and verified cleaners ready to help.';
+$listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find a cleaner:';
+$listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Search by Postcode, not by name.';
 $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No professionals found. Try adjusting your search criteria.';
 ?>
 
@@ -122,12 +148,12 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
     <p class="gb-dir-sub"><?php echo esc_html($listings_sub); ?></p>
     
     <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
-        <input type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo isset($_GET['k']) ? esc_attr($_GET['k']) : ''; ?>">
+        <input type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo esc_attr($search_term); ?>" maxlength="10" autocomplete="postal-code" inputmode="text" aria-label="Search by postcode">
         <select name="service" class="gb-search-select">
             <option value="">Any Service</option>
-            <option value="standard">Standard Clean</option>
-            <option value="deep">Deep Clean</option>
-            <option value="moving">Move In/Out</option>
+            <option value="standard" <?php selected($service_filter, 'standard'); ?>>Standard Clean</option>
+            <option value="deep" <?php selected($service_filter, 'deep'); ?>>Deep Clean</option>
+            <option value="moving" <?php selected($service_filter, 'moving'); ?>>Move In/Out</option>
         </select>
         <button type="submit" class="gb-search-btn">Search</button>
     </form>
@@ -135,8 +161,10 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
 
 <div class="gb-dir-container">
     
-    <?php if ( ! empty($_GET['k']) ) : ?>
-        <p style="margin-bottom: 30px; color: #64748b;">Found <strong><?php echo $cleaners->found_posts; ?></strong> results for "<?php echo esc_html($_GET['k']); ?>"</p>
+    <?php if ( $search_error ) : ?>
+        <p style="margin-bottom: 30px; color: #b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 14px;"><?php echo esc_html($search_error); ?></p>
+    <?php elseif ( $search_term !== '' ) : ?>
+        <p style="margin-bottom: 30px; color: #64748b;">Found <strong><?php echo $cleaners->found_posts; ?></strong> results for "<?php echo esc_html($search_term); ?>"</p>
     <?php endif; ?>
 
     <div class="gb-cleaner-grid">

@@ -232,8 +232,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         ];
     } elseif ($slug === 'cleaner-listings') {
         $gb_page_defaults = [
-            '_gb_listings_title' => 'Find Your Professional',
-            '_gb_listings_sub'   => 'Trusted, vetted, and verified cleaners ready to help.',
+            '_gb_listings_title' => 'Find a cleaner:',
+            '_gb_listings_sub'   => 'Search by Postcode, not by name.',
             '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
         ];
     } elseif ($slug === 'join') {
