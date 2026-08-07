@@ -179,8 +179,8 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
         <div class="gb-grid-3">
             <a href="<?php echo esc_url(home_url('/eco-products')); ?>" class="gb-card">
                 <div style="font-size:2rem; margin-bottom:15px;">🌿</div>
-                <h3 class="gb-card-title">Product Guide &amp; Information Booklet</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem;">Open eco-product guidance and practical cleaner information.</p>
+                <h3 class="gb-card-title">Eco Cleaning Products Guide</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Open the public guide to eco-friendly cleaning products.</p>
             </a>
             <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('cleaner-handbook') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
                 <div style="font-size:2rem; margin-bottom:15px;">📘</div>

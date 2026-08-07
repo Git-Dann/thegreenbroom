@@ -245,7 +245,7 @@ function gb_handle_resource_download() {
         wp_die( 'Resource not found.', 'Resource not found', array( 'response' => 404 ) );
     }
 
-    $protected_resources = array( 'cleaner-handbook', 'certificate-of-insurance' );
+    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
     if ( in_array( $resource, $protected_resources, true ) && ! is_user_logged_in() ) {
         auth_redirect();
     }

@@ -34,20 +34,6 @@ $resources = function_exists( 'gb_get_resource_definitions' ) ? gb_get_resource_
                     <a class="gb-eco-link" target="_blank" rel="noopener" href="<?php echo esc_url( gb_get_resource_url( 'eco-cleaning-products' ) ); ?>">View guide</a>
                 </article>
             <?php endif; ?>
-            <?php if ( isset( $resources['make-the-most-of-your-eco-cleaner'] ) ) : ?>
-                <article class="gb-eco-item">
-                    <h2>Make the Most of Your Eco-Cleaner</h2>
-                    <p>Helpful preparation tips for getting the best results from an eco-cleaning visit.</p>
-                    <a class="gb-eco-link" target="_blank" rel="noopener" href="<?php echo esc_url( gb_get_resource_url( 'make-the-most-of-your-eco-cleaner' ) ); ?>">View guide</a>
-                </article>
-            <?php endif; ?>
-            <?php if ( isset( $resources['cleaner-handbook'] ) ) : ?>
-                <article class="gb-eco-item">
-                    <h2>Cleaner Information Booklet</h2>
-                    <p>Welcome and operating information for cleaners working with The Green Broom.</p>
-                    <a class="gb-eco-link" target="_blank" rel="noopener" href="<?php echo esc_url( gb_get_resource_url( 'cleaner-handbook' ) ); ?>">View booklet</a>
-                </article>
-            <?php endif; ?>
         </div>
     </div>
 </main>
