@@ -2143,6 +2143,23 @@ function gb_is_allowed_media_admin_request() {
     return $target > 0 && get_post_type( $target ) === 'attachment';
 }
 
+/**
+ * Keep the auth-cookie policy fresh when WordPress serves a media screen.
+ * Media editing can be opened directly from the front-end picker, without a
+ * new manager-dashboard page load to refresh the cookie first.
+ */
+function gb_refresh_media_auth_cookie_policy() {
+    if ( ! gb_is_allowed_media_admin_request() || ! is_user_logged_in() ) {
+        return;
+    }
+
+    $token = wp_get_session_token();
+    if ( $token !== '' ) {
+        wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
+    }
+}
+add_action( 'admin_init', 'gb_refresh_media_auth_cookie_policy', 20 );
+
 // Redirect Non-Admins away from /wp-admin/
 function gb_security_redirect() {
     // Allow selected unauthenticated admin-post actions.
