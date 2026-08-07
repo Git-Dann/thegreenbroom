@@ -333,10 +333,11 @@ a.gb-card:hover {
     background: #f2f8f3;
 }
 
-/* Keep the homepage hero solid green even while an older cached page is served. */
-.gb-hero {
-    background: #1b5e20 !important;
-    background-image: none !important;
+/* Compatibility for the cached homepage while its inline template refreshes. */
+body.home .gb-hero {
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://thegreenbroom.uk/wp-content/uploads/2026/07/large-vecteezy_bright-and-inviting-cleaning-supplies-arranged-by-a-sunny_73308997_large.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
 }
 
 @media (max-width: 700px) {

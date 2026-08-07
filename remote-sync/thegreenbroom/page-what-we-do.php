@@ -8,7 +8,10 @@ get_header();
 // --- DATA RETRIEVAL (RIGID STRUCTURE) ---
 
 // A. Hero
-$hero_bg    = get_post_meta(get_the_ID(), '_gb_svc_hero_bg', true)    ?: 'https://images.unsplash.com/photo-1584622050111-993a426fbf0a?auto=format&fit=crop&w=1920&q=80';
+$hero_bg    = trim((string) get_post_meta(get_the_ID(), '_gb_svc_hero_bg', true));
+$hero_style = $hero_bg !== ''
+    ? "background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('" . esc_url($hero_bg) . "');"
+    : 'background-color: #1b5e20;';
 $hero_title = get_post_meta(get_the_ID(), '_gb_svc_hero_title', true) ?: 'More Than Just a Clean Home';
 $hero_sub   = get_post_meta(get_the_ID(), '_gb_svc_hero_sub', true)   ?: 'Professional, reliable, and 100% eco-friendly services tailored to your lifestyle.';
 
@@ -69,7 +72,7 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
     .gb-text-lead { font-size: 1.2rem; color: #555; line-height: 1.6; max-width: 700px; margin: 0 auto 40px; }
 
     /* HERO */
-    .gb-svc-hero { background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('<?php echo esc_url($hero_bg); ?>'); background-size: cover; background-position: center; padding: 140px 20px; text-align: center; color: white; }
+    .gb-svc-hero { <?php echo $hero_style; ?> background-size: cover; background-position: center; padding: 140px 20px; text-align: center; color: white; }
     .gb-svc-hero h1 { font-size: 3.5rem; font-weight: 800; color: white !important; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
 
     /* NEW TRUST BAR STYLE */

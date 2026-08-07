@@ -95,7 +95,7 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
     .gb-btn-outline:hover { background: #1b5e20; color: white !important; }
 
     /* HERO */
-    .gb-hero { background: #1b5e20; color: white; padding: 160px 20px; text-align: center; }
+    .gb-hero { background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('<?php echo esc_url($hero_bg); ?>'); background-size: cover; background-position: center; color: white; padding: 160px 20px; text-align: center; }
     .gb-hero h1 { font-size: 3.5rem; font-weight: 800; color: white !important; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
     .gb-hero p { font-size: 1.4rem; color: rgba(255,255,255,0.95); margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto; }
 
