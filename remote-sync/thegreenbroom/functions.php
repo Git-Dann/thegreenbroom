@@ -187,19 +187,56 @@ function gb_get_resource_definitions() {
     );
 }
 
+/**
+ * Give protected documents a filename-based URL so browser PDF viewers do not
+ * label them after the generic admin-post.php delivery script.
+ */
+function gb_register_resource_rewrite_rules() {
+    add_rewrite_rule(
+        '^greenbroom-resource/([^/]+)/([^/]+)/?$',
+        'index.php?gb_resource=$matches[1]&gb_resource_file=$matches[2]',
+        'top'
+    );
+}
+add_action( 'init', 'gb_register_resource_rewrite_rules', 5 );
+
+function gb_register_resource_query_vars( $vars ) {
+    $vars[] = 'gb_resource';
+    $vars[] = 'gb_resource_file';
+    return $vars;
+}
+add_filter( 'query_vars', 'gb_register_resource_query_vars' );
+
+function gb_maybe_flush_resource_rewrite_rules() {
+    if ( get_option( 'gb_resource_rewrite_version' ) === '1' ) {
+        return;
+    }
+
+    flush_rewrite_rules( false );
+    update_option( 'gb_resource_rewrite_version', '1' );
+}
+add_action( 'init', 'gb_maybe_flush_resource_rewrite_rules', 20 );
+
 function gb_get_resource_url( $resource ) {
     $resource = sanitize_key( (string) $resource );
+    $resources = gb_get_resource_definitions();
+    $filename = isset( $resources[ $resource ]['file'] ) ? $resources[ $resource ]['file'] : $resource . '.pdf';
+    $resource_path = '/greenbroom-resource/' . rawurlencode( $resource ) . '/' . rawurlencode( $filename );
+
     return wp_nonce_url(
-        add_query_arg(
-            array(
-                'action'   => 'gb_download_resource',
-                'resource' => $resource,
-            ),
-            admin_url( 'admin-post.php' )
-        ),
+        home_url( $resource_path ),
         'gb_download_resource_' . $resource
     );
 }
+
+function gb_handle_resource_rewrite() {
+    $resource = get_query_var( 'gb_resource' );
+    if ( $resource ) {
+        $_GET['resource'] = $resource;
+        gb_handle_resource_download();
+    }
+}
+add_action( 'template_redirect', 'gb_handle_resource_rewrite', 1 );
 
 function gb_handle_resource_download() {
     $resource = isset( $_GET['resource'] ) ? sanitize_key( wp_unslash( $_GET['resource'] ) ) : '';
@@ -222,7 +259,9 @@ function gb_handle_resource_download() {
 
     nocache_headers();
     header( 'Content-Type: application/pdf' );
-    header( 'Content-Disposition: inline; filename="' . basename( $file ) . '"' );
+    $download_filename = sanitize_file_name( $resources[ $resource ]['file'] );
+    header( 'Content-Disposition: inline; filename="' . $download_filename . '"; filename*=UTF-8\'\'' . rawurlencode( $download_filename ) );
+    header( 'Content-Location: ' . $download_filename );
     header( 'Content-Length: ' . (string) filesize( $file ) );
     readfile( $file );
     exit;
