@@ -28,25 +28,27 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-textarea { min-height: 70px; resize: vertical; }
     .gb-upload-wrapper { margin-top: 5px; }
-    .gb-media-field { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 14px; align-items: stretch; }
+    .gb-media-field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr); gap: 16px; align-items: stretch; }
     .gb-media-controls { min-width: 0; }
-    .gb-media-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-    .gb-media-selected { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
-    .gb-media-selected .dashicons { flex: 0 0 auto; width: 28px; height: 28px; padding: 5px; border-radius: 7px; background: #f0fdf4; color: #2e7d32; box-sizing: border-box; }
-    .gb-media-selected-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .gb-media-name { overflow: hidden; color: #334155; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-    .gb-media-source { color: #94a3b8; font-size: 11px; }
-    .gb-media-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+    .gb-media-toolbar { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+    .gb-media-input-row { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
+    .gb-media-input-row:focus-within { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
+    .gb-media-input-row .dashicons { flex: 0 0 auto; color: #2e7d32; }
+    .gb-media-input { min-width: 0; width: 100%; padding: 0; overflow: hidden; border: 0; outline: 0; background: transparent; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .gb-media-input::placeholder { color: #94a3b8; }
+    .gb-media-actions { display: flex; flex: 0 0 auto; align-items: stretch; gap: 8px; margin-top: 0; }
+    .gb-media-actions .gb-btn-small-os { white-space: nowrap; }
     .gb-media-actions .gb-upload-btn { border-color: #2e7d32; color: #2e7d32; }
     .gb-media-actions .gb-upload-btn:hover { border-color: #256b2a; background: #f0fdf4; }
     .gb-media-clear { display: none; }
     .gb-media-field.has-value .gb-media-clear { display: inline-flex; }
     .gb-media-help { margin: 8px 0 0; color: #94a3b8; font-size: 11px; }
-    .gb-media-preview { display: flex; align-items: center; justify-content: center; min-height: 92px; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 9px; background: #f8fafc; }
-    .gb-media-preview img { display: block; width: 100%; height: 100%; min-height: 92px; max-height: 116px; object-fit: cover; }
+    .gb-media-preview { display: flex; align-items: center; justify-content: center; min-height: 150px; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 9px; background: #f8fafc; }
+    .gb-media-preview img { display: block; width: 100%; height: 100%; min-height: 150px; max-height: 220px; object-fit: cover; }
     .gb-media-preview.is-empty::before { content: '\f128'; font-family: dashicons; color: #cbd5e1; font-size: 24px; }
     .gb-media-preview.is-error::before { content: '\f534'; font-family: dashicons; color: #f59e0b; font-size: 24px; }
-    @media (max-width: 700px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 140px; } .gb-media-preview img { min-height: 140px; max-height: 190px; } }
+    @media (max-width: 900px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 180px; } .gb-media-preview img { min-height: 180px; max-height: 240px; } }
+    @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; } }
     .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .gb-sub-head { font-size: 11px; font-weight: 800; color: #2e7d32; margin: 25px 0 10px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
     
@@ -304,19 +306,17 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             <div class="gb-upload-wrapper">
                 <div class="gb-media-field<?php echo $field_value !== '' ? ' has-value' : ''; ?>" data-media-field>
                     <div class="gb-media-controls">
-                        <div class="gb-media-selected">
-                            <span class="dashicons dashicons-format-image" aria-hidden="true"></span>
-                            <div class="gb-media-selected-copy">
-                                <span class="gb-media-name" data-media-name><?php echo $field_value !== '' ? 'Selected image' : 'No image selected'; ?></span>
-                                <span class="gb-media-source" data-media-source><?php echo $field_value !== '' ? 'Ready to use' : 'Choose an image to add one'; ?></span>
+                        <div class="gb-media-toolbar">
+                            <div class="gb-media-input-row">
+                                <span class="dashicons dashicons-format-image" aria-hidden="true"></span>
+                                <input type="text" name="<?php echo esc_attr($field_name); ?>" class="gb-media-input" value="<?php echo esc_attr($field_value); ?>" placeholder="No image selected" title="<?php echo esc_attr($field_value); ?>">
+                            </div>
+                            <div class="gb-media-actions">
+                                <button type="button" class="gb-upload-btn gb-btn-small-os"><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span> Choose image</button>
+                                <button type="button" class="gb-media-clear gb-btn-small-os">Clear</button>
                             </div>
                         </div>
-                        <input type="hidden" name="<?php echo esc_attr($field_name); ?>" class="gb-media-input" value="<?php echo esc_attr($field_value); ?>">
-                        <div class="gb-media-actions">
-                            <button type="button" class="gb-upload-btn gb-btn-small-os"><span class="dashicons dashicons-images-alt2" aria-hidden="true"></span> Choose image</button>
-                            <button type="button" class="gb-media-clear gb-btn-small-os">Clear</button>
-                        </div>
-                        <p class="gb-media-help">Choose an image from the WordPress media library. The image is stored automatically.</p>
+                        <p class="gb-media-help">Choose an image from the WordPress media library. Hover over the field to see the full URL.</p>
                     </div>
                     <div class="gb-media-preview<?php echo $field_value === '' ? ' is-empty' : ''; ?>" data-media-preview>
                         <?php if ($field_value !== ''): ?><img src="<?php echo esc_url($field_value); ?>" alt="" data-media-preview-image><?php endif; ?>
@@ -725,20 +725,14 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             var cleanUrl = $.trim(url || '');
 
             $field.toggleClass('has-value', !!cleanUrl);
-            var $name = $field.find('[data-media-name]');
-            var $source = $field.find('[data-media-source]');
             $preview.removeClass('is-empty is-error').empty();
             if (!cleanUrl) {
-                $name.text('No image selected');
-                $source.text('Choose an image to add one');
+                $field.find('.gb-media-input').attr('title', '');
                 $preview.addClass('is-empty');
                 return;
             }
 
-            var filename = cleanUrl.split('?')[0].split('/').pop() || 'Selected image';
-            try { filename = decodeURIComponent(filename); } catch (error) {}
-            $name.text(filename);
-            $source.text('Selected image');
+            $field.find('.gb-media-input').attr('title', cleanUrl);
 
             $('<img>', { src: cleanUrl, alt: '' })
                 .on('error', function() {
