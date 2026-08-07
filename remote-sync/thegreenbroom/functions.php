@@ -2097,6 +2097,52 @@ function gb_disable_admin_bar($show) {
 }
 add_filter('show_admin_bar', 'gb_disable_admin_bar');
 
+/**
+ * Return true for the small set of WordPress media requests that front-end
+ * managers and cleaners are allowed to use. The media modal can move between
+ * upload.php, attachment edit screens, and the image editor while a single
+ * selection is being made. Treating only one of those URLs as media causes an
+ * apparent logout when the guard redirects the user back to their dashboard.
+ */
+function gb_is_allowed_media_admin_request() {
+    if (
+        ! is_admin()
+        || wp_doing_ajax()
+        || current_user_can( 'administrator' )
+        || ! current_user_can( 'upload_files' )
+    ) {
+        return false;
+    }
+
+    $pagenow = isset( $GLOBALS['pagenow'] ) ? (string) $GLOBALS['pagenow'] : '';
+    $media_screens = array( 'upload.php', 'media-new.php', 'media.php', 'async-upload.php' );
+    if ( in_array( $pagenow, $media_screens, true ) ) {
+        return true;
+    }
+
+    $target = isset( $_REQUEST['post'] ) ? absint( $_REQUEST['post'] ) : 0;
+    $action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
+
+    // The attachment list is how WordPress opens the gallery browser.
+    if ( $pagenow === 'edit.php' && isset( $_REQUEST['post_type'] ) && sanitize_key( wp_unslash( $_REQUEST['post_type'] ) ) === 'attachment' ) {
+        return true;
+    }
+
+    if ( $pagenow !== 'post.php' ) {
+        return false;
+    }
+
+    // WordPress adds the image-editor flag to the crop/edit URL. Check the
+    // flag itself because some hosting/WP combinations do not populate the
+    // attachment post type before admin_init runs.
+    if ( isset( $_REQUEST['image-editor'] ) || isset( $_REQUEST['image-editor-preview'] ) || $action === 'image-editor' ) {
+        return true;
+    }
+
+    // Ordinary attachment details/edit screens remain scoped to attachments.
+    return $target > 0 && get_post_type( $target ) === 'attachment';
+}
+
 // Redirect Non-Admins away from /wp-admin/
 function gb_security_redirect() {
     // Allow selected unauthenticated admin-post actions.
@@ -2111,31 +2157,11 @@ function gb_security_redirect() {
         }
     }
 
-    // Front-end managers/cleaners genuinely need the core Media Library and
-    // attachment/image-edit screens to select, upload, edit or crop images for
-    // the page builder and their listings. Without this exemption the guard
-    // below bounced them to their dashboard the moment they opened "Edit Image"
-    // or an attachment details screen, so they could never finish placing an
-    // image. Only media-related screens are allowed through — everything else
-    // in wp-admin still redirects.
-    if ( is_admin() && ! defined('DOING_AJAX') && ! current_user_can('administrator') && current_user_can('upload_files') ) {
-        $pagenow = isset($GLOBALS['pagenow']) ? $GLOBALS['pagenow'] : '';
-        $media_screens = array('upload.php', 'media-new.php', 'media.php', 'async-upload.php');
-        if ( in_array($pagenow, $media_screens, true) ) {
-            return;
-        }
-        // Attachment edit / image-crop screen (post.php?post=ID&action=edit),
-        // scoped strictly to attachments so managers still can't reach the
-        // editor for arbitrary posts/pages.
-        if ( $pagenow === 'post.php' ) {
-            $target = isset($_REQUEST['post']) ? intval($_REQUEST['post']) : 0;
-            if ( $target && get_post_type($target) === 'attachment' ) {
-                return;
-            }
-        }
+    if ( gb_is_allowed_media_admin_request() ) {
+        return;
     }
 
-    if ( is_admin() && ! defined('DOING_AJAX') && ! current_user_can('administrator') ) {
+    if ( is_admin() && ! wp_doing_ajax() && ! current_user_can('administrator') ) {
         $user = wp_get_current_user();
         if ( $user instanceof WP_User && $user->exists() ) {
             wp_redirect( gb_get_post_login_redirect_url( $user ) );
