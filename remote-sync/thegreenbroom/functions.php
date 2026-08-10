@@ -2530,7 +2530,7 @@ function gb_find_service_post($identifier) {
 
     if (is_numeric($identifier)) {
         $service_post = get_post((int) $identifier);
-        if ($service_post && $service_post->post_type === 'gb_service') {
+        if ($service_post && $service_post->post_type === 'gb_service' && $service_post->post_status === 'publish') {
             return $service_post;
         }
     }
@@ -2543,14 +2543,14 @@ function gb_find_service_post($identifier) {
     $slug = sanitize_title($name);
     if ($slug !== '') {
         $service_post = get_page_by_path($slug, OBJECT, 'gb_service');
-        if ($service_post && $service_post->post_type === 'gb_service') {
+        if ($service_post && $service_post->post_type === 'gb_service' && $service_post->post_status === 'publish') {
             return $service_post;
         }
     }
 
     $service_query = new WP_Query([
         'post_type'      => 'gb_service',
-        'post_status'    => ['publish', 'draft', 'pending'],
+        'post_status'    => 'publish',
         'posts_per_page' => 1,
         'fields'         => 'ids',
         'title'          => $name,
@@ -2558,7 +2558,7 @@ function gb_find_service_post($identifier) {
     ]);
     if (!empty($service_query->posts[0])) {
         $service_post = get_post((int) $service_query->posts[0]);
-        if ($service_post && $service_post->post_type === 'gb_service') {
+        if ($service_post && $service_post->post_type === 'gb_service' && $service_post->post_status === 'publish') {
             return $service_post;
         }
     }
@@ -2597,17 +2597,51 @@ function gb_process_booking_submission() {
     }
     gb_record_rate_limit_hit('booking_ajax', HOUR_IN_SECONDS, $rate_identity);
 
-    $cleaner_id = intval($_POST['cleaner_id']);
-    $service_name = sanitize_text_field($_POST['service']);
-    $date = sanitize_text_field($_POST['date']);
-    $time_str = sanitize_text_field($_POST['time']);
-    $name = sanitize_text_field($_POST['customer_name']);
-    $email = sanitize_email($_POST['customer_email']);
-    $phone = sanitize_text_field($_POST['customer_phone']);
-    $address = sanitize_textarea_field($_POST['customer_address']);
+    $cleaner_id = isset($_POST['cleaner_id']) ? absint($_POST['cleaner_id']) : 0;
+    $service_identifier = isset($_POST['service']) ? sanitize_text_field(wp_unslash($_POST['service'])) : '';
+    $date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : '';
+    $time_str = isset($_POST['time']) ? sanitize_text_field(wp_unslash($_POST['time'])) : '';
+    $name = isset($_POST['customer_name']) ? sanitize_text_field(wp_unslash($_POST['customer_name'])) : '';
+    $email = isset($_POST['customer_email']) ? sanitize_email(wp_unslash($_POST['customer_email'])) : '';
+    $phone = isset($_POST['customer_phone']) ? sanitize_text_field(wp_unslash($_POST['customer_phone'])) : '';
+    $address = isset($_POST['customer_address']) ? sanitize_textarea_field(wp_unslash($_POST['customer_address'])) : '';
 
-    // Default Duration (pulled from Services config when possible).
-    $duration = gb_get_service_duration_hours($service_name, 2);
+    if (
+        !$cleaner_id ||
+        get_post_type($cleaner_id) !== 'gb_cleaner' ||
+        get_post_status($cleaner_id) !== 'publish'
+    ) {
+        wp_send_json_error(['message' => 'This cleaner is not currently available for booking.']);
+    }
+
+    $service_post = gb_find_service_post($service_identifier);
+    if (!$service_post) {
+        wp_send_json_error(['message' => 'Please choose an available service.']);
+    }
+
+    $date_object = DateTimeImmutable::createFromFormat('!Y-m-d', $date, wp_timezone());
+    $date_errors = DateTimeImmutable::getLastErrors();
+    if (
+        !$date_object ||
+        ($date_errors !== false && ($date_errors['warning_count'] > 0 || $date_errors['error_count'] > 0)) ||
+        $date_object->format('Y-m-d') !== $date ||
+        $date < current_time('Y-m-d')
+    ) {
+        wp_send_json_error(['message' => 'Please choose a valid future booking date.']);
+    }
+
+    if (!preg_match('/^([01]\\d|2[0-3]):[0-5]\\d$/', $time_str)) {
+        wp_send_json_error(['message' => 'Please choose a valid booking time.']);
+    }
+
+    if (!$name || !is_email($email) || !$phone || !$address) {
+        wp_send_json_error(['message' => 'Please complete all booking details.']);
+    }
+
+    $service_name = sanitize_text_field($service_post->post_title);
+
+    // Duration is always read from the selected, published service.
+    $duration = gb_get_service_duration_hours($service_post->ID, 2);
 
     // Double Booking Check
     $new_start = strtotime("$date $time_str");
