@@ -17,8 +17,8 @@
         .header-inner { max-width: 1200px; margin: 0 auto; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; }
         
         /* Logos */
-        .logo-mobile { display: none; height: 40px; }
-        .logo-desktop { display: block; height: 45px; }
+        .logo-mobile { display: none !important; }
+        .logo-desktop { display: block; height: 45px; width: auto; max-width: calc(100vw - 120px); }
         
         /* Desktop Menu */
         .main-navigation ul.nav-menu { 
@@ -80,8 +80,10 @@
 
         /* MOBILE RESPONSIVE */
         @media (max-width: 900px) {
-            .logo-desktop { display: none; }
-            .logo-mobile { display: block; }
+            .header-inner { padding: 12px 16px; }
+            .site-branding { min-width: 0; }
+            .logo-desktop { display: block; height: 32px; max-width: calc(100vw - 132px); }
+            .logo-mobile { display: none !important; }
             
             .main-navigation { position: absolute; top: 100%; left: 0; right: 0; background: white; padding: 20px; border-bottom: 1px solid #eee; display: none; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
             .main-navigation.toggled { display: flex; }
@@ -95,7 +97,7 @@
                 width: 100% !important; background: none !important;
             }
             
-            .header-actions { gap: 10px; }
+            .header-actions { display: flex; flex-shrink: 0; gap: 10px; }
             .nav-login { display: none; }
             .menu-toggle { display: block; }
         }
@@ -217,20 +219,5 @@
 
         </div>
     </header>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var toggle = document.querySelector('.menu-toggle');
-            var nav = document.querySelector('.main-navigation');
-            
-            if(toggle && nav) {
-                toggle.addEventListener('click', function() {
-                    nav.classList.toggle('toggled');
-                    var expanded = toggle.getAttribute('aria-expanded') === 'true' || false;
-                    toggle.setAttribute('aria-expanded', !expanded);
-                });
-            }
-        });
-    </script>
 
 <div id="content" class="site-content">

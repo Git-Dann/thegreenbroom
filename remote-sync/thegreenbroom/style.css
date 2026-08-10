@@ -185,9 +185,9 @@ a.gb-card:hover {
         display: none; flex-direction: column;
         box-shadow: var(--shadow-card);
     }
-    .main-navigation.tgb-nav-open { display: flex; }
+    .main-navigation.toggled { display: flex; }
     .main-navigation ul { flex-direction: column; gap: 15px; }
-    .header-actions { display: none; } /* Hide buttons on mobile for now */
+    .header-actions { display: flex; flex-shrink: 0; gap: 10px; }
 }
 
 /* 10. SPECIFIC: AUTH PAGES */
@@ -364,22 +364,22 @@ body.home .gb-hero {
    14. CRITICAL HEADER FIXES (Add to bottom)
    ========================================= */
 
-/* Logo Sizing & Toggle */
+/* Logo Sizing */
 .logo-desktop { 
     height: 45px; 
     width: auto; 
-    display: none; /* Hidden on mobile by default */
+    display: block;
+    max-width: calc(100vw - 120px);
 }
 .logo-mobile { 
-    height: 35px; 
-    width: auto; 
-    display: block; /* Shown on mobile */
+    display: none !important;
 }
 
-/* Desktop View */
-@media (min-width: 900px) {
-    .logo-desktop { display: block; }
-    .logo-mobile { display: none; }
+@media (max-width: 900px) {
+    .logo-desktop {
+        height: 32px;
+        max-width: calc(100vw - 132px);
+    }
 }
 
 /* Nav Actions (Login/CTA Buttons) */
