@@ -77,7 +77,7 @@ get_header();
     .gb-auth-card-body { padding: 30px; }
 
     /* OS Input Styles */
-    .gb-os-label-alt { display: block; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .gb-os-label-alt { display: block; font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-os-input-auth { width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #0f172a; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; }
     .gb-os-input-auth:focus { border-color: #10b981; outline: none; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.05); }
 
@@ -97,11 +97,11 @@ get_header();
 
     /* Footer Nav Underneath the Box */
     .gb-auth-footer-nav { margin-top: 25px; text-align: center; font-size: 13px; }
-    .gb-auth-footer-nav a { color: #2e7d32; font-weight: 700; text-decoration: none; border-bottom: 1px solid rgba(46, 125, 50, 0.2); }
+    .gb-auth-footer-nav a { color: #166534; font-weight: 700; text-decoration: none; border-bottom: 1px solid rgba(22, 101, 52, 0.2); }
     .gb-auth-footer-nav a:hover { border-bottom-color: #2e7d32; }
 </style>
 
-<div class="gb-auth-page-wrap">
+<main id="main-content" class="gb-auth-page-wrap">
     
     <div class="gb-auth-card-main">
         <div class="gb-auth-card-head">
@@ -120,16 +120,16 @@ get_header();
                 <?php endif; ?>
                 
                 <div class="gb-form-row">
-                    <label class="gb-os-label-alt">Username or Email</label>
-                    <input type="text" name="log_identity" class="gb-os-input-auth" placeholder="e.g. John Smith" required>
+                    <label class="gb-os-label-alt" for="login-identity">Username or Email</label>
+                    <input id="login-identity" type="text" name="log_identity" class="gb-os-input-auth" placeholder="e.g. John Smith" required autocomplete="username">
                 </div>
 
                 <div class="gb-form-row">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label class="gb-os-label-alt" style="margin-bottom: 0;">Password</label>
-                        <a href="<?php echo wp_lostpassword_url(); ?>" style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; text-decoration: none;">Lost?</a>
+                        <label class="gb-os-label-alt" for="login-password" style="margin-bottom: 0;">Password</label>
+                        <a href="<?php echo wp_lostpassword_url(); ?>" style="font-size: 10px; font-weight: 800; color: #166534; text-transform: uppercase; text-decoration: none;">Lost?</a>
                     </div>
-                    <input type="password" name="password" class="gb-os-input-auth" required>
+                    <input id="login-password" type="password" name="password" class="gb-os-input-auth" required autocomplete="current-password">
                 </div>
 
                 <button type="submit" class="gb-login-btn-final">Secure Login</button>
@@ -142,6 +142,6 @@ get_header();
         <a href="<?php echo home_url('/register'); ?>">Create an account instead</a>
     </div>
 
-</div>
+</main>
 
 <?php get_footer(); ?>

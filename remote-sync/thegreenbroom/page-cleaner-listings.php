@@ -79,7 +79,8 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
         color: #ffffff !important; 
     }
     
-    .gb-dir-sub { color: rgba(255,255,255,0.9); margin-top: 15px; font-size: 18px; margin-bottom: 40px; }
+    .gb-dir-sub { color: #ffffff; margin-top: 15px; font-size: 18px; margin-bottom: 40px; }
+    .gb-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     
     /* SEARCH BAR */
     .gb-search-wrapper { max-width: 800px; margin: 0 auto; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap; }
@@ -87,8 +88,8 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
     .gb-search-select { flex: 0.5; padding: 15px 20px; border-left: 1px solid #eee; border-top: none; border-right: none; border-bottom: none; outline: none; font-size: 16px; color: #333; background: white; min-width: 150px; }
     
     /* Search Button (Emerald) */
-    .gb-search-btn { background: #10b981; color: white; border: none; padding: 0 40px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 16px; }
-    .gb-search-btn:hover { background: #059669; }
+    .gb-search-btn { background: #047857; color: white; border: none; padding: 0 40px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 16px; }
+    .gb-search-btn:hover { background: #065f46; }
 
     /* GRID LAYOUT */
     .gb-dir-container { max-width: 1200px; margin: -60px auto 60px; padding: 0 20px; position: relative; z-index: 10; }
@@ -143,23 +144,26 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
     }
 </style>
 
-<div class="gb-dir-hero">
-    <h1 class="gb-dir-title"><?php echo esc_html($listings_title); ?></h1>
-    <p class="gb-dir-sub"><?php echo esc_html($listings_sub); ?></p>
-    
-    <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
-        <input type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo esc_attr($search_term); ?>" maxlength="10" autocomplete="postal-code" inputmode="text" aria-label="Search by postcode">
-        <select name="service" class="gb-search-select">
+<main id="main-content">
+    <div class="gb-dir-hero">
+        <h1 class="gb-dir-title"><?php echo esc_html($listings_title); ?></h1>
+        <p class="gb-dir-sub"><?php echo esc_html($listings_sub); ?></p>
+
+        <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
+            <label class="gb-sr-only" for="cleaner-search-postcode">Search by postcode</label>
+            <input id="cleaner-search-postcode" type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo esc_attr($search_term); ?>" maxlength="10" autocomplete="postal-code" inputmode="text">
+            <label class="gb-sr-only" for="cleaner-search-service">Service type</label>
+            <select id="cleaner-search-service" name="service" class="gb-search-select">
             <option value="">Any Service</option>
             <option value="standard" <?php selected($service_filter, 'standard'); ?>>Standard Clean</option>
             <option value="deep" <?php selected($service_filter, 'deep'); ?>>Deep Clean</option>
             <option value="moving" <?php selected($service_filter, 'moving'); ?>>Move In/Out</option>
-        </select>
-        <button type="submit" class="gb-search-btn">Search</button>
-    </form>
-</div>
+            </select>
+            <button type="submit" class="gb-search-btn">Search</button>
+        </form>
+    </div>
 
-<div class="gb-dir-container">
+    <div class="gb-dir-container">
     
     <?php if ( $search_error ) : ?>
         <p style="margin-bottom: 30px; color: #b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 14px;"><?php echo esc_html($search_error); ?></p>
@@ -176,9 +180,9 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
             ?>
             <div class="gb-cleaner-card">
                 <div class="gb-card-img-wrap">
-                    <a href="<?php the_permalink(); ?>">
+                    <a href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(sprintf('View profile for %s', get_the_title())); ?>">
                         <?php if(has_post_thumbnail()): ?>
-                            <?php the_post_thumbnail('medium', ['class' => 'gb-card-img']); ?>
+                            <?php the_post_thumbnail('medium', ['class' => 'gb-card-img', 'alt' => '']); ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#f1f5f9; color:#cbd5e1; font-size:48px;">
                                 <span class="dashicons dashicons-id"></span>
@@ -188,7 +192,7 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
                     
                     <?php if($is_verified): ?>
                         <span class="gb-card-verified">
-                            <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" style="height:14px; width:auto;"> 
+                            <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" style="height:14px; width:auto;" alt="" aria-hidden="true">
                             Verified
                         </span>
                     <?php endif; ?>
@@ -197,7 +201,7 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
                 
                 <div class="gb-card-body">
                     <div class="gb-card-header">
-                        <h3 class="gb-card-name"><a href="<?php the_permalink(); ?>" style="text-decoration:none; color:inherit;"><?php the_title(); ?></a></h3>
+                        <h2 class="gb-card-name"><a href="<?php the_permalink(); ?>" style="text-decoration:none; color:inherit;"><?php the_title(); ?></a></h2>
                         <span class="gb-card-rate">£<?php echo esc_html($rate); ?>/hr</span>
                     </div>
                     
@@ -218,7 +222,7 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
             <?php endwhile; ?>
         <?php else: ?>
             <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: white; border-radius: 12px; color: #64748b;">
-                <h3><?php echo esc_html($listings_none); ?></h3>
+                <h2><?php echo esc_html($listings_none); ?></h2>
             </div>
         <?php endif; wp_reset_postdata(); ?>
     </div>
@@ -226,6 +230,7 @@ $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No p
     <div class="gb-pagination">
         <?php echo paginate_links(array('total' => $cleaners->max_num_pages, 'current' => $paged, 'prev_text' => '←', 'next_text' => '→')); ?>
     </div>
-</div>
+    </div>
+</main>
 
 <?php get_footer(); ?>

@@ -35,15 +35,16 @@ get_header();
     }
 </style>
 
-<section class="gb-blog-hero">
-    <div class="gb-blog-shell">
-        <span class="gb-blog-kicker">Journal</span>
-        <h1 class="gb-blog-title">Eco Blog</h1>
-        <p class="gb-blog-subtitle">Updates from The Green Broom, cleaner standards, platform improvements, and practical notes for households and professionals using the service.</p>
-    </div>
-</section>
+<main id="main-content">
+    <section class="gb-blog-hero">
+        <div class="gb-blog-shell">
+            <span class="gb-blog-kicker">Journal</span>
+            <h1 class="gb-blog-title">Eco Blog</h1>
+            <p class="gb-blog-subtitle">Updates from The Green Broom, cleaner standards, platform improvements, and practical notes for households and professionals using the service.</p>
+        </div>
+    </section>
 
-<section class="gb-blog-body">
+    <section class="gb-blog-body" aria-label="Latest updates">
     <?php if ( $blog_posts->have_posts() ) : ?>
         <div class="gb-blog-grid">
             <?php while ( $blog_posts->have_posts() ) : $blog_posts->the_post(); ?>
@@ -81,6 +82,7 @@ get_header();
             </div>
         </div>
     <?php endif; ?>
-</section>
+    </section>
+</main>
 
 <?php get_footer(); ?>
