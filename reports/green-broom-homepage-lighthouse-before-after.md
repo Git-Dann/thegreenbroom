@@ -136,6 +136,14 @@ Recommended next steps:
 
 ## Final Summary
 
-The Green Broom website now has a stronger technical foundation across the public site and its management tools. It is faster on mobile, more accessible, easier to manage, better prepared for search engines, clearer in how it handles documents and content, and has been checked across the journeys that matter most to customers and cleaners.
+The Green Broom now has a much stronger and more polished website to support the business. The improvements were made both to the parts customers see and to the areas used to manage the website day to day.
 
-**What this means:** The website should feel more professional, trustworthy, and straightforward to use. It also gives the business a more robust platform to build on as services, content, and future payment features are introduced.
+For visitors, this means the website opens quickly on a phone, is easier to read and navigate, clearly displays the correct branding and imagery, and gives customers a simpler path to find a cleaner, make a booking, create an account, or get in touch.
+
+For the team, this means the website is easier to look after. Pages, services, images, blog posts, and documents are presented more clearly in the management area, with less technical clutter and less opportunity for an accidental mistake. Important customer and cleaner documents are also now placed in the appropriate portal rather than being left in the wrong area of the site.
+
+The website has also been strengthened behind the scenes. Key public pages have been checked, the most important customer journeys have been reviewed, and the homepage achieved top results in the latest speed, accessibility, quality, and search-engine checks on both mobile and desktop.
+
+This creates a solid platform for the next stage of the business, including adding more content, expanding the service offering, and introducing payments once the final safe Stripe test is complete.
+
+**What this means:** The Green Broom now has a website that is faster, clearer, more professional, and easier to manage. It gives a better first impression to potential customers, supports cleaners and subscribers more effectively, and is in a strong position to grow with the business.
