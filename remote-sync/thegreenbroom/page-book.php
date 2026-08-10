@@ -333,7 +333,7 @@ get_header();
     #gb-book-page { background: #f8fafc; min-height: 100vh; padding: 40px 20px; font-family: 'Helvetica Neue', sans-serif; }
     .gb-book-container { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr; gap: 32px; }
     .gb-form-card { background: white; padding: 36px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-    .gb-summary-card { background: #0f172a; color: white; padding: 28px; border-radius: 12px; height: fit-content; position: sticky; top: 20px; }
+    .gb-summary-card { background: #0f172a; color: #f8fafc; padding: 28px; border-radius: 12px; height: fit-content; position: sticky; top: 20px; }
     h1 { margin-top: 0; color: #0f172a; font-size: 24px; }
     .gb-step-title { font-size: 13px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 15px; display: block; letter-spacing: 0.04em; }
     .gb-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -341,21 +341,25 @@ get_header();
     input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
     input:focus, select:focus { border-color: #10b981; outline: none; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
     .gb-total-row { display: flex; justify-content: space-between; font-size: 19px; font-weight: 800; margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.2); }
-    .gb-btn-submit { width: 100%; background: #10b981; color: white; border: none; padding: 16px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 18px; transition: 0.2s; }
-    .gb-btn-submit:hover { background: #059669; }
+    .gb-btn-submit { width: 100%; background: #047857; color: white; border: none; padding: 16px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 18px; transition: 0.2s; }
+    .gb-btn-submit:hover { background: #065f46; }
     .gb-btn-submit[disabled] { opacity: 0.8; cursor: not-allowed; }
     .gb-login-prompt { background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; }
     .gb-field-help { margin-top: 6px; font-size: 12px; color: #64748b; }
-    .gb-summary-meta { font-size: 13px; opacity: 0.88; margin: 8px 0 0; }
+    .gb-summary-card p { color: #f8fafc; }
+    .gb-summary-detail { margin-bottom: 6px; font-size: 14px; color: #e2e8f0; }
+    .gb-summary-meta { font-size: 13px; color: #e2e8f0; margin: 8px 0 0; }
+    .gb-summary-note { color: #cbd5e1; font-size: 12px; text-align: center; margin-top: 15px; }
     .gb-error-box { background:#fee2e2; color:#991b1b; max-width:980px; margin:0 auto 20px; border-radius:10px; border:1px solid #fecaca; padding:14px 16px; }
     .gb-error-box ul { margin: 8px 0 0 18px; padding: 0; }
     .gb-error-box li { margin-bottom: 4px; }
     @media (max-width: 900px) { .gb-book-container { grid-template-columns: 1fr; } }
 </style>
 
+<main id="main-content">
 <div id="gb-book-page">
     <?php if (!empty($info_message)) : ?>
-        <div style="background:#e0f2fe; color:#075985; max-width:980px; margin:0 auto 20px; border-radius:10px; border:1px solid #bae6fd; padding:14px 16px;">
+        <div role="status" style="background:#e0f2fe; color:#075985; max-width:980px; margin:0 auto 20px; border-radius:10px; border:1px solid #bae6fd; padding:14px 16px;">
             <?php echo esc_html($info_message); ?>
         </div>
     <?php endif; ?>
@@ -458,21 +462,22 @@ get_header();
             </div>
         </div>
 
-        <div class="gb-summary-card">
-            <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:15px; margin-bottom:15px;">Booking Summary</h3>
+        <aside class="gb-summary-card" aria-labelledby="booking-summary-heading">
+            <h2 id="booking-summary-heading" style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:15px; margin-bottom:15px;">Booking Summary</h2>
             <p style="margin-bottom:10px;"><strong>Professional:</strong><br><?php echo esc_html($cleaner_name); ?></p>
             <p style="margin-bottom:10px;"><strong>Service:</strong><br><span id="summary-service">-</span></p>
             <p style="margin-bottom:10px;"><strong>Base Rate:</strong><br>£<?php echo esc_html($base_rate); ?> / hour</p>
-            <p style="margin-bottom:6px; font-size:14px; opacity:0.88;"><strong>Service Surcharge:</strong> <span id="surcharge-display">£0</span> / hr</p>
+            <p class="gb-summary-detail"><strong>Service Surcharge:</strong> <span id="surcharge-display">£0</span> / hr</p>
             <p class="gb-summary-meta"><strong>Slot:</strong> <span id="summary-slot">Choose date and time</span></p>
             <p class="gb-summary-meta"><strong>Estimated Finish:</strong> <span id="summary-end">-</span></p>
 
             <div class="gb-total-row"><span>Total Est.</span><span>£<span id="total-display">0</span></span></div>
             <button type="submit" class="gb-btn-submit" id="gb-submit-btn">Continue to Secure Payment</button>
-            <p style="font-size:12px; opacity:0.68; text-align:center; margin-top:15px;">You will be redirected to Stripe to pay securely and confirm your booking.</p>
-        </div>
+            <p class="gb-summary-note">You will be redirected to Stripe to pay securely and confirm your booking.</p>
+        </aside>
     </form>
 </div>
+</main>
 
 <script>
 (function () {

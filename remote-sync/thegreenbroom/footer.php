@@ -70,7 +70,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
     }
 
     /* Column Headings */
-    .gb-footer-col h3 {
+    .gb-footer-col h2 {
         color: #a5d6a7; /* Light Green Accent */
         font-size: 0.85rem;
         text-transform: uppercase;
@@ -153,7 +153,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         </div>
 
         <div class="gb-footer-col">
-            <h3>Company</h3>
+            <h2>Company</h2>
             <ul class="gb-footer-links">
                 <li><a href="/how-it-works">How It Works</a></li>
                 <li><a href="/what-we-do">What We Do</a></li>
@@ -165,7 +165,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         </div>
 
         <div class="gb-footer-col">
-            <h3>Support</h3>
+            <h2>Support</h2>
             <ul class="gb-footer-links">
                 <li><a href="<?php echo esc_url($gb_contact_url); ?>">Contact Us</a></li>
                 <li><a href="/login">Log In</a></li>
@@ -174,7 +174,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         </div>
 
         <div class="gb-footer-col">
-            <h3>Legal</h3>
+            <h2>Legal</h2>
             <ul class="gb-footer-links">
                 <li><a href="<?php echo esc_url($gb_privacy_url); ?>">Privacy Policy</a></li>
                 <li><a href="<?php echo esc_url($gb_terms_url); ?>">Terms & Conditions</a></li>
@@ -185,7 +185,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         </div>
 
         <div class="gb-footer-col">
-            <h3>Ready to start?</h3>
+            <h2>Ready to start?</h2>
             <p style="color:rgba(255,255,255,0.7); font-size:0.85rem; margin-bottom: 15px;">Join hundreds of cleaners earning more today.</p>
             <a href="/join" class="gb-footer-btn">Join The Green Broom &rarr;</a>
         </div>

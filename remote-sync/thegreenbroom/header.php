@@ -30,9 +30,10 @@
             display: block; padding: 10px 0; 
         }
         .main-navigation a:hover { color: #10b981; }
-        .main-navigation .menu-parent-label {
+        .main-navigation .menu-parent-toggle {
             color: #333; font-weight: 600; font-size: 15px;
-            display: block; padding: 10px 0; cursor: default; user-select: none;
+            display: block; padding: 10px 0; cursor: pointer; user-select: none;
+            background: transparent; border: 0; font-family: inherit;
         }
 
         /* --- DROPDOWN LOGIC (FORCED) --- */
@@ -54,7 +55,8 @@
             z-index: 99999 !important;
         }
         
-        .menu-item-has-children:hover .sub-menu { display: flex !important; }
+        .menu-item-has-children:hover .sub-menu,
+        .menu-parent-toggle[aria-expanded="true"] + .sub-menu { display: flex !important; }
         
         .sub-menu li { width: 100% !important; display: block !important; }
         .sub-menu a { 
@@ -91,11 +93,13 @@
             .main-navigation ul.nav-menu { flex-direction: column; gap: 0; align-items: flex-start; }
             .main-navigation li { width: 100%; border-bottom: 1px solid #f9f9f9; }
             
-            .sub-menu { 
-                display: block !important; position: relative !important; top: 0 !important; left: 0 !important; 
+            .sub-menu {
+                display: none !important; position: relative !important; top: 0 !important; left: 0 !important;
                 box-shadow: none !important; border: none !important; padding-left: 20px !important; 
                 width: 100% !important; background: none !important;
             }
+            .menu-item-has-children:hover .sub-menu,
+            .menu-parent-toggle[aria-expanded="true"] + .sub-menu { display: block !important; }
             
             .header-actions { display: flex; flex-shrink: 0; gap: 10px; }
             .nav-login { display: none; }
@@ -141,12 +145,13 @@
                     <?php foreach ( $header_menu as $item ) : 
                         $has_children = isset($item['children']) && !empty($item['children']);
                     ?>
+                        <?php $submenu_id = 'menu-' . sanitize_title($item['label']); ?>
                         <li class="<?php echo $has_children ? 'menu-item-has-children' : ''; ?>">
                             <?php if( empty($item['url']) ): ?>
-                            <span class="menu-parent-label">
+                            <button class="menu-parent-toggle" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr($submenu_id); ?>">
                                 <?php echo esc_html( $item['label'] ); ?>
-                                <?php if($has_children): ?><span class="dropdown-arrow">▼</span><?php endif; ?>
-                            </span>
+                                <?php if($has_children): ?><span class="dropdown-arrow" aria-hidden="true">▼</span><?php endif; ?>
+                            </button>
                             <?php else: ?>
                             <a href="<?php echo esc_url( home_url($item['url']) ); ?>">
                                 <?php echo esc_html( $item['label'] ); ?>
@@ -155,7 +160,7 @@
                             <?php endif; ?>
                             
                             <?php if($has_children): ?>
-                                <ul class="sub-menu">
+                                <ul id="<?php echo esc_attr($submenu_id); ?>" class="sub-menu">
                                     <?php foreach($item['children'] as $sub): ?>
                                         <li>
                                             <a href="<?php echo esc_url( home_url($sub['url']) ); ?>">
