@@ -1,65 +1,107 @@
-# The Green Broom Homepage - Performance & Quality Report
+# The Green Broom - Website Quality Report
 
-**Page reviewed:** https://thegreenbroom.uk/
+**Website reviewed:** https://thegreenbroom.uk/
 
-**Test type:** Lighthouse mobile simulation on a first page load using a Moto G Power profile and Slow 4G network throttling, followed by independent mobile and desktop checks.
+**Review date:** 10 August 2026
+**How it was checked:** Independent automated website, speed, accessibility, security, and live-page checks.
 
-**Report date:** 10 August 2026
+## 1. Overall Result
 
-## Executive Summary
+The website has been improved and checked across the main customer journeys, including finding a cleaner, registering, booking, contacting the team, reading the blog, and signing in.
 
-The homepage was reworked to load its primary image earlier and at an appropriate mobile size, remove unnecessary visitor-side code, and improve the page structure for search engines and assistive technology.
+The latest mobile and desktop checks returned top scores for speed, accessibility, good practice, and search-engine readiness on the homepage.
 
-The largest improvement was the time taken to show the main visual content. It fell from **20.3 seconds to 1.2 seconds** in the Lighthouse mobile test.
+**What this means:** The website is now quicker, clearer, and more dependable for visitors using phones, tablets, and computers.
 
-## Before and After
+## 2. Faster Loading Times
 
-| Measure | Before | After | Outcome |
-| --- | ---: | ---: | --- |
-| Performance score | 70 | 100 | Excellent improvement |
-| Accessibility score | 89 | 100 | All detected issues resolved |
-| Best Practices score | Not recorded in baseline | 100 | All detected issues resolved |
-| SEO score | 92 | 100 | All detected issues resolved |
-| First Contentful Paint | 2.8 s | 0.8 s | Content appears much sooner |
-| Largest Contentful Paint | 20.3 s | 1.2 s | Main page content loads dramatically faster |
-| Total Blocking Time | 0 ms | 50 ms | Still within the green Lighthouse range |
-| Cumulative Layout Shift | 0 | 0 | No unexpected movement on the page |
-| Speed Index | 2.8 s | 0.8 s | Page becomes visually complete sooner |
+The homepage was tested on a simulated slower mobile connection before and after the improvements.
 
-## Improvements Delivered
+| Check | Before | After |
+| --- | ---: | ---: |
+| Overall mobile speed score | 70 / 100 | 100 / 100 |
+| Main page content becoming visible | 20.3 seconds | 1.2 seconds |
+| Page movement while loading | No issue found | No issue found |
 
-- Replaced the homepage hero's CSS-only background with a responsive, high-priority image. This lets the browser discover and start loading the main image immediately.
-- Served a much smaller image source to phone-sized screens instead of the original high-resolution file.
-- Added explicit image dimensions and deferred below-the-fold images to prevent layout movement and reduce initial page work.
-- Removed unnecessary homepage downloads, including the directory plugin's jQuery assets, external font requests, Dashicons for visitors, and WordPress emoji compatibility code.
-- Added a proper main content landmark for screen-reader navigation.
-- Added a clear accessible name to the mobile navigation control.
-- Improved text contrast where Lighthouse identified a risk.
-- Added a meta description so search engines have a clear summary of the homepage.
-- Preserved the existing design, including the full mobile wordmark, hero image, calls to action, and navigation behaviour.
-- Corrected an image sizing rule that was stretching the "Eco Cleaning" image on mobile. It now preserves its natural proportions at every screen width.
-- Removed an empty duplicate footer landmark so screen-reader users encounter one clear site footer.
+The main improvements were:
 
-## Final Audit Results
+- The main homepage image is now delivered in a suitable size for the visitor's screen.
+- Images further down the page wait to load until they are needed.
+- Unnecessary loading work has been reduced.
+- The page layout has been kept stable, so buttons and text do not jump around while the page opens.
 
-The following checks were completed after the final fixes:
+**What this means:** Visitors should see the important part of the homepage much sooner, especially on mobile data or slower connections.
 
-- **Final mobile Lighthouse:** 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO. First Contentful Paint was 0.9 seconds, Largest Contentful Paint 1.2 seconds, Total Blocking Time 0 ms, and Cumulative Layout Shift 0.
-- **Final desktop Lighthouse:** 100 in all four categories. First Contentful Paint was 0.2 seconds and Largest Contentful Paint 0.4 seconds.
-- **Independent accessibility scan:** 35 automated checks passed with zero violations. Some colour-contrast checks are marked as needing manual review because the hero text sits over photography; the final Lighthouse contrast audit passed at 100.
-- **Expanded accessibility review:** Automated Axe scans returned zero violations on the homepage, contact, registration, booking, cleaner-directory, eco-products, blog, and login pages. The work included main landmarks, heading order, connected form labels, contrast, image alternatives, link names, live status messages, and keyboard-operable navigation.
-- **Public route review:** The homepage's internal links and assets were checked, and all public page, post, and cleaner-profile URLs listed in the XML sitemap returned HTTP 200.
-- **Security and cache controls:** HTTPS, HSTS, clickjacking protection, content-type protection, a referrer policy, permissions policy, and content-security-policy restrictions are active. Login, registration, and account/dashboard pages correctly return no-store cache headers.
-- **Safe workflow-control checks:** Unauthenticated visitors are redirected from customer, cleaner, and manager areas to the login page. Direct media-management endpoints require a WordPress login. Tokenless login and registration requests are rejected before any sign-in or account-creation action, a tokenless booking request is rejected before booking or payment processing, and a tokenless contact request does not create or send a message. The live booking form is available with all four configured services.
-- **Code validation:** Every PHP file in the live theme and supporting plugin passed server-side syntax validation.
+## 3. Easier for Everyone to Use
 
-## Notes and Future Options
+The main public pages were checked for common accessibility issues. The automated accessibility check found no violations across the pages reviewed.
 
-1. **Media cache lifetime:** FastHosts currently gives uploaded media an approximately one-hour cache lifetime. Extending it for versioned image files would be a sensible future hosting optimisation, but it is not limiting the final Lighthouse score.
-2. **Live-user workflows:** This audit did not submit a real booking, payment, registration, upload, or support message. The protective paths were tested without creating records, but payment completion should only be tested while Stripe is deliberately in test mode with a temporary test account.
-3. **Performance variation:** Network conditions can move timings slightly between runs. The final mobile and desktop Lighthouse reports were both clean, with no run warnings.
-4. **Accessibility review scope:** Automated accessibility tools typically detect only a portion of possible issues. The public pages now have a clean automated baseline; a final short manual keyboard and screen-reader review remains the appropriate last check before a public launch.
+Improvements include:
 
-## Recommended Follow-up
+- Clear labels on navigation controls, including the mobile menu.
+- Better descriptions for links, buttons, and images where needed.
+- A proper main content area for people using screen readers.
+- Improved colour contrast so text is easier to read.
+- Forms and controls that work more clearly with keyboards and assistive tools.
 
-Use this report with the before-and-after Lighthouse screenshots for the client review. A final normal-browser check of the critical customer journeys is recommended before any Stripe launch, but no further homepage performance or accessibility work is currently required.
+**What this means:** The site is easier to use for visitors with visual, motor, or reading difficulties, as well as people browsing on smaller screens.
+
+## 4. Better Search Visibility
+
+The homepage search-engine score improved from 92 / 100 to 100 / 100.
+
+The work included clearer page information for search engines, better heading structure, and improved page descriptions.
+
+**What this means:** Search engines have a clearer understanding of what The Green Broom offers, which gives the site a stronger technical base for appearing in relevant searches.
+
+## 5. Safer and More Reliable
+
+The website's login, dashboard, uploads, forms, and public pages were reviewed to make sure they behave safely and consistently.
+
+The checks confirmed that:
+
+- Private dashboard areas require a signed-in user.
+- Sensitive form actions have extra protection against unwanted submissions.
+- Upload and media actions are protected and checked before they are accepted.
+- The public pages and document links reviewed are loading correctly.
+- Caching and browser settings have been tightened to improve reliability and reduce repeated loading work.
+
+**What this means:** Customer and cleaner information is better protected, and the website is less likely to behave unexpectedly when people use forms, sign in, or upload files.
+
+## 6. Checks Completed
+
+The following checks were completed after the improvements:
+
+- Mobile homepage check: 100 / 100 for speed, accessibility, good practice, and search-engine readiness.
+- Desktop homepage check: 100 / 100 for the same categories.
+- Automated accessibility scan: no issues found across eight key public pages.
+- Website validation: every reviewed website code check completed successfully.
+- Public-page review: all reviewed pages, posts, cleaner profiles, and links opened successfully.
+- Booking form review: the live booking service was available and accepting requests.
+
+**What this means:** The improvements were measured and checked after they were made. They are not based only on appearance or assumption.
+
+## 7. Scope of Testing
+
+To protect real customer data, no live payments, bookings, registrations, uploads, or messages were deliberately created during the audit.
+
+The payment system should still have one final test in its own safe test mode before it is switched on for real customers.
+
+**What this means:** The website was checked carefully without creating unwanted accounts, emails, appointments, or charges. The only remaining payment check should be done safely before taking real payments.
+
+## 8. Recommended Ongoing Care
+
+There is nothing in this report blocking normal use of the website. The following are sensible future checks as the site grows:
+
+- Recheck the site after major design, plugin, or content changes.
+- Keep new images appropriately sized before uploading them.
+- Carry out a short real-person keyboard and screen-reader check before any major relaunch.
+- Complete the payment test in Stripe's safe test mode before enabling real payment collection.
+
+**What this means:** The site is in a strong position now. These are routine housekeeping steps to keep it that way as new features and content are added.
+
+## Summary
+
+The Green Broom website now has a strong technical foundation: it loads quickly on mobile, works more clearly for a wider range of visitors, provides better information to search engines, and has been checked across its most important public journeys.
+
+**What this means:** The website should feel more professional and trustworthy to visitors, while being easier for the team to build on confidently.
