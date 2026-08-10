@@ -114,8 +114,7 @@
 
             <div class="site-branding">
                 <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-                    <img class="logo-mobile" src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" alt="The Green Broom">
-                    <img class="logo-desktop" src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" alt="The Green Broom">
+                    <img class="logo-desktop" src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" width="974" height="139" alt="The Green Broom">
                 </a>
             </div>
 
@@ -210,7 +209,7 @@
 
                 <?php endif; ?>
 
-                <button class="menu-toggle" aria-controls="site-navigation" aria-expanded="false">
+                <button class="menu-toggle" type="button" aria-controls="site-navigation" aria-expanded="false" aria-label="Open navigation">
                     <span class="hamburger-box">
                         <span class="hamburger-inner"></span>
                     </span>

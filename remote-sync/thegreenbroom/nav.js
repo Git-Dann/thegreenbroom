@@ -9,5 +9,6 @@ document.addEventListener('DOMContentLoaded', function () {
     toggle.addEventListener('click', function () {
         var isOpen = navigation.classList.toggle('toggled');
         toggle.setAttribute('aria-expanded', String(isOpen));
+        toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
     });
 });

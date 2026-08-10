@@ -708,8 +708,10 @@ function gb_load_assets() {
     // 1. Load Main Styles with file-based cache busting.
     wp_enqueue_style( 'gb-main-style', get_stylesheet_uri(), array(), $style_version );
     
-    // 2. Load Dashicons (Required for Dashboard Icons)
-    wp_enqueue_style( 'dashicons' );
+    // 2. Dashboard icons are not needed by public visitors.
+    if ( is_user_logged_in() ) {
+        wp_enqueue_style( 'dashicons' );
+    }
 
     // 3. Load Navigation Logic
     wp_enqueue_script( 'gb-nav-js', get_template_directory_uri() . '/nav.js', array(), $nav_version, true );
@@ -721,6 +723,54 @@ function gb_load_assets() {
     ));
 }
 add_action( 'wp_enqueue_scripts', 'gb_load_assets' );
+
+/**
+ * Provide a useful search snippet when an editor has not supplied one.
+ */
+function gb_output_meta_description() {
+    if ( is_admin() || is_feed() || is_robots() ) {
+        return;
+    }
+
+    $description = '';
+    if ( is_front_page() ) {
+        $description = 'Find trusted eco-friendly cleaners across Merseyside and West Lancashire with The Green Broom.';
+    } elseif ( is_singular() ) {
+        $post_id     = (int) get_queried_object_id();
+        $description = (string) get_post_meta( $post_id, '_gb_seo_meta_desc', true );
+        if ( $description === '' ) {
+            $description = get_the_excerpt( $post_id );
+        }
+        if ( $description === '' ) {
+            $description = get_post_field( 'post_content', $post_id );
+        }
+    }
+
+    $description = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $description ) ) );
+    if ( $description === '' ) {
+        return;
+    }
+
+    $description = function_exists( 'mb_substr' ) ? mb_substr( $description, 0, 155 ) : substr( $description, 0, 155 );
+    echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
+}
+add_action( 'wp_head', 'gb_output_meta_description', 1 );
+
+/**
+ * Modern browsers render the site's emoji natively, so visitors do not need
+ * WordPress' compatibility detector, worker, or remote icon requests.
+ */
+function gb_disable_public_emoji_assets() {
+    if ( is_admin() ) {
+        return;
+    }
+
+    remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+    remove_action( 'wp_head', 'wp_print_emoji_detection_script', 7 );
+    remove_action( 'wp_print_styles', 'print_emoji_styles' );
+    remove_action( 'wp_enqueue_scripts', 'wp_enqueue_emoji_styles' );
+}
+add_action( 'wp', 'gb_disable_public_emoji_assets', 1 );
 
 function gb_send_security_headers() {
     if ( headers_sent() ) {

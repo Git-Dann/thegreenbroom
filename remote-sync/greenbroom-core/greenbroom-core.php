@@ -35,9 +35,12 @@ class Green_Broom_Core {
     }
 
     public function enqueue_frontend() {
-        // Geist Font via CDN
-        wp_enqueue_style( 'geist-font', 'https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/style.css', array(), '1.0.0' );
-        
+        // The sales homepage has no directory controls, so it does not need
+        // this plugin's jQuery-based search assets.
+        if ( is_front_page() ) {
+            return;
+        }
+
         wp_enqueue_style( 'gb-core-style', GB_URL . 'assets/style.css', array(), GB_VERSION );
         wp_enqueue_script( 'gb-core-script', GB_URL . 'assets/script.js', array( 'jquery' ), GB_VERSION, true );
         

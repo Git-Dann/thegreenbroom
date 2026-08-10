@@ -64,7 +64,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         display: block;
     }
     .gb-footer-brand p {
-        color: rgba(255,255,255,0.7);
+        color: rgba(255,255,255,0.92);
         line-height: 1.6;
         font-size: 0.95rem;
         max-width: 280px;
@@ -87,7 +87,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
     }
     .gb-footer-links li { margin-bottom: 12px; }
     .gb-footer-links a {
-        color: rgba(255,255,255,0.9);
+        color: #ffffff;
         text-decoration: none;
         font-size: 0.9rem;
         transition: color 0.2s;
@@ -121,7 +121,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         margin-top: 50px;
         padding: 25px 0;
         text-align: center;
-        color: rgba(255,255,255,0.5);
+        color: rgba(255,255,255,0.88);
         font-size: 0.8rem;
     }
 
@@ -140,7 +140,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         
         <div class="gb-footer-brand">
             <div class="gb-logo-box">
-                <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" alt="The Green Broom" class="gb-footer-logo">
+                <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" width="974" height="139" alt="The Green Broom" class="gb-footer-logo" loading="lazy" decoding="async">
             </div>
             <p>Connecting homeowners with trusted, eco-friendly cleaning professionals. Simple, safe, and sustainable.</p>
             <?php if (!empty($gb_social_links)): ?>

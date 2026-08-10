@@ -71,6 +71,22 @@ $cta_heading   = get_post_meta(get_the_ID(), '_gb_cta_heading', true)   ?: 'Read
 $cta_sub       = get_post_meta(get_the_ID(), '_gb_cta_sub', true)       ?: 'Join The Green Broom today.';
 $cta_btn_1     = get_post_meta(get_the_ID(), '_gb_cta_btn_1', true)     ?: 'Get Started Now';
 $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/register';
+
+// Prefer WordPress-generated image sizes so a phone never downloads an original.
+$gb_image_source = static function( $url, $size, $fallback_width, $fallback_height ) {
+    $attachment_id = attachment_url_to_postid( $url );
+    $image = $attachment_id ? wp_get_attachment_image_src( $attachment_id, $size ) : false;
+
+    if ( $image ) {
+        return array( 'url' => $image[0], 'width' => (int) $image[1], 'height' => (int) $image[2] );
+    }
+
+    return array( 'url' => $url, 'width' => $fallback_width, 'height' => $fallback_height );
+};
+$hero_image_desktop = $gb_image_source( $hero_bg, 'large', 1920, 1080 );
+$hero_image_mobile  = $gb_image_source( $hero_bg, 'medium_large', 768, 432 );
+$split_image = $gb_image_source( $split_img, 'large', 600, 900 );
+$mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
 ?>
 
 <style>
@@ -95,13 +111,18 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
     .gb-btn-outline:hover { background: #1b5e20; color: white !important; }
 
     /* HERO */
-    .gb-hero { background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('<?php echo esc_url($hero_bg); ?>'); background-size: cover; background-position: center; color: white; padding: 160px 20px; text-align: center; }
+    .gb-hero { position:relative; isolation:isolate; overflow:hidden; background:#1b5e20; color:white; padding:160px 20px; text-align:center; }
+    .gb-hero-media, .gb-hero-overlay { position:absolute; inset:0; }
+    .gb-hero-media img { width:100%; height:100%; object-fit:cover; }
+    .gb-hero-media { z-index:0; }
+    .gb-hero-overlay { z-index:1; background:rgba(0, 0, 0, 0.58); }
+    .gb-hero-content { position:relative; z-index:2; }
     .gb-hero h1 { font-size: 3.5rem; font-weight: 800; color: white !important; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
     .gb-hero p { font-size: 1.4rem; color: rgba(255,255,255,0.95); margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto; }
 
     /* TRUST BAR */
     .gb-trust-bar { background: #e8f5e9; padding: 20px 0; text-align: center; border-bottom: 1px solid #c8e6c9; }
-    .gb-trust-text { font-weight: 600; color: #2e7d32; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+    .gb-trust-text { font-weight:700; color:#1b5e20; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; }
 
     /* SPLIT SECTION */
     .gb-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
@@ -149,14 +170,20 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
     }
 </style>
 
+<main id="primary" class="site-main">
 <div id="gb-front-page">
     <section class="gb-hero">
-        <div class="gb-container">
+        <picture class="gb-hero-media" aria-hidden="true">
+            <source media="(max-width: 700px)" srcset="<?php echo esc_url( $hero_image_mobile['url'] ); ?>">
+            <img src="<?php echo esc_url( $hero_image_desktop['url'] ); ?>" width="<?php echo esc_attr( $hero_image_desktop['width'] ); ?>" height="<?php echo esc_attr( $hero_image_desktop['height'] ); ?>" alt="" fetchpriority="high" decoding="async">
+        </picture>
+        <div class="gb-hero-overlay" aria-hidden="true"></div>
+        <div class="gb-container gb-hero-content">
             <h1><?php echo esc_html($hero_headline); ?></h1>
             <p><?php echo esc_html($hero_sub); ?></p>
             <div style="display:flex; gap:15px; justify-content:center; flex-wrap:wrap;">
                 <a href="<?php echo esc_url($hero_link_1); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($hero_btn_1); ?></a>
-                <a href="<?php echo esc_url($hero_link_2); ?>" class="gb-btn" style="background:transparent; color:white; border:2px solid white;"><?php echo esc_html($hero_btn_2); ?></a>
+                <a href="<?php echo esc_url($hero_link_2); ?>" class="gb-btn" style="background:rgba(15,23,42,0.84); color:white; border:2px solid white;"><?php echo esc_html($hero_btn_2); ?></a>
             </div>
         </div>
     </section>
@@ -177,7 +204,7 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
                     </ul>
                     <a href="/cleaner-listings" class="gb-btn gb-btn-outline" style="margin-top:30px;">Browse Cleaners &rarr;</a>
                 </div>
-                <img src="<?php echo esc_url($split_img); ?>" alt="Eco Cleaning" class="gb-split-img">
+                <img src="<?php echo esc_url( $split_image['url'] ); ?>" width="<?php echo esc_attr( $split_image['width'] ); ?>" height="<?php echo esc_attr( $split_image['height'] ); ?>" alt="Eco Cleaning" class="gb-split-img" loading="lazy" decoding="async">
             </div>
         </div>
     </section>
@@ -209,7 +236,7 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
 
     <section class="gb-section" style="padding:0;">
         <div class="gb-container" style="max-width:1200px; padding:0;">
-             <img src="<?php echo esc_url($mid_img); ?>" alt="Cleaner" style="width:100%; height:auto; display:block;">
+             <img src="<?php echo esc_url( $mid_image['url'] ); ?>" width="<?php echo esc_attr( $mid_image['width'] ); ?>" height="<?php echo esc_attr( $mid_image['height'] ); ?>" alt="Cleaner" style="width:100%; height:auto; display:block;" loading="lazy" decoding="async">
         </div>
     </section>
 
@@ -245,5 +272,6 @@ $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/reg
         </div>
     </section>
 </div>
+</main>
 
 <?php get_footer(); ?>

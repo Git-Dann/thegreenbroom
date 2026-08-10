@@ -3,8 +3,6 @@
    ========================================= */
 
 /* 1. IMPORTS & VARIABLES */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
 :root {
     /* Brand Colors */
     --color-primary: #2e7d32;      /* Forest Green */
@@ -35,7 +33,7 @@
     --shadow-card: 0 10px 30px rgba(0,0,0,0.05);
     
     /* Font */
-    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* 2. RESET & BASE */
@@ -342,13 +340,6 @@ a.gb-card:hover {
     padding: 12px 22px;
     color: #153243;
     background: #f2f8f3;
-}
-
-/* Compatibility for the cached homepage while its inline template refreshes. */
-body.home .gb-hero {
-    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://thegreenbroom.uk/wp-content/uploads/2026/07/large-vecteezy_bright-and-inviting-cleaning-supplies-arranged-by-a-sunny_73308997_large.jpg') !important;
-    background-size: cover !important;
-    background-position: center !important;
 }
 
 @media (max-width: 700px) {
