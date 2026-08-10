@@ -49,12 +49,13 @@ The following checks were completed after the final fixes:
 - **Independent accessibility scan:** 35 automated checks passed with zero violations. Some colour-contrast checks are marked as needing manual review because the hero text sits over photography; the final Lighthouse contrast audit passed at 100.
 - **Public route review:** The homepage's internal links and assets were checked, and all public page, post, and cleaner-profile URLs listed in the XML sitemap returned HTTP 200.
 - **Security and cache controls:** HTTPS, HSTS, clickjacking protection, content-type protection, a referrer policy, permissions policy, and content-security-policy restrictions are active. Login, registration, and account/dashboard pages correctly return no-store cache headers.
+- **Safe workflow-control checks:** Unauthenticated visitors are redirected from customer, cleaner, and manager areas to the login page. Direct media-management endpoints require a WordPress login. Tokenless login and registration requests are rejected before any sign-in or account-creation action, a tokenless booking request is rejected before booking or payment processing, and a tokenless contact request does not create or send a message. The live booking form is available with all four configured services.
 - **Code validation:** Every PHP file in the live theme and supporting plugin passed server-side syntax validation.
 
 ## Notes and Future Options
 
 1. **Media cache lifetime:** FastHosts currently gives uploaded media an approximately one-hour cache lifetime. Extending it for versioned image files would be a sensible future hosting optimisation, but it is not limiting the final Lighthouse score.
-2. **Live-user workflows:** This audit did not submit a real booking, payment, registration, or support message. Those should remain part of a controlled pre-launch operational check so no test records or payment activity are created unnecessarily.
+2. **Live-user workflows:** This audit did not submit a real booking, payment, registration, upload, or support message. The protective paths were tested without creating records, but payment completion should only be tested while Stripe is deliberately in test mode with a temporary test account.
 3. **Performance variation:** Network conditions can move timings slightly between runs. The final mobile and desktop Lighthouse reports were both clean, with no run warnings.
 
 ## Recommended Follow-up
