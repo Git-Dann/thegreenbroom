@@ -126,7 +126,7 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
 
     /* SPLIT SECTION */
     .gb-split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
-    .gb-split-img { width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .gb-split-img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     .gb-check-list { list-style: none; padding: 0; margin: 0; }
     .gb-check-list li { margin-bottom: 15px; padding-left: 30px; position: relative; font-size: 1.1rem; color: #444; }
     .gb-check-list li:before { content: '✓'; position: absolute; left: 0; color: #2e7d32; font-weight: 800; }

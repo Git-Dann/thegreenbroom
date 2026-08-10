@@ -1,5 +1,3 @@
-</div><footer id="colophon" class="site-footer">
-    </footer>
 </div>
 <?php
 /**
@@ -199,6 +197,8 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
     </div>
 
 </footer>
+
+</div>
 
 <?php wp_footer(); ?>
 </body>

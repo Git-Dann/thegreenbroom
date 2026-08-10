@@ -2,7 +2,7 @@
 
 **Page reviewed:** https://thegreenbroom.uk/
 
-**Test type:** Lighthouse mobile simulation on a first page load using a Moto G Power profile and Slow 4G network throttling.
+**Test type:** Lighthouse mobile simulation on a first page load using a Moto G Power profile and Slow 4G network throttling, followed by independent mobile and desktop checks.
 
 **Report date:** 10 August 2026
 
@@ -18,7 +18,7 @@ The largest improvement was the time taken to show the main visual content. It f
 | --- | ---: | ---: | --- |
 | Performance score | 70 | 100 | Excellent improvement |
 | Accessibility score | 89 | 100 | All detected issues resolved |
-| Best Practices score | Not recorded in baseline | 96 | Strong result; see notes below |
+| Best Practices score | Not recorded in baseline | 100 | All detected issues resolved |
 | SEO score | 92 | 100 | All detected issues resolved |
 | First Contentful Paint | 2.8 s | 0.8 s | Content appears much sooner |
 | Largest Contentful Paint | 20.3 s | 1.2 s | Main page content loads dramatically faster |
@@ -37,24 +37,26 @@ The largest improvement was the time taken to show the main visual content. It f
 - Improved text contrast where Lighthouse identified a risk.
 - Added a meta description so search engines have a clear summary of the homepage.
 - Preserved the existing design, including the full mobile wordmark, hero image, calls to action, and navigation behaviour.
+- Corrected an image sizing rule that was stretching the "Eco Cleaning" image on mobile. It now preserves its natural proportions at every screen width.
+- Removed an empty duplicate footer landmark so screen-reader users encounter one clear site footer.
 
-## Remaining Lighthouse Notes
+## Final Audit Results
 
-These are minor advisory items and do not affect the 100 performance, accessibility, or SEO scores.
+The following checks were completed after the final fixes:
 
-1. **Media cache lifetime (estimated 92 KiB):** FastHosts currently sends uploaded media with a one-hour cache lifetime. This is a hosting/server setting rather than a theme issue. Extending it for versioned image files would be a sensible future hosting optimisation.
-2. **Image delivery (estimated 45 KiB):** Lighthouse can suggest further compression for the hero image. The homepage already serves a responsive 768-pixel image on mobile, so the remaining potential saving is small and not affecting the performance score.
-3. **Best Practices 96 - image aspect ratio:** The hero image is intentionally cropped with `object-fit: cover` to fill different screen shapes without distortion. Lighthouse flags the difference between its intrinsic and displayed aspect ratios, but the image is not stretched and the visual result is correct.
-4. **Back/forward cache message:** One browser-side run reported a back/forward cache note while DevTools was open. A separate automated live Lighthouse run passed that check. This does not affect normal first-load performance.
+- **Final mobile Lighthouse:** 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO. First Contentful Paint was 0.9 seconds, Largest Contentful Paint 1.2 seconds, Total Blocking Time 0 ms, and Cumulative Layout Shift 0.
+- **Final desktop Lighthouse:** 100 in all four categories. First Contentful Paint was 0.2 seconds and Largest Contentful Paint 0.4 seconds.
+- **Independent accessibility scan:** 35 automated checks passed with zero violations. Some colour-contrast checks are marked as needing manual review because the hero text sits over photography; the final Lighthouse contrast audit passed at 100.
+- **Public route review:** The homepage's internal links and assets were checked, and all public page, post, and cleaner-profile URLs listed in the XML sitemap returned HTTP 200.
+- **Security and cache controls:** HTTPS, HSTS, clickjacking protection, content-type protection, a referrer policy, permissions policy, and content-security-policy restrictions are active. Login, registration, and account/dashboard pages correctly return no-store cache headers.
+- **Code validation:** Every PHP file in the live theme and supporting plugin passed server-side syntax validation.
 
-## Validation Completed
+## Notes and Future Options
 
-- Live homepage returned HTTP 200.
-- All changed PHP files passed server-side syntax validation.
-- Public page markup was checked for the responsive hero, meta description, main landmark, labelled navigation button, and removal of the old visitor-side dependencies.
-- Live mobile screenshot visually checked for wordmark, navigation control, hero copy, buttons, and responsive layout.
-- Fresh live Lighthouse run confirmed 100 Performance, 100 Accessibility, and 100 SEO.
+1. **Media cache lifetime:** FastHosts currently gives uploaded media an approximately one-hour cache lifetime. Extending it for versioned image files would be a sensible future hosting optimisation, but it is not limiting the final Lighthouse score.
+2. **Live-user workflows:** This audit did not submit a real booking, payment, registration, or support message. Those should remain part of a controlled pre-launch operational check so no test records or payment activity are created unnecessarily.
+3. **Performance variation:** Network conditions can move timings slightly between runs. The final mobile and desktop Lighthouse reports were both clean, with no run warnings.
 
 ## Recommended Follow-up
 
-Run a final Lighthouse test from another normal browser session or network connection before sharing the result externally. Scores can vary slightly with network conditions, but the key loading metrics are now firmly in the green range.
+Use this report with the before-and-after Lighthouse screenshots for the client review. A final normal-browser check of the critical customer journeys is recommended before any Stripe launch, but no further homepage performance or accessibility work is currently required.
