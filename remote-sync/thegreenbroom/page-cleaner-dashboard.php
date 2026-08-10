@@ -187,11 +187,6 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                 <h3 class="gb-card-title">Cleaner Handbook</h3>
                 <p style="color:var(--text-muted); font-size:0.9rem;">Read the welcome and information booklet.</p>
             </a>
-            <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('make-the-most-of-your-eco-cleaner') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
-                <div style="font-size:2rem; margin-bottom:15px;">🧽</div>
-                <h3 class="gb-card-title">Make the Most of Your Eco-Cleaner</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem;">Practical guidance for preparing for each visit.</p>
-            </a>
             <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('certificate-of-insurance') : '#'); ?>" target="_blank" rel="noopener" class="gb-card">
                 <div style="font-size:2rem; margin-bottom:15px;">🛡️</div>
                 <h3 class="gb-card-title">Insurance Certificate</h3>

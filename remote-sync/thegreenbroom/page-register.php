@@ -20,7 +20,8 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
         } elseif ( ! is_email($email) ) {
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Please enter a valid email address.</div>';
         } elseif ( ! $terms_accepted ) {
-            $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Please confirm that you have read and agree to the Terms of Business.</div>';
+            $agreement_name = $type === 'customer' ? "Subscribers' Terms of Association" : 'Terms of Business';
+            $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Please confirm that you have read and agree to the ' . esc_html( $agreement_name ) . '.</div>';
         } elseif ( is_wp_error($password_check) ) {
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ ' . esc_html($password_check->get_error_message()) . '</div>';
         } elseif ( email_exists($email) ) {
@@ -33,6 +34,11 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
                 wp_update_user(['ID'=>$uid, 'first_name'=>$name, 'display_name'=>$name]);
                 update_user_meta($uid, '_gb_terms_accepted', '1');
                 update_user_meta($uid, '_gb_terms_accepted_at', current_time('mysql'));
+                if ($type === 'customer') {
+                    update_user_meta($uid, '_gb_subscriber_terms_accepted', '1');
+                    update_user_meta($uid, '_gb_subscriber_terms_accepted_at', current_time('mysql'));
+                    update_user_meta($uid, '_gb_subscriber_terms_accepted_version', function_exists('gb_get_subscriber_terms_of_association_version') ? gb_get_subscriber_terms_of_association_version() : 'current');
+                }
                 $u = new WP_User($uid);
                 
                 if($type === 'cleaner') {
@@ -84,7 +90,7 @@ get_header();
             </div>
             <label style="display:flex; gap:10px; align-items:flex-start; margin:0 0 18px; font-size:13px; line-height:1.5; color:#334155;">
                 <input type="checkbox" name="terms_acceptance" value="1" required style="margin-top:3px;">
-                <span>I have read and agree to the <a href="<?php echo esc_url(function_exists('gb_get_terms_page_url') ? gb_get_terms_page_url() : home_url('/terms/')); ?>" target="_blank" rel="noopener">Terms of Business</a>.</span>
+                <span id="gb-terms-acceptance-copy">I have read and agree to the <a id="gb-terms-acceptance-link" href="<?php echo esc_url(function_exists('gb_get_subscriber_terms_page_url') ? gb_get_subscriber_terms_page_url() : home_url('/subscribers-terms-of-association/')); ?>" target="_blank" rel="noopener">Subscribers' Terms of Association</a>.</span>
             </label>
             <button type="submit" class="gb-btn gb-btn-primary gb-btn-block">Sign Up</button>
         </form>
@@ -98,8 +104,14 @@ get_header();
 document.addEventListener('DOMContentLoaded', function () {
     var typeSelect = document.querySelector('select[name="user_type"]');
     var cleanerNote = document.getElementById('gb-cleaner-signup-note');
-    if (!typeSelect || !cleanerNote) return;
-    var updateCleanerNote = function () { cleanerNote.style.display = typeSelect.value === 'cleaner' ? 'block' : 'none'; };
+    var termsLink = document.getElementById('gb-terms-acceptance-link');
+    if (!typeSelect || !cleanerNote || !termsLink) return;
+    var updateCleanerNote = function () {
+        var isCleaner = typeSelect.value === 'cleaner';
+        cleanerNote.style.display = isCleaner ? 'block' : 'none';
+        termsLink.href = isCleaner ? '<?php echo esc_url(function_exists('gb_get_terms_page_url') ? gb_get_terms_page_url() : home_url('/terms/')); ?>' : '<?php echo esc_url(function_exists('gb_get_subscriber_terms_page_url') ? gb_get_subscriber_terms_page_url() : home_url('/subscribers-terms-of-association/')); ?>';
+        termsLink.textContent = isCleaner ? 'Terms of Business' : "Subscribers' Terms of Association";
+    };
     typeSelect.addEventListener('change', updateCleanerNote);
     updateCleanerNote();
 });

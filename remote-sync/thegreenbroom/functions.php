@@ -164,7 +164,42 @@ function gb_ensure_eco_products_page() {
 add_action( 'init', 'gb_ensure_eco_products_page' );
 
 /**
- * Keep customer-facing resource files behind a signed-in WordPress route.
+ * Keep the homeowner subscription agreement separate from the cleaner
+ * agreement, with its own public page and sign-up acceptance record.
+ */
+function gb_ensure_subscriber_terms_page() {
+    if ( get_option( 'gb_subscriber_terms_page_created' ) ) {
+        return;
+    }
+
+    $existing = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'subscribers-terms-of-association',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( empty( $existing ) ) {
+        $page_id = wp_insert_post( array(
+            'post_title'   => "Subscribers' Terms of Association",
+            'post_name'    => 'subscribers-terms-of-association',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_content' => '',
+        ) );
+
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_post_meta( $page_id, '_wp_page_template', 'page-legal.php' );
+        }
+    }
+
+    update_option( 'gb_subscriber_terms_page_created', 1 );
+}
+add_action( 'init', 'gb_ensure_subscriber_terms_page' );
+
+/**
+ * Deliver public and portal-only resource files through one controlled route.
  */
 function gb_get_resource_definitions() {
     return array(
@@ -175,6 +210,10 @@ function gb_get_resource_definitions() {
         'eco-cleaning-products' => array(
             'label' => 'Eco Cleaning Products Guide',
             'file'  => 'eco-cleaning-products.pdf',
+        ),
+        'subscribers-terms-of-association' => array(
+            'label' => "Subscribers' Terms of Association",
+            'file'  => 'subscribers-terms-of-association.pdf',
         ),
         'make-the-most-of-your-eco-cleaner' => array(
             'label' => 'Make the Most of Your Eco-Cleaner',
@@ -223,6 +262,11 @@ function gb_get_resource_url( $resource ) {
     $filename = isset( $resources[ $resource ]['file'] ) ? $resources[ $resource ]['file'] : $resource . '.pdf';
     $resource_path = '/greenbroom-resource/' . rawurlencode( $resource ) . '/' . rawurlencode( $filename );
 
+    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
+    if ( ! in_array( $resource, $protected_resources, true ) ) {
+        return home_url( $resource_path );
+    }
+
     return wp_nonce_url(
         home_url( $resource_path ),
         'gb_download_resource_' . $resource
@@ -250,7 +294,23 @@ function gb_handle_resource_download() {
         auth_redirect();
     }
 
-    check_admin_referer( 'gb_download_resource_' . $resource );
+    $role_restricted_resources = array(
+        'cleaner-handbook' => array( 'gb_cleaner' ),
+        // gb_client is the legacy customer role used by earlier accounts.
+        'make-the-most-of-your-eco-cleaner' => array( 'gb_customer', 'gb_client' ),
+    );
+    if ( isset( $role_restricted_resources[ $resource ] ) && ! current_user_can( 'manage_options' ) ) {
+        $current_user = wp_get_current_user();
+        $required_roles = $role_restricted_resources[ $resource ];
+        $is_manager = in_array( 'gb_manager', (array) $current_user->roles, true );
+        if ( ! $is_manager && ! array_intersect( $required_roles, (array) $current_user->roles ) ) {
+            wp_die( 'This resource is available from your account portal.', 'Resource access denied', array( 'response' => 403 ) );
+        }
+    }
+
+    if ( in_array( $resource, $protected_resources, true ) ) {
+        check_admin_referer( 'gb_download_resource_' . $resource );
+    }
 
     $file = trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'];
     if ( ! is_readable( $file ) ) {
@@ -1689,6 +1749,90 @@ function gb_get_privacy_page_url() {
 
 function gb_get_terms_page_url() {
     return gb_get_page_url_by_slug( 'terms', '/terms/' );
+}
+
+function gb_get_subscriber_terms_page_url() {
+    return gb_get_page_url_by_slug( 'subscribers-terms-of-association', '/subscribers-terms-of-association/' );
+}
+
+function gb_get_subscriber_terms_of_association_sections() {
+    return array(
+        array(
+            'id' => 'about-the-green-broom',
+            'heading' => '1. About The Green Broom',
+            'paragraphs' => array(
+                'The Green Broom is a UK eco-friendly cleaner platform that connects homeowners and other members seeking cleaning services with a database of verified and vetted, self-employed cleaners.',
+            ),
+        ),
+        array(
+            'id' => 'membership',
+            'heading' => '2. Membership',
+            'paragraphs' => array(
+                'Access to The Green Broom database and its member services is available to subscribers who pay the applicable quarterly or annual membership fee. Membership provides exceptional value and remains active for the period for which the subscription has been paid.',
+            ),
+        ),
+        array(
+            'id' => 'member-benefits',
+            'heading' => '3. Member Benefits',
+            'paragraphs' => array(
+                'While subscribed, members may benefit from:',
+            ),
+            'items' => array(
+                'Access to the database of verified and vetted self-employed cleaners.',
+                'The ability to make bookings through the platform.',
+                'Cashless payment facilities.',
+                'The ability to leave reviews of cleaners.',
+                'Insurance cover provided by The Green Broom, subject to the applicable terms, conditions and exclusions.',
+            ),
+        ),
+        array(
+            'id' => 'self-employed-cleaners',
+            'heading' => '4. Self-Employed Cleaners',
+            'paragraphs' => array(
+                'Members acknowledge and agree that all cleaners listed on The Green Broom are self-employed and independent contractors. Cleaners are not employees, agents or representatives of The Green Broom and are not supplied or employed by The Green Broom.',
+            ),
+        ),
+        array(
+            'id' => 'private-arrangement',
+            'heading' => '5. Private Arrangement Between Member and Cleaner',
+            'paragraphs' => array(
+                "The Green Broom's role is to provide a platform that enables members and cleaners to find and connect with one another. Once a member chooses a cleaner, the cleaning arrangement is a private agreement between the member and the self-employed cleaner.",
+                'Members are free to contact cleaners directly and, where appropriate, arrange future cleaning services directly with them. The Green Broom does not become a party to such arrangements and does not charge an ongoing commission or fee for cleaning services arranged between members and cleaners.',
+            ),
+        ),
+        array(
+            'id' => 'responsibility-for-services',
+            'heading' => '6. Responsibility for Cleaning Services',
+            'paragraphs' => array(
+                'The member and cleaner are responsible for agreeing the scope, timing, price and other terms of any cleaning service. The Green Broom does not direct or control how a self-employed cleaner carries out their work.',
+            ),
+        ),
+        array(
+            'id' => 'platform-role',
+            'heading' => '7. Platform Role',
+            'paragraphs' => array(
+                'The Green Broom provides the platform, database and associated member services but does not itself provide cleaning services. Its role is principally to facilitate connection between members and independent, self-employed cleaners.',
+            ),
+        ),
+        array(
+            'id' => 'membership-continuation',
+            'heading' => '8. Membership Continuation',
+            'paragraphs' => array(
+                "The benefits of membership, including access to the database and platform services, continue only while a member's subscription remains active. The cleaner's subscription must also be active. The Green Broom reserves the right to amend or update these terms from time to time, with reasonable notice where appropriate.",
+            ),
+        ),
+        array(
+            'id' => 'acceptance-of-terms',
+            'heading' => '9. Acceptance of These Terms',
+            'paragraphs' => array(
+                'By subscribing to The Green Broom, the member confirms that they have read, understood and accepted these Terms of Association, including the fact that cleaners are self-employed and that any cleaning arrangement is a private arrangement between the member and the cleaner.',
+            ),
+        ),
+    );
+}
+
+function gb_get_subscriber_terms_of_association_version() {
+    return substr( md5( wp_json_encode( gb_get_subscriber_terms_of_association_sections() ) ), 0, 8 );
 }
 
 function gb_get_blog_url() {

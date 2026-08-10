@@ -12,7 +12,7 @@ $resources = function_exists( 'gb_get_resource_definitions' ) ? gb_get_resource_
     #gb-eco-products-page .gb-eco-hero h1 { color:#fff; margin:0 0 14px; font-size:clamp(2.2rem, 5vw, 3.5rem); }
     #gb-eco-products-page .gb-eco-hero p { max-width:680px; margin:0 auto; line-height:1.7; color:rgba(255,255,255,.9); }
     #gb-eco-products-page .gb-eco-container { max-width:1000px; margin:0 auto; padding:60px 20px 90px; }
-    #gb-eco-products-page .gb-eco-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+    #gb-eco-products-page .gb-eco-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:22px; }
     #gb-eco-products-page .gb-eco-item { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:28px; box-shadow:0 8px 24px rgba(15,23,42,.05); }
     #gb-eco-products-page .gb-eco-item h2 { margin:0 0 10px; color:#166534; font-size:1.25rem; }
     #gb-eco-products-page .gb-eco-item p { margin:0 0 22px; line-height:1.6; color:#64748b; }
@@ -34,6 +34,11 @@ $resources = function_exists( 'gb_get_resource_definitions' ) ? gb_get_resource_
                     <a class="gb-eco-link" target="_blank" rel="noopener" href="<?php echo esc_url( gb_get_resource_url( 'eco-cleaning-products' ) ); ?>">View guide</a>
                 </article>
             <?php endif; ?>
+            <article class="gb-eco-item">
+                <h2>Make Your Own</h2>
+                <p>Simple, lower-impact ideas for making your own cleaning products. The full guide is coming soon.</p>
+                <span class="gb-eco-link" aria-disabled="true" style="background:#64748b; cursor:default;">Coming soon</span>
+            </article>
         </div>
     </div>
 </main>

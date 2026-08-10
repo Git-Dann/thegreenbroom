@@ -104,6 +104,11 @@ $legal_content_map = [
             ],
         ],
     ],
+    'subscribers-terms-of-association' => [
+        'eyebrow' => 'Subscriber Agreement',
+        'title' => "Subscribers' Terms of Association",
+        'sections' => function_exists( 'gb_get_subscriber_terms_of_association_sections' ) ? gb_get_subscriber_terms_of_association_sections() : array(),
+    ],
 ];
 $legal_content = isset($legal_content_map[$legal_slug]) ? $legal_content_map[$legal_slug] : null;
 ?>
@@ -189,6 +194,13 @@ $legal_content = isset($legal_content_map[$legal_slug]) ? $legal_content_map[$le
                         <?php foreach ($section['paragraphs'] as $paragraph): ?>
                             <p><?php echo esc_html($paragraph); ?></p>
                         <?php endforeach; ?>
+                        <?php if ( ! empty( $section['items'] ) ) : ?>
+                            <ul>
+                                <?php foreach ( $section['items'] as $item ) : ?>
+                                    <li><?php echo esc_html( $item ); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
                     </section>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -202,6 +214,9 @@ $legal_content = isset($legal_content_map[$legal_slug]) ? $legal_content_map[$le
         </div>
         
         <div style="margin-top: 60px; padding-top: 40px; border-top: 1px solid #f1f5f9;">
+            <?php if ( $legal_slug === 'subscribers-terms-of-association' && function_exists( 'gb_get_resource_url' ) ) : ?>
+                <p><a href="<?php echo esc_url( gb_get_resource_url( 'subscribers-terms-of-association' ) ); ?>" target="_blank" rel="noopener" style="color: #2e7d32; font-weight: 700; text-decoration: none;">Download a PDF copy</a></p>
+            <?php endif; ?>
             <p style="font-size: 14px; color: #64748b;">
                 Have questions about our legal policies? 
                 <a href="<?php echo esc_url($contact_url); ?>" style="color: #2e7d32; font-weight: 700; text-decoration: none;">
