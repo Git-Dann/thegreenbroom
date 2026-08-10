@@ -239,6 +239,17 @@ a.gb-card:hover {
     color: rgba(255,255,255,0.8);
     font-size: 0.9rem;
 }
+.gb-article-featured-image {
+    margin: 0;
+    overflow: hidden;
+    background: #e8f0e8;
+}
+.gb-article-featured-image img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 8;
+    object-fit: cover;
+}
 .gb-article-content {
     padding: 54px 64px 68px;
     background: #fff;

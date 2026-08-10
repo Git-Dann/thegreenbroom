@@ -199,6 +199,28 @@ function gb_ensure_subscriber_terms_page() {
 add_action( 'init', 'gb_ensure_subscriber_terms_page' );
 
 /**
+ * Add the supplied Recycling image to the legacy article once. New articles
+ * already save their selected featured image through the manager editor.
+ */
+function gb_ensure_legacy_blog_featured_images() {
+    if ( get_option( 'gb_legacy_blog_featured_images_version' ) === '1' ) {
+        return;
+    }
+
+    $recycling_post = get_page_by_path( 'uk-household-recycling', OBJECT, 'post' );
+    $recycling_image = attachment_url_to_postid( 'https://thegreenbroom.uk/wp-content/uploads/2026/07/UK-Recycling.png' );
+
+    if ( $recycling_post && $recycling_image && ! has_post_thumbnail( $recycling_post ) ) {
+        set_post_thumbnail( $recycling_post->ID, $recycling_image );
+    }
+
+    if ( $recycling_post && ( $recycling_image || has_post_thumbnail( $recycling_post ) ) ) {
+        update_option( 'gb_legacy_blog_featured_images_version', '1' );
+    }
+}
+add_action( 'init', 'gb_ensure_legacy_blog_featured_images', 25 );
+
+/**
  * Deliver public and portal-only resource files through one controlled route.
  */
 function gb_get_resource_definitions() {

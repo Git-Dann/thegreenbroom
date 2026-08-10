@@ -9,6 +9,12 @@
         <div class="gb-article-meta"><?php echo esc_html( get_the_date( 'j F Y' ) ); ?></div>
       </header>
 
+      <?php if ( has_post_thumbnail() ) : ?>
+        <figure class="gb-article-featured-image">
+          <?php the_post_thumbnail( 'large', array( 'loading' => 'eager' ) ); ?>
+        </figure>
+      <?php endif; ?>
+
       <div class="gb-article-content">
         <?php
         // The article title is supplied by the styled header. Remove a duplicate
