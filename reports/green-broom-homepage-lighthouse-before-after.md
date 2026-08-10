@@ -47,6 +47,7 @@ The following checks were completed after the final fixes:
 - **Final mobile Lighthouse:** 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO. First Contentful Paint was 0.9 seconds, Largest Contentful Paint 1.2 seconds, Total Blocking Time 0 ms, and Cumulative Layout Shift 0.
 - **Final desktop Lighthouse:** 100 in all four categories. First Contentful Paint was 0.2 seconds and Largest Contentful Paint 0.4 seconds.
 - **Independent accessibility scan:** 35 automated checks passed with zero violations. Some colour-contrast checks are marked as needing manual review because the hero text sits over photography; the final Lighthouse contrast audit passed at 100.
+- **Expanded accessibility review:** Automated Axe scans returned zero violations on the homepage, contact, registration, booking, cleaner-directory, eco-products, blog, and login pages. The work included main landmarks, heading order, connected form labels, contrast, image alternatives, link names, live status messages, and keyboard-operable navigation.
 - **Public route review:** The homepage's internal links and assets were checked, and all public page, post, and cleaner-profile URLs listed in the XML sitemap returned HTTP 200.
 - **Security and cache controls:** HTTPS, HSTS, clickjacking protection, content-type protection, a referrer policy, permissions policy, and content-security-policy restrictions are active. Login, registration, and account/dashboard pages correctly return no-store cache headers.
 - **Safe workflow-control checks:** Unauthenticated visitors are redirected from customer, cleaner, and manager areas to the login page. Direct media-management endpoints require a WordPress login. Tokenless login and registration requests are rejected before any sign-in or account-creation action, a tokenless booking request is rejected before booking or payment processing, and a tokenless contact request does not create or send a message. The live booking form is available with all four configured services.
@@ -57,6 +58,7 @@ The following checks were completed after the final fixes:
 1. **Media cache lifetime:** FastHosts currently gives uploaded media an approximately one-hour cache lifetime. Extending it for versioned image files would be a sensible future hosting optimisation, but it is not limiting the final Lighthouse score.
 2. **Live-user workflows:** This audit did not submit a real booking, payment, registration, upload, or support message. The protective paths were tested without creating records, but payment completion should only be tested while Stripe is deliberately in test mode with a temporary test account.
 3. **Performance variation:** Network conditions can move timings slightly between runs. The final mobile and desktop Lighthouse reports were both clean, with no run warnings.
+4. **Accessibility review scope:** Automated accessibility tools typically detect only a portion of possible issues. The public pages now have a clean automated baseline; a final short manual keyboard and screen-reader review remains the appropriate last check before a public launch.
 
 ## Recommended Follow-up
 
