@@ -8,7 +8,6 @@
 $gb_contact_url = function_exists('gb_get_contact_page_url') ? gb_get_contact_page_url() : home_url('/contact/');
 $gb_privacy_url = function_exists('gb_get_privacy_page_url') ? gb_get_privacy_page_url() : home_url('/privacy/');
 $gb_terms_url = function_exists('gb_get_terms_page_url') ? gb_get_terms_page_url() : home_url('/terms/');
-$gb_subscriber_terms_url = function_exists('gb_get_subscriber_terms_page_url') ? gb_get_subscriber_terms_page_url() : home_url('/subscribers-terms-of-association/');
 $gb_blog_url = function_exists('gb_get_blog_url') ? gb_get_blog_url() : home_url('/blog/');
 
 // Social links — only rendered when a URL has been set in the dashboard.
@@ -178,8 +177,6 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
             <ul class="gb-footer-links">
                 <li><a href="<?php echo esc_url($gb_privacy_url); ?>">Privacy Policy</a></li>
                 <li><a href="<?php echo esc_url($gb_terms_url); ?>">Terms & Conditions</a></li>
-                <li><a href="<?php echo esc_url($gb_subscriber_terms_url); ?>">Subscriber Terms</a></li>
-                <li><a href="<?php echo esc_url(home_url('/cookies/')); ?>">Cookie Policy</a></li>
                 <li><a href="<?php echo esc_url(home_url('/gdpr/')); ?>">GDPR</a></li>
             </ul>
         </div>

@@ -189,7 +189,7 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
             <div style="display:flex; flex-wrap:wrap; gap:10px;">
                 <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('make-the-most-of-your-eco-cleaner') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Make the Most of Your Eco-Cleaner</a>
                 <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('certificate-of-insurance') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Insurance Certificate</a>
-                <a href="<?php echo esc_url(function_exists('gb_get_subscriber_terms_page_url') ? gb_get_subscriber_terms_page_url() : home_url('/subscribers-terms-of-association/')); ?>" class="gb-btn gb-btn-secondary gb-btn-sm">Subscribers' Terms of Association</a>
+                <a href="<?php echo esc_url(function_exists('gb_get_resource_url') ? gb_get_resource_url('subscribers-terms-of-association') : '#'); ?>" target="_blank" rel="noopener" class="gb-btn gb-btn-secondary gb-btn-sm">Subscribers' Terms of Association</a>
             </div>
         </div>
 

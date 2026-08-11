@@ -284,7 +284,7 @@ function gb_get_resource_url( $resource ) {
     $filename = isset( $resources[ $resource ]['file'] ) ? $resources[ $resource ]['file'] : $resource . '.pdf';
     $resource_path = '/greenbroom-resource/' . rawurlencode( $resource ) . '/' . rawurlencode( $filename );
 
-    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
+    $protected_resources = array( 'cleaner-handbook', 'subscribers-terms-of-association', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
     if ( ! in_array( $resource, $protected_resources, true ) ) {
         return home_url( $resource_path );
     }
@@ -311,13 +311,14 @@ function gb_handle_resource_download() {
         wp_die( 'Resource not found.', 'Resource not found', array( 'response' => 404 ) );
     }
 
-    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
+    $protected_resources = array( 'cleaner-handbook', 'subscribers-terms-of-association', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
     if ( in_array( $resource, $protected_resources, true ) && ! is_user_logged_in() ) {
         auth_redirect();
     }
 
     $role_restricted_resources = array(
         'cleaner-handbook' => array( 'gb_cleaner' ),
+        'subscribers-terms-of-association' => array( 'gb_customer', 'gb_client' ),
         // gb_client is the legacy customer role used by earlier accounts.
         'make-the-most-of-your-eco-cleaner' => array( 'gb_customer', 'gb_client' ),
     );
@@ -505,10 +506,8 @@ function gb_migrate_cleaner_rates() {
 add_action( 'init', 'gb_migrate_cleaner_rates' );
 
 /**
- * Ensure standalone, editable legal pages exist (Cookie Policy, GDPR).
- * Previously these were footer links that only redirected into the Privacy
- * page, so they could not be edited in the dashboard. Provision them as real
- * pages so they get the same editing treatment as Terms & Conditions.
+ * Ensure the standalone editable GDPR page exists. Cookie information lives
+ * inside the consolidated legal content rather than on its own page.
  */
 function gb_ensure_legal_pages() {
     if ( get_option( 'gb_legal_pages_created' ) ) {
@@ -516,10 +515,6 @@ function gb_ensure_legal_pages() {
     }
 
     $legal_pages = array(
-        'cookies' => array(
-            'title'   => 'Cookie Policy',
-            'content' => "This is your Cookie Policy. Replace this text with your full policy from the manager dashboard (Pages → Cookie Policy).\n\nWe use cookies to operate this website, remember your preferences, and understand how it is used.",
-        ),
         'gdpr' => array(
             'title'   => 'GDPR',
             'content' => "This is your GDPR / Data Protection statement. Replace this text with your full policy from the manager dashboard (Pages → GDPR).\n\nYou have the right to access, correct, and request deletion of your personal data.",
@@ -548,6 +543,25 @@ function gb_ensure_legal_pages() {
     update_option( 'gb_legal_pages_created', 1 );
 }
 add_action( 'init', 'gb_ensure_legal_pages' );
+
+/**
+ * Retire the standalone Cookie Policy page now that cookie information lives
+ * alongside the site's other legal information. The old URL is redirected
+ * to the Privacy Policy so saved links remain useful.
+ */
+function gb_retire_standalone_cookie_page() {
+    if ( get_option( 'gb_cookie_page_retired_v1' ) ) {
+        return;
+    }
+
+    $cookies_page = get_page_by_path( 'cookies', OBJECT, 'page' );
+    if ( $cookies_page && $cookies_page->post_status !== 'trash' ) {
+        wp_trash_post( $cookies_page->ID );
+    }
+
+    update_option( 'gb_cookie_page_retired_v1', 1, false );
+}
+add_action( 'init', 'gb_retire_standalone_cookie_page', 30 );
 
 /**
  * Email the manager when a new support/contact message arrives.
@@ -2291,12 +2305,11 @@ function gb_handle_public_route_fixes() {
         exit;
     }
 
-    // Note: 'cookies' and 'gdpr' are now standalone editable pages (see
-    // gb_ensure_legal_pages), so they are intentionally NOT redirected here.
     $legacy_redirects = [
         'contact-us'     => gb_get_contact_page_url(),
         'privacy-policy' => gb_get_privacy_page_url(),
         'legal'          => gb_get_terms_page_url(),
+        'cookies'        => gb_get_privacy_page_url(),
     ];
 
     $path_key = trim( gb_get_current_request_path(), '/' );

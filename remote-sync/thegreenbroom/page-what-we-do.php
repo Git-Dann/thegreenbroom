@@ -67,6 +67,7 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
     .gb-bg-light { background-color: #f9f9f9; }
     .gb-bg-green { background-color: #1b5e20; color: white; }
     .gb-bg-green .gb-heading-md { color: white; }
+    .gb-bg-green .gb-text-lead { color: rgba(255,255,255,0.96); }
     .gb-heading-lg { font-size: 3rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1; }
     .gb-heading-md { font-size: 2.2rem; font-weight: 700; margin-bottom: 20px; color: #1b5e20; }
     .gb-text-lead { font-size: 1.2rem; color: #555; line-height: 1.6; max-width: 700px; margin: 0 auto 40px; }

@@ -790,7 +790,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     }
 
     $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'eco-products'];
-    $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr'];
+    $legal_slugs = ['privacy', 'terms', 'gdpr'];
 
     $core_pages = [];
     if ($front_id) {
