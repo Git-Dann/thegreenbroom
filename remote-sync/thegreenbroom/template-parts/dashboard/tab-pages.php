@@ -238,6 +238,10 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_search_head' => 'Search cleaners near you',
             '_gb_listings_verified_link'  => 'What does Verified mean?',
             '_gb_listings_verified_title' => 'What does Verified mean?',
+            '_gb_listings_btn_1'  => 'Find a cleaner near you',
+            '_gb_listings_link_1' => '#gb-dir-search-head',
+            '_gb_listings_btn_2'  => '',
+            '_gb_listings_link_2' => '/how-it-works',
         ];
     } elseif ($slug === 'join') {
         $gb_page_defaults = [
@@ -735,6 +739,19 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                     <div class="gb-editor-body">
                         <?php if($slug == 'cleaner-listings'): ?>
                             <div class="gb-form-row"><label class="gb-label">Eyebrow label above the headline (optional)</label><input type="text" name="_gb_listings_eyebrow" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_eyebrow')); ?>" placeholder="e.g. Liverpool &amp; Merseyside"></div>
+                            <div class="gb-form-row">
+                                <label class="gb-label">Selling points in the header (one per line)</label>
+                                <textarea name="_gb_listings_usps" class="gb-textarea" style="min-height:110px;" placeholder="Leave blank to use the standard three."><?php echo esc_textarea($gb_field_value('_gb_listings_usps')); ?></textarea>
+                                <p style="margin-top:8px; color:#94a3b8; font-size:12px;">Shown as a ticked row under the subtitle. Three short lines works best.</p>
+                            </div>
+                            <div class="gb-link-row">
+                                <div class="gb-form-row"><label class="gb-label">Main button text</label><input type="text" name="_gb_listings_btn_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_btn_1')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Main button link</label><input type="text" name="_gb_listings_link_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_link_1')); ?>" placeholder="#gb-dir-search-head jumps to the search"></div>
+                            </div>
+                            <div class="gb-link-row">
+                                <div class="gb-form-row"><label class="gb-label">Second button text (blank to hide)</label><input type="text" name="_gb_listings_btn_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_btn_2')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Second button link</label><input type="text" name="_gb_listings_link_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_link_2')); ?>"></div>
+                            </div>
                             <div class="gb-form-row"><label class="gb-label">Heading above the search box</label><input type="text" name="_gb_listings_search_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_search_head')); ?>"></div>
                             <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">

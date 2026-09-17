@@ -70,6 +70,19 @@ $listings_trust   = trim((string) get_post_meta(get_the_ID(), '_gb_trust_banner'
 $listings_eyebrow = trim((string) get_post_meta(get_the_ID(), '_gb_listings_eyebrow', true));
 $listings_search_head = get_post_meta(get_the_ID(), '_gb_listings_search_head', true) ?: 'Search cleaners near you';
 
+// Selling points and call to action for the hero. Paid traffic arrives cold,
+// so the header has to make the case before asking anyone to search.
+$listings_usps_raw = trim((string) get_post_meta(get_the_ID(), '_gb_listings_usps', true));
+if ($listings_usps_raw === '') {
+    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products as standard\nIndependent local cleaners, paid fairly";
+}
+$listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_replace("\r\n", "\n", $listings_usps_raw))), 'strlen'));
+
+$listings_btn_1  = get_post_meta(get_the_ID(), '_gb_listings_btn_1', true) ?: 'Find a cleaner near you';
+$listings_link_1 = get_post_meta(get_the_ID(), '_gb_listings_link_1', true) ?: '#gb-dir-search-head';
+$listings_btn_2  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_2', true));
+$listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '/how-it-works';
+
 $verified_link  = get_post_meta(get_the_ID(), '_gb_listings_verified_link', true) ?: 'What does Verified mean?';
 $verified_title = get_post_meta(get_the_ID(), '_gb_listings_verified_title', true) ?: 'What does Verified mean?';
 $verified_body  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_verified_body', true));
@@ -116,13 +129,31 @@ if ($verified_body === '') {
     .gb-dir-hero-content { position: relative; z-index: 2; max-width: 820px; margin: 0 auto; }
     .gb-dir-eyebrow { display:inline-block; margin-bottom:18px; padding:7px 15px; border-radius:999px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:12px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
 
+    .gb-dir-usps { list-style:none; margin:32px auto 0; padding:0; display:flex; flex-wrap:wrap; justify-content:center; gap:14px 30px; max-width:900px; }
+    .gb-dir-usps li { position:relative; padding-left:30px; color:rgba(255,255,255,.96); font-size:1.02rem; font-weight:600; text-align:left; }
+    .gb-dir-usps li::before { content:""; position:absolute; left:4px; top:7px; width:7px; height:13px; border:solid #86efac; border-width:0 2.5px 2.5px 0; transform:rotate(45deg); }
+    .gb-dir-cta { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; margin-top:38px; }
+    .gb-dir-btn { display:inline-block; padding:15px 30px; border-radius:9px; font-weight:800; text-decoration:none; font-size:1rem; transition:transform .15s ease; }
+    .gb-dir-btn:hover { transform:translateY(-2px); }
+    .gb-dir-btn-primary { background:#fff; color:#1b5e20 !important; box-shadow:0 10px 24px rgba(0,0,0,.18); }
+    .gb-dir-btn-outline { border:2px solid rgba(255,255,255,.75); color:#fff !important; }
+    .gb-dir-btn-outline:hover { background:rgba(255,255,255,.12); }
+
+    @media (max-width:760px) {
+        .gb-dir-hero { padding:72px 20px; }
+        .gb-dir-usps { flex-direction:column; align-items:flex-start; gap:12px; margin-top:26px; }
+        .gb-dir-cta { flex-direction:column; }
+        .gb-dir-btn { width:100%; text-align:center; box-sizing:border-box; }
+        .gb-dir-search { padding:38px 20px 6px; }
+    }
+
     .gb-dir-trust { background:#e8f5e9; padding:18px 20px; text-align:center; border-bottom:1px solid #c8e6c9; }
     .gb-dir-trust span { font-weight:700; color:#1b5e20; font-size:.9rem; text-transform:uppercase; letter-spacing:1px; }
 
     .gb-dir-search { max-width:1000px; margin:0 auto; padding:54px 20px 10px; text-align:center; }
     .gb-dir-search-head { margin:0 0 22px; color:#1b5e20; font-size:1.6rem; font-weight:800; }
 
-    .gb-verified-cue { margin:18px 0 0; }
+    .gb-verified-cue { margin:20px 0 0; padding-bottom:34px; }
     .gb-verified-trigger { background:none; border:0; padding:0; color:#2e7d32; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-family:inherit; }
     .gb-verified-trigger:hover { color:#1b5e20; }
     .gb-verified-trigger:focus-visible { outline:2px solid #2e7d32; outline-offset:3px; border-radius:3px; }
@@ -162,7 +193,11 @@ if ($verified_body === '') {
     .gb-search-btn:hover { background: #065f46; }
 
     /* GRID LAYOUT */
-    .gb-dir-container { max-width: 1200px; margin: -60px auto 60px; padding: 0 20px; position: relative; z-index: 10; }
+    /* Was margin-top:-60px, to pull the results card up over the green hero
+       back when the search sat inside it. With the search now its own section
+       that pull dragged the cards over the search box and hid the "What does
+       Verified mean?" link underneath. */
+    .gb-dir-container { max-width: 1200px; margin: 0 auto 60px; padding: 0 20px; position: relative; z-index: 1; }
     .gb-cleaner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
     
     /* CARD DESIGN */
@@ -226,6 +261,25 @@ if ($verified_body === '') {
             <?php endif; ?>
             <h1 class="gb-dir-title"><?php echo esc_html($listings_title); ?></h1>
             <p class="gb-dir-sub"><?php echo esc_html($listings_sub); ?></p>
+
+            <?php if (!empty($listings_usps)): ?>
+                <ul class="gb-dir-usps">
+                    <?php foreach ($listings_usps as $listings_usp): ?>
+                        <li><?php echo esc_html($listings_usp); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+
+            <?php if ($listings_btn_1 !== '' || $listings_btn_2 !== ''): ?>
+                <div class="gb-dir-cta">
+                    <?php if ($listings_btn_1 !== ''): ?>
+                        <a class="gb-dir-btn gb-dir-btn-primary" href="<?php echo esc_url($listings_link_1); ?>"><?php echo esc_html($listings_btn_1); ?></a>
+                    <?php endif; ?>
+                    <?php if ($listings_btn_2 !== ''): ?>
+                        <a class="gb-dir-btn gb-dir-btn-outline" href="<?php echo esc_url($listings_link_2); ?>"><?php echo esc_html($listings_btn_2); ?></a>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 
