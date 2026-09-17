@@ -36,8 +36,10 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
     .gb-eco-chip.ok { background:#dcfce7; color:#166534; }
     .gb-eco-chip.muted { background:#f1f5f9; color:#475569; }
     .gb-eco-chip.warn { background:#fffbeb; color:#92400e; }
-    .gb-eco-card-actions { display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px; border-top:1px solid #f1f5f9; background:#fbfdfb; }
-    .gb-eco-card-actions .gb-eco-btn { flex:1 1 72px; justify-content:center; white-space:nowrap; }
+    .gb-eco-card-actions { display:flex; gap:8px; padding:12px 16px; border-top:1px solid #f1f5f9; background:#fbfdfb; }
+    /* flex-basis 0 + min-width 0 keeps Edit/View/Delete on one row at any card
+       width; a basis sized to the label wrapped Delete onto its own line. */
+    .gb-eco-card-actions .gb-eco-btn { flex:1 1 0; min-width:0; padding:9px 6px; justify-content:center; white-space:nowrap; }
     .gb-eco-empty { padding:55px 20px; text-align:center; background:#fff; border:1px solid #e2e8f0; border-radius:12px; color:#64748b; }
     .gb-eco-pager { display:flex; justify-content:center; gap:6px; margin-top:24px; flex-wrap:wrap; }
     .gb-eco-pager a, .gb-eco-pager span { padding:8px 13px; border-radius:7px; border:1px solid #e2e8f0; background:#fff; color:#334155; font-size:12px; font-weight:700; text-decoration:none; }

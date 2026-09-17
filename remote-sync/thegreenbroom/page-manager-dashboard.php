@@ -570,6 +570,11 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
     
     <style>
         html { margin-top: 0 !important; }
+        /* Buttons in this dashboard set display:inline-flex, which beats the
+           [hidden] attribute's default display:none — so "Remove" buttons kept
+           showing on rows with nothing to remove, in Settings > Documents as
+           well as Eco Products. One guard covers every tab. */
+        [hidden] { display: none !important; }
         body { margin: 0; font-family: 'Inter', sans-serif; background: #f8fafc; color: #334155; padding: 0; overflow-x: hidden; }
         .gb-app { display: flex; min-height: 100vh; width: 100%; }
         .gb-sidebar { width: 260px; background: #0f172a; padding: 30px 0; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; top:0; left:0; border-right: 1px solid rgba(255,255,255,0.05); }
