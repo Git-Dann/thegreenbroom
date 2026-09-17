@@ -192,10 +192,22 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
         </form>
     </div>
 
+    <?php $gb_sup_redirect = add_query_arg(['tab' => 'support'] + ($view === 'archived' ? ['view' => 'archived'] : []), home_url('/manager-dashboard')); ?>
+    <form method="post" id="gb-sup-bulk" style="margin:0 0 14px;" onsubmit="return gbSupConfirmDelete();">
+        <input type="hidden" name="gb_bulk_action" value="delete_messages">
+        <input type="hidden" name="gb_bulk_redirect" value="<?php echo esc_url($gb_sup_redirect); ?>">
+        <?php wp_nonce_field('gb_bulk_messages', 'gb_bulk_nonce'); ?>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <button type="submit" class="gb-btn-small-os" style="color:#991b1b; border-color:#fecaca;">🗑️ Delete selected</button>
+            <span id="gb-sup-count" style="color:#64748b; font-size:12px;">0 selected</span>
+        </div>
+    </form>
+
     <div class="gb-card" style="padding:0; overflow:hidden;">
         <table class="gb-booking-table">
             <thead>
                 <tr>
+                    <th style="width:36px;"><input type="checkbox" id="gb-sup-select-all" title="Select all on this page" style="width:16px; height:16px; cursor:pointer;"></th>
                     <th style="width:200px;">Sender</th>
                     <th>Message Content</th>
                     <th style="width:120px;">Status</th>
@@ -218,6 +230,8 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                 } else {
                     $meta_query[] = ['key' => '_gb_archived', 'compare' => 'NOT EXISTS'];
                 }
+                // Quarantined spam never shows in the working inbox.
+                $meta_query[] = ['key' => '_gb_spam', 'compare' => 'NOT EXISTS'];
                 if ($cleaner_id_filter > 0) $meta_query[] = ['key' => '_gb_related_cleaner', 'value' => $cleaner_id_filter];
                 $args['meta_query'] = $meta_query;
                 if ($search_query) $args['s'] = $search_query;
@@ -238,6 +252,7 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                     $responded = get_post_meta(get_the_ID(), '_gb_responded_date', true);
                 ?>
                 <tr>
+                    <td><input type="checkbox" class="gb-sup-cb" form="gb-sup-bulk" name="message_ids[]" value="<?php echo (int) get_the_ID(); ?>" style="width:16px; height:16px; cursor:pointer;"></td>
                     <td>
                         <div style="display:flex; align-items:center; gap:12px;">
                             <div class="gb-avatar-circle"><?php echo strtoupper(substr($sender_name, 0, 1)); ?></div>
@@ -276,9 +291,42 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                     </td>
                 </tr>
                 <?php endwhile; else: ?>
-                    <tr><td colspan="5" style="text-align:center; padding:80px 0;"><h3 style="color:#94a3b8;">No messages found</h3></td></tr>
+                    <tr><td colspan="6" style="text-align:center; padding:80px 0;"><h3 style="color:#94a3b8;">No messages found</h3></td></tr>
                 <?php endif; wp_reset_postdata(); ?>
             </tbody>
         </table>
     </div>
 <?php endif; ?>
+
+<script>
+(function () {
+    var selectAll = document.getElementById('gb-sup-select-all');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.gb-sup-cb'));
+    var counter = document.getElementById('gb-sup-count');
+    if (!boxes.length) { return; }
+
+    function refresh() {
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        if (counter) { counter.textContent = n + ' selected'; }
+        if (selectAll) {
+            selectAll.checked = (n > 0 && n === boxes.length);
+            selectAll.indeterminate = (n > 0 && n < boxes.length);
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = selectAll.checked; });
+            refresh();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+    refresh();
+
+    window.gbSupConfirmDelete = function () {
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        if (n === 0) { alert('Select at least one message to delete.'); return false; }
+        return confirm('Permanently delete ' + n + ' message' + (n === 1 ? '' : 's') + '? This cannot be undone.');
+    };
+})();
+</script>

@@ -42,6 +42,7 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
                 <input type="hidden" name="gb_contact_action" value="submit_helpdesk">
                 <?php wp_nonce_field('gb_contact_submit', 'gb_contact_nonce'); ?>
                 <input type="text" name="gb_contact_website" value="" autocomplete="off" tabindex="-1" style="position:absolute; left:-9999px; opacity:0;" aria-hidden="true">
+                <input type="hidden" name="gb_contact_ts" value="<?php echo esc_attr( gb_form_timing_token() ); ?>">
 
                 <label style="display:block; font-weight:700; margin-bottom:5px;">Name</label>
                 <input type="text" name="c_name" value="<?php echo esc_attr($user->exists() ? $user->display_name : ''); ?>" required style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; margin-bottom:15px; box-sizing:border-box;">

@@ -43,6 +43,7 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
             <input type="hidden" name="gb_contact_action" value="submit_helpdesk">
             <?php wp_nonce_field('gb_contact_submit', 'gb_contact_nonce'); ?>
             <input type="text" name="gb_contact_website" value="" autocomplete="off" tabindex="-1" style="position:absolute; left:-9999px; opacity:0;" aria-hidden="true">
+            <input type="hidden" name="gb_contact_ts" value="<?php echo esc_attr( gb_form_timing_token() ); ?>">
 
             <div class="gb-form-group">
                 <label class="gb-label" for="contact-name">Your Name</label>

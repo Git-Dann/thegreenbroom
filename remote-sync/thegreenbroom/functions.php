@@ -920,6 +920,148 @@ function gb_get_rate_limit_message( $state, $default = 'Too many attempts. Pleas
     return sprintf( 'Too many attempts. Please wait about %d minutes and try again.', (int) ceil( $retry_after / 60 ) );
 }
 
+/* ==========================================================================
+   ANTI-SPAM FOR PUBLIC MESSAGE FORMS
+   ==========================================================================
+   The honeypot + rate limit alone were not enough: the limiter is keyed on
+   (action | email | IP), so rotating either resets it, and the old limit of 5
+   per hour is exactly why identical spam appeared in the helpdesk five times
+   in a row. These helpers add the missing layers — a timing trap, duplicate
+   suppression, and content scoring — and are shared by every public message
+   entry point (contact/helpdesk form and the cleaner enquiry AJAX handler).
+   ========================================================================== */
+
+/**
+ * Signed timestamp embedded in public forms. Lets us reject submissions that
+ * arrive implausibly fast (bots post instantly) or from very stale pages,
+ * without storing per-visitor state.
+ */
+function gb_form_timing_token() {
+    $ts = time();
+    return $ts . '|' . hash_hmac( 'sha256', (string) $ts, wp_salt( 'nonce' ) );
+}
+
+/**
+ * Returns the age of a timing token in seconds, or null if missing/forged.
+ */
+function gb_form_timing_age( $token ) {
+    $token = (string) $token;
+    if ( strpos( $token, '|' ) === false ) {
+        return null;
+    }
+    list( $ts, $sig ) = array_map( 'trim', explode( '|', $token, 2 ) );
+    if ( ! ctype_digit( $ts ) ) {
+        return null;
+    }
+    $expected = hash_hmac( 'sha256', $ts, wp_salt( 'nonce' ) );
+    if ( ! hash_equals( $expected, $sig ) ) {
+        return null;
+    }
+
+    return time() - (int) $ts;
+}
+
+/**
+ * True only for the unambiguous bot case: a VALID token submitted faster than a
+ * human could fill the form.
+ *
+ * Deliberately lenient about a missing, forged or stale token — the contact
+ * page can be served from a full-page cache, which would hand every visitor the
+ * same (eventually old) token, and silently swallowing a genuine enquiry is far
+ * worse than letting one through to the rate-limit/duplicate/content checks.
+ */
+function gb_form_timing_too_fast( $token, $min_seconds = 3 ) {
+    $age = gb_form_timing_age( $token );
+    if ( $age === null ) {
+        return false;
+    }
+
+    return $age < (int) $min_seconds;
+}
+
+/**
+ * Suppress identical resubmissions. Spam bots replay the same payload many
+ * times; genuine senders effectively never do within the window.
+ */
+function gb_message_is_duplicate( $email, $subject, $message, $window = DAY_IN_SECONDS ) {
+    $fingerprint = md5( strtolower( trim( (string) $email ) ) . '|' . strtolower( trim( (string) $subject ) ) . '|' . strtolower( trim( (string) $message ) ) );
+    $key = 'gb_msgdupe_' . $fingerprint;
+
+    if ( get_transient( $key ) ) {
+        return true;
+    }
+
+    set_transient( $key, 1, max( 60, (int) $window ) );
+
+    return false;
+}
+
+/**
+ * Heuristic spam score for a public message. Higher is worse; anything at or
+ * above the threshold used by callers (6) is treated as spam.
+ *
+ * Tuned for a cleaning marketplace: genuine enquiries are short, plain-text
+ * and almost never contain links, so links and promotional keywords carry the
+ * most weight. A single link on its own is NOT enough to block (a cleaner may
+ * legitimately paste a Stripe onboarding URL).
+ */
+function gb_message_spam_score( $name, $email, $subject, $message ) {
+    $score = 0;
+    $subject = (string) $subject;
+    $message = (string) $message;
+    $haystack = strtolower( $name . ' ' . $subject . ' ' . $message );
+
+    // Links: the single strongest signal on this form.
+    $link_count = preg_match_all( '#(https?://|www\.)#i', $subject . ' ' . $message );
+    if ( $link_count > 0 ) {
+        $score += 3;
+    }
+    if ( $link_count > 1 ) {
+        $score += 3 * min( $link_count - 1, 3 );
+    }
+
+    // BBCode / anchor markup is never used by real senders here.
+    if ( preg_match( '#\[url|\[/url\]|<a\s+href#i', $subject . ' ' . $message ) ) {
+        $score += 5;
+    }
+
+    // Promotional / scam vocabulary.
+    $keywords = [
+        'playstation', 'xbox', 'nintendo', 'giveaway', 'sweepstake', 'prize', 'jackpot',
+        'casino', 'betting', 'crypto', 'bitcoin', 'forex', 'viagra', 'cialis', 'porn',
+        'seo boost', 'seo service', 'backlink', 'rank your website', 'rank higher',
+        'web traffic', 'buy traffic', 'email list', 'b2b data', 'b2b leads', 'lead list',
+        'database of', 'marketing list', 'telegra.ph', 'bit.ly', 'tinyurl',
+        'shutting down', 'final notice', 'act now', 'limited offer', 'work from home',
+        'make money', 'earn money', 'investment opportunity', 'loan offer',
+    ];
+    foreach ( $keywords as $needle ) {
+        if ( strpos( $haystack, $needle ) !== false ) {
+            $score += 3;
+        }
+    }
+
+    // Shouty subjects.
+    $subject_letters = preg_replace( '/[^a-z]/i', '', $subject );
+    if ( strlen( $subject_letters ) > 10 && strtoupper( $subject_letters ) === $subject_letters ) {
+        $score += 3;
+    }
+
+    // Non-Latin scripts are a reliable signal for this UK-only audience.
+    if ( preg_match( '/[\x{0400}-\x{04FF}\x{4E00}-\x{9FFF}]/u', $subject . ' ' . $message ) ) {
+        $score += 5;
+    }
+
+    return $score;
+}
+
+/**
+ * Single entry point used by the public forms.
+ */
+function gb_message_looks_like_spam( $name, $email, $subject, $message, $threshold = 6 ) {
+    return gb_message_spam_score( $name, $email, $subject, $message ) >= (int) $threshold;
+}
+
 function gb_validate_account_password( $password ) {
     $password = (string) $password;
     if ( strlen( $password ) < 10 ) {
@@ -2719,13 +2861,27 @@ function gb_send_cleaner_message() {
     $email = sanitize_email($_POST['sender_email']);
     $body = sanitize_textarea_field($_POST['message_body']);
 
-    $rate_state = gb_rate_limit_check('cleaner_message', 5, HOUR_IN_SECONDS, $email);
-    if ($rate_state['blocked']) {
-        wp_send_json_error(['message' => gb_get_rate_limit_message($rate_state)]);
+    // Same anti-spam layers as the contact/helpdesk form, so spam can't simply
+    // move to this endpoint instead.
+    $rate_state = gb_rate_limit_check('cleaner_message', 3, HOUR_IN_SECONDS, $email);
+    $ip_state   = gb_rate_limit_check('cleaner_message_ip', 6, HOUR_IN_SECONDS);
+    if ($rate_state['blocked'] || $ip_state['blocked']) {
+        wp_send_json_error(['message' => gb_get_rate_limit_message($rate_state['blocked'] ? $rate_state : $ip_state)]);
     }
     gb_record_rate_limit_hit('cleaner_message', HOUR_IN_SECONDS, $email);
-    
+    gb_record_rate_limit_hit('cleaner_message_ip', HOUR_IN_SECONDS);
+
     if (!$name || !$email || !$body) wp_send_json_error(['message'=>'Please fill in all fields.']);
+
+    // Identical payload replayed, or promotional content: acknowledge success
+    // so bots get nothing to tune against, but store nothing.
+    $subject_line = 'Inquiry from ' . $name;
+    if (
+        gb_message_is_duplicate($email, $subject_line, $body)
+        || gb_message_looks_like_spam($name, $email, $subject_line, $body)
+    ) {
+        wp_send_json_success(['message' => 'Message sent!']);
+    }
 
     $msg_id = wp_insert_post(['post_type'=>'gb_message', 'post_title'=>'Inquiry from '.$name, 'post_content'=>$body, 'post_status'=>'publish']);
 
@@ -2785,19 +2941,44 @@ add_action('init', function() {
         if (!empty($_POST['gb_contact_website'])) {
             return;
         }
-        
+
         $name    = isset($_POST['c_name']) ? sanitize_text_field(wp_unslash($_POST['c_name'])) : '';
         $email   = isset($_POST['c_email']) ? sanitize_email(wp_unslash($_POST['c_email'])) : '';
         $subject = isset($_POST['c_subject']) ? sanitize_text_field(wp_unslash($_POST['c_subject'])) : '';
         $message = isset($_POST['c_message']) ? wp_kses_post(wp_unslash($_POST['c_message'])) : '';
 
-        $rate_state = gb_rate_limit_check('contact_form', 5, HOUR_IN_SECONDS, $email);
-        if ($rate_state['blocked']) {
-            $referer = wp_get_referer() ? wp_get_referer() : gb_get_contact_page_url();
-            wp_safe_redirect(add_query_arg('contact_error', '1', $referer));
+        $contact_referer = wp_get_referer() ? wp_get_referer() : gb_get_contact_page_url();
+
+        // Bots post instantly (or replay a scraped page). Report success so they
+        // get no feedback to tune against, but store nothing.
+        $timing_token = isset($_POST['gb_contact_ts']) ? sanitize_text_field(wp_unslash($_POST['gb_contact_ts'])) : '';
+        if (gb_form_timing_too_fast($timing_token)) {
+            wp_safe_redirect(add_query_arg('contact_success', '1', $contact_referer));
+            exit;
+        }
+
+        // Rate limit on (email + IP) AND on IP alone, so rotating the sender
+        // address no longer resets the counter — that loophole is why the same
+        // spam arrived five times over.
+        $rate_state = gb_rate_limit_check('contact_form', 3, HOUR_IN_SECONDS, $email);
+        $ip_state   = gb_rate_limit_check('contact_form_ip', 6, HOUR_IN_SECONDS);
+        if ($rate_state['blocked'] || $ip_state['blocked']) {
+            wp_safe_redirect(add_query_arg('contact_error', '1', $contact_referer));
             exit;
         }
         gb_record_rate_limit_hit('contact_form', HOUR_IN_SECONDS, $email);
+        gb_record_rate_limit_hit('contact_form_ip', HOUR_IN_SECONDS);
+
+        // Identical payload replayed — keep the first, drop the repeats.
+        if (gb_message_is_duplicate($email, $subject, $message)) {
+            wp_safe_redirect(add_query_arg('contact_success', '1', $contact_referer));
+            exit;
+        }
+
+        // Content scoring. Flagged messages are quarantined rather than
+        // discarded, so a false positive is recoverable from the Spam view
+        // instead of silently lost.
+        $is_spam = gb_message_looks_like_spam($name, $email, $subject, $message);
 
         if (!$name || !is_email($email) || !$subject || !$message) {
             $referer = wp_get_referer() ? wp_get_referer() : gb_get_contact_page_url();
@@ -2817,7 +2998,14 @@ add_action('init', function() {
             update_post_meta($ticket_id, '_gb_sender_email', $email);
             // This flag is what tab-helpdesk.php filters by
             update_post_meta($ticket_id, '_gb_is_helpdesk', '1');
-            gb_notify_support_message($ticket_id, 'Support');
+
+            if ($is_spam) {
+                // Quarantined: kept out of Active/Resolved and never emailed on,
+                // but reviewable (and bulk-deletable) from the Spam view.
+                update_post_meta($ticket_id, '_gb_spam', '1');
+            } else {
+                gb_notify_support_message($ticket_id, 'Support');
+            }
 
             // Redirect with success flag for page-contactus.php
             $referer = wp_get_referer() ? wp_get_referer() : gb_get_contact_page_url();
@@ -3028,6 +3216,99 @@ add_action('init', function () {
     update_post_meta($mid, '_gb_reply_body', $reply_body);
 
     $bounce($sent ? 'reply_sent' : 'replied_nomail');
+}, 5);
+
+/**
+ * Bulk message actions for the manager Inbox / Helpdesk.
+ *
+ * Supports:
+ *   - delete_messages : permanently delete the ticked messages
+ *   - scan_spam       : score existing messages and flag matches as _gb_spam,
+ *                       so an accumulated backlog can be reviewed in one view
+ *   - purge_spam      : permanently delete everything flagged as spam
+ *
+ * Deletes are permanent (these are spam/support messages, not content), and
+ * every path is nonce-checked and restricted to managers/admins.
+ */
+add_action('init', function () {
+    if (!isset($_POST['gb_bulk_action'])) {
+        return;
+    }
+    $bulk_action = sanitize_key(wp_unslash($_POST['gb_bulk_action']));
+    if (!in_array($bulk_action, ['delete_messages', 'scan_spam', 'purge_spam'], true)) {
+        return;
+    }
+    if (empty($_POST['gb_bulk_nonce']) || !wp_verify_nonce($_POST['gb_bulk_nonce'], 'gb_bulk_messages')) {
+        wp_die('Security check failed.');
+    }
+    if (!is_user_logged_in()) {
+        wp_safe_redirect(home_url('/login'));
+        exit;
+    }
+    $user = wp_get_current_user();
+    if (!current_user_can('administrator') && !in_array('gb_manager', (array) $user->roles, true)) {
+        wp_die('You are not allowed to do that.');
+    }
+
+    $redirect = '';
+    if (!empty($_POST['gb_bulk_redirect'])) {
+        $redirect = wp_validate_redirect(esc_url_raw(wp_unslash($_POST['gb_bulk_redirect'])), '');
+    }
+    if ($redirect === '') {
+        $redirect = home_url('/manager-dashboard?tab=helpdesk');
+    }
+
+    $done = 0;
+
+    if ($bulk_action === 'delete_messages') {
+        $ids = isset($_POST['message_ids']) && is_array($_POST['message_ids']) ? array_map('intval', (array) $_POST['message_ids']) : [];
+        foreach ($ids as $id) {
+            if ($id && get_post_type($id) === 'gb_message') {
+                wp_delete_post($id, true);
+                $done++;
+            }
+        }
+        $flag = 'bulk_deleted';
+    } elseif ($bulk_action === 'scan_spam') {
+        $candidates = get_posts([
+            'post_type'      => 'gb_message',
+            'post_status'    => 'any',
+            'posts_per_page' => 2000,
+            'fields'         => 'ids',
+        ]);
+        foreach ($candidates as $id) {
+            if (get_post_meta($id, '_gb_spam', true) === '1') {
+                continue;
+            }
+            $post = get_post($id);
+            if (!$post) {
+                continue;
+            }
+            $sname = (string) get_post_meta($id, '_gb_sender_name', true);
+            $semail = (string) get_post_meta($id, '_gb_sender_email', true);
+            if (gb_message_looks_like_spam($sname, $semail, $post->post_title, $post->post_content)) {
+                update_post_meta($id, '_gb_spam', '1');
+                $done++;
+            }
+        }
+        $flag = 'spam_scanned';
+    } else { // purge_spam
+        $spam_ids = get_posts([
+            'post_type'      => 'gb_message',
+            'post_status'    => 'any',
+            'posts_per_page' => 2000,
+            'fields'         => 'ids',
+            'meta_query'     => [[ 'key' => '_gb_spam', 'value' => '1' ]],
+        ]);
+        foreach ($spam_ids as $id) {
+            wp_delete_post($id, true);
+            $done++;
+        }
+        $flag = 'spam_purged';
+    }
+
+    wp_safe_redirect(add_query_arg(['msg' => $flag, 'n' => $done], $redirect));
+    exit;
 }, 5);
 
 /**

@@ -7,8 +7,28 @@
 
 // 1. GET FILTER PARAMETERS
 $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : 'active';
+if (!in_array($status_filter, ['active', 'resolved', 'spam'], true)) {
+    $status_filter = 'active';
+}
 $search_query = isset($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
 $orderby = isset($_GET['sort']) ? sanitize_text_field($_GET['sort']) : 'date_desc';
+
+// Page size, so a large spam backlog can be selected and cleared in few passes.
+$allowed_per_page = [20, 50, 100, 200];
+$per_page = isset($_GET['per_page']) ? intval($_GET['per_page']) : 20;
+if (!in_array($per_page, $allowed_per_page, true)) {
+    $per_page = 20;
+}
+
+// Where bulk actions should return to.
+$gb_hd_redirect = add_query_arg(
+    ['tab' => 'helpdesk', 'status' => $status_filter, 'per_page' => $per_page],
+    home_url('/manager-dashboard')
+);
+
+// Result notice from a bulk action.
+$gb_bulk_msg = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
+$gb_bulk_n   = isset($_GET['n']) ? intval($_GET['n']) : 0;
 
 // 2. HANDLE RESOLVE ACTION
 if (isset($_POST['gb_resolve_ticket'])) {
@@ -52,9 +72,39 @@ if (isset($_POST['gb_resolve_ticket'])) {
         <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Review and resolve support tickets raised by cleaners and customers.</p>
     </div>
     <div style="display:flex; gap:10px;">
-        <a href="?tab=helpdesk&status=active" class="btn-os <?php echo $status_filter == 'active' ? 'active' : ''; ?>">Active</a>
-        <a href="?tab=helpdesk&status=resolved" class="btn-os <?php echo $status_filter == 'resolved' ? 'active' : ''; ?>">Resolved</a>
+        <a href="?tab=helpdesk&status=active&per_page=<?php echo (int) $per_page; ?>" class="btn-os <?php echo $status_filter == 'active' ? 'active' : ''; ?>">Active</a>
+        <a href="?tab=helpdesk&status=resolved&per_page=<?php echo (int) $per_page; ?>" class="btn-os <?php echo $status_filter == 'resolved' ? 'active' : ''; ?>">Resolved</a>
+        <a href="?tab=helpdesk&status=spam&per_page=<?php echo (int) $per_page; ?>" class="btn-os <?php echo $status_filter == 'spam' ? 'active' : ''; ?>" style="<?php echo $status_filter == 'spam' ? 'background:#991b1b; border-color:#991b1b;' : ''; ?>">Spam</a>
     </div>
+</div>
+
+<?php if ($gb_bulk_msg === 'bulk_deleted'): ?>
+    <div style="background:#fef2f2; border:1px solid #fee2e2; color:#991b1b; padding:14px 16px; border-radius:12px; margin-bottom:20px; font-weight:600;">🗑️ Deleted <?php echo (int) $gb_bulk_n; ?> message<?php echo $gb_bulk_n === 1 ? '' : 's'; ?>.</div>
+<?php elseif ($gb_bulk_msg === 'spam_scanned'): ?>
+    <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:12px; margin-bottom:20px; font-weight:600;">Flagged <?php echo (int) $gb_bulk_n; ?> existing message<?php echo $gb_bulk_n === 1 ? '' : 's'; ?> as spam. Review them under <strong>Spam</strong>, then delete.</div>
+<?php elseif ($gb_bulk_msg === 'spam_purged'): ?>
+    <div style="background:#f0fdf4; border:1px solid #dcfce7; color:#166534; padding:14px 16px; border-radius:12px; margin-bottom:20px; font-weight:600;">✅ Permanently deleted <?php echo (int) $gb_bulk_n; ?> spam message<?php echo $gb_bulk_n === 1 ? '' : 's'; ?>.</div>
+<?php endif; ?>
+
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px;">
+    <form method="post" style="margin:0;">
+        <input type="hidden" name="gb_bulk_action" value="scan_spam">
+        <input type="hidden" name="gb_bulk_redirect" value="<?php echo esc_url($gb_hd_redirect); ?>">
+        <?php wp_nonce_field('gb_bulk_messages', 'gb_bulk_nonce'); ?>
+        <button type="submit" class="gb-btn-small-os" title="Score existing messages and flag the junk so you can review and clear it">🔎 Scan existing messages for spam</button>
+    </form>
+    <?php if ($status_filter === 'spam'): ?>
+    <form method="post" style="margin:0;" onsubmit="return confirm('Permanently delete ALL messages flagged as spam? This cannot be undone.');">
+        <input type="hidden" name="gb_bulk_action" value="purge_spam">
+        <input type="hidden" name="gb_bulk_redirect" value="<?php echo esc_url($gb_hd_redirect); ?>">
+        <?php wp_nonce_field('gb_bulk_messages', 'gb_bulk_nonce'); ?>
+        <button type="submit" class="gb-btn-small-os" style="color:#991b1b; border-color:#fecaca;">🗑️ Delete ALL spam</button>
+    </form>
+    <?php endif; ?>
+    <span style="color:#64748b; font-size:12px;">Show:</span>
+    <?php foreach ($allowed_per_page as $pp): ?>
+        <a href="?tab=helpdesk&status=<?php echo esc_attr($status_filter); ?>&per_page=<?php echo (int) $pp; ?>" class="btn-os <?php echo $per_page === $pp ? 'active' : ''; ?>" style="padding:6px 12px;"><?php echo (int) $pp; ?></a>
+    <?php endforeach; ?>
 </div>
 
 <div class="gb-filter-bar">
@@ -79,10 +129,24 @@ if (isset($_POST['gb_resolve_ticket'])) {
     </form>
 </div>
 
+<?php // Bulk form lives OUTSIDE the table: rows contain their own <form> elements
+      // (Resolve), and nesting forms is invalid HTML. Checkboxes join this form
+      // via the HTML5 form="" attribute instead. ?>
+<form method="post" id="gb-hd-bulk" style="margin:0 0 14px;" onsubmit="return gbHdConfirmDelete();">
+    <input type="hidden" name="gb_bulk_action" value="delete_messages">
+    <input type="hidden" name="gb_bulk_redirect" value="<?php echo esc_url($gb_hd_redirect); ?>">
+    <?php wp_nonce_field('gb_bulk_messages', 'gb_bulk_nonce'); ?>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <button type="submit" class="gb-btn-small-os" style="color:#991b1b; border-color:#fecaca;">🗑️ Delete selected</button>
+        <span id="gb-hd-count" style="color:#64748b; font-size:12px;">0 selected</span>
+    </div>
+</form>
+
 <div class="gb-card" style="padding:0; overflow:hidden; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
     <table class="gb-helpdesk-table">
         <thead>
             <tr>
+                <th style="width:36px;"><input type="checkbox" id="gb-hd-select-all" title="Select all on this page" style="width:16px; height:16px; cursor:pointer;"></th>
                 <th>Received</th>
                 <th>Sender</th>
                 <th>Subject & Preview</th>
@@ -94,7 +158,7 @@ if (isset($_POST['gb_resolve_ticket'])) {
             $args = [
                 'post_type' => 'gb_message',
                 'post_status' => 'publish',
-                'posts_per_page' => 20,
+                'posts_per_page' => $per_page,
                 'orderby' => 'date',
                 'order' => ($orderby == 'date_asc') ? 'ASC' : 'DESC',
                 'meta_query' => [
@@ -106,18 +170,32 @@ if (isset($_POST['gb_resolve_ticket'])) {
                 ]
             ];
 
-            // Filter by Resolved Status
-            if ($status_filter == 'resolved') {
+            if ($status_filter === 'spam') {
+                // Quarantine view: everything the filter flagged.
                 $args['meta_query'][] = [
-                    'key' => '_gb_helpdesk_status',
-                    'value' => 'resolved'
+                    'key' => '_gb_spam',
+                    'value' => '1'
                 ];
             } else {
+                // Spam never shows in the working views.
                 $args['meta_query'][] = [
-                    'key' => '_gb_helpdesk_status',
-                    'value' => 'resolved',
+                    'key' => '_gb_spam',
                     'compare' => 'NOT EXISTS'
                 ];
+
+                // Filter by Resolved Status
+                if ($status_filter == 'resolved') {
+                    $args['meta_query'][] = [
+                        'key' => '_gb_helpdesk_status',
+                        'value' => 'resolved'
+                    ];
+                } else {
+                    $args['meta_query'][] = [
+                        'key' => '_gb_helpdesk_status',
+                        'value' => 'resolved',
+                        'compare' => 'NOT EXISTS'
+                    ];
+                }
             }
 
             if ($search_query) {
@@ -133,6 +211,9 @@ if (isset($_POST['gb_resolve_ticket'])) {
                 $content = get_the_content();
                 ?>
                 <tr onmouseover="this.style.background='#fbfcfd'" onmouseout="this.style.background='transparent'" style="transition: background 0.2s;">
+                    <td>
+                        <input type="checkbox" class="gb-hd-cb" form="gb-hd-bulk" name="message_ids[]" value="<?php echo (int) $ticket_id; ?>" style="width:16px; height:16px; cursor:pointer;">
+                    </td>
                     <td>
                         <div style="font-weight:700; color:#1b5e20;"><?php echo get_the_date('M j, Y'); ?></div>
                         <div style="color:#94a3b8; font-size:11px;"><?php echo get_the_time(); ?></div>
@@ -192,7 +273,7 @@ if (isset($_POST['gb_resolve_ticket'])) {
                 </tr>
             <?php endwhile; wp_reset_postdata(); else : ?>
                 <tr>
-                    <td colspan="4" style="text-align:center; padding:80px 24px; color:#94a3b8; font-size: 15px;">No matching inquiries found.</td>
+                    <td colspan="5" style="text-align:center; padding:80px 24px; color:#94a3b8; font-size: 15px;">No matching inquiries found.</td>
                 </tr>
             <?php endif; ?>
         </tbody>
@@ -200,6 +281,36 @@ if (isset($_POST['gb_resolve_ticket'])) {
 </div>
 
 <script>
+(function () {
+    var selectAll = document.getElementById('gb-hd-select-all');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.gb-hd-cb'));
+    var counter = document.getElementById('gb-hd-count');
+
+    function refresh() {
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        if (counter) { counter.textContent = n + ' selected'; }
+        if (selectAll) {
+            selectAll.checked = (n > 0 && n === boxes.length);
+            selectAll.indeterminate = (n > 0 && n < boxes.length);
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = selectAll.checked; });
+            refresh();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+    refresh();
+
+    window.gbHdConfirmDelete = function () {
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        if (n === 0) { alert('Select at least one message to delete.'); return false; }
+        return confirm('Permanently delete ' + n + ' message' + (n === 1 ? '' : 's') + '? This cannot be undone.');
+    };
+})();
+
 function openMessageModal(id) {
     const modal = document.getElementById('msg-modal-' + id);
     modal.style.display = (modal.style.display === 'none' || modal.style.display === '') ? 'flex' : 'none';
