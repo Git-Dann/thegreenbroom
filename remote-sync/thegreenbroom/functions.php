@@ -338,6 +338,22 @@ function gb_get_eco_product_link( $product_id ) {
 }
 
 /**
+ * Button/label wording for an Eco Product card. Both were hard-coded strings
+ * ("View guide" / "Coming soon"), which meant a manager could publish a
+ * product but not say anything else on its button. Stored per product so each
+ * card can speak for itself; the defaults keep existing cards unchanged.
+ */
+function gb_get_eco_product_cta_label( $product_id ) {
+    $label = trim( (string) get_post_meta( $product_id, '_gb_eco_cta_label', true ) );
+    return $label === '' ? 'View guide' : $label;
+}
+
+function gb_get_eco_product_soon_label( $product_id ) {
+    $label = trim( (string) get_post_meta( $product_id, '_gb_eco_soon_label', true ) );
+    return $label === '' ? 'Coming soon' : $label;
+}
+
+/**
  * Seed the catalogue once from the two entries the page used to hard-code, so
  * moving to a repeatable post type does not change what visitors see today.
  * Deliberately not gated on a logged-in manager: the public page renders from

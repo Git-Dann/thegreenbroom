@@ -69,6 +69,8 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
     $file_url  = $file_id ? wp_get_attachment_url($file_id) : '';
     $file_name = $file_id ? basename((string) get_attached_file($file_id)) : '';
     $link      = $pid ? trim((string) get_post_meta($pid, '_gb_eco_link', true)) : '';
+    $cta_label  = $pid && function_exists('gb_get_eco_product_cta_label') ? gb_get_eco_product_cta_label($pid) : 'View guide';
+    $soon_label = $pid && function_exists('gb_get_eco_product_soon_label') ? gb_get_eco_product_soon_label($pid) : 'Coming soon';
     $thumb_id  = $pid ? (int) get_post_thumbnail_id($pid) : 0;
     $thumb_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'medium') : '';
 ?>
@@ -126,7 +128,19 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
             <div class="gb-form-row">
                 <label class="gb-label">Or link to a URL (used only when no file is attached)</label>
                 <input type="text" name="_gb_eco_link" class="gb-input" value="<?php echo esc_attr($link); ?>" placeholder="/make-your-own or https://...">
-                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Leave both the file and the link empty to show the card as &ldquo;Coming soon&rdquo;.</p>
+                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Leave both the file and the link empty to show the card as unavailable, using the wording below.</p>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:25px;">
+                <div class="gb-form-row">
+                    <label class="gb-label">Button text (when a file or link is set)</label>
+                    <input type="text" name="_gb_eco_cta_label" class="gb-input" value="<?php echo esc_attr($cta_label); ?>" placeholder="View guide">
+                </div>
+                <div class="gb-form-row">
+                    <label class="gb-label">Text when nothing is attached yet</label>
+                    <input type="text" name="_gb_eco_soon_label" class="gb-input" value="<?php echo esc_attr($soon_label); ?>" placeholder="Coming soon">
+                    <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Shown instead of a button, e.g. &ldquo;Coming soon&rdquo; or &ldquo;Members only&rdquo;.</p>
+                </div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 220px; gap:25px; align-items:start;">
@@ -272,7 +286,7 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                             <?php elseif ($eco_link !== ''): ?>
                                 <span class="gb-eco-chip ok">Link</span>
                             <?php else: ?>
-                                <span class="gb-eco-chip warn">Coming soon</span>
+                                <span class="gb-eco-chip warn"><?php echo esc_html(function_exists('gb_get_eco_product_soon_label') ? gb_get_eco_product_soon_label($eid) : 'Coming soon'); ?></span>
                             <?php endif; ?>
                         </div>
                     </div>

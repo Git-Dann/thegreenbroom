@@ -66,6 +66,8 @@ $gb_eco_products = function_exists( 'gb_get_eco_products' ) ? gb_get_eco_product
                     $gb_eco_desc  = trim( wp_strip_all_tags( $gb_eco_product->post_content ) );
                     // Uploaded files open in a new tab; an internal path stays in place.
                     $gb_eco_external = $gb_eco_link !== '' && strpos( $gb_eco_link, '/' ) !== 0;
+                    $gb_eco_cta  = function_exists( 'gb_get_eco_product_cta_label' ) ? gb_get_eco_product_cta_label( $gb_eco_product->ID ) : 'View guide';
+                    $gb_eco_soon = function_exists( 'gb_get_eco_product_soon_label' ) ? gb_get_eco_product_soon_label( $gb_eco_product->ID ) : 'Coming soon';
                 ?>
                     <article class="gb-eco-item">
                         <?php if ( $gb_eco_thumb ) : ?>
@@ -78,9 +80,9 @@ $gb_eco_products = function_exists( 'gb_get_eco_products' ) ? gb_get_eco_product
                             <?php endif; ?>
                             <div class="gb-eco-item-cta">
                                 <?php if ( $gb_eco_link !== '' ) : ?>
-                                    <a class="gb-eco-link" href="<?php echo esc_url( $gb_eco_link ); ?>"<?php echo $gb_eco_external ? ' target="_blank" rel="noopener"' : ''; ?>>View guide</a>
+                                    <a class="gb-eco-link" href="<?php echo esc_url( $gb_eco_link ); ?>"<?php echo $gb_eco_external ? ' target="_blank" rel="noopener"' : ''; ?>><?php echo esc_html( $gb_eco_cta ); ?></a>
                                 <?php else : ?>
-                                    <span class="gb-eco-link" aria-disabled="true" style="background:#64748b; cursor:default;">Coming soon</span>
+                                    <span class="gb-eco-link" aria-disabled="true" style="background:#64748b; cursor:default;"><?php echo esc_html( $gb_eco_soon ); ?></span>
                                 <?php endif; ?>
                             </div>
                         </div>

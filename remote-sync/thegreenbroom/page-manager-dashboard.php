@@ -409,6 +409,17 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             delete_post_meta($pid, '_gb_eco_link');
         }
 
+        // Same reason as the fields above: on a new product the global _gb_
+        // meta saver ran against post 0, so these are written here.
+        foreach (['_gb_eco_cta_label', '_gb_eco_soon_label'] as $eco_label_key) {
+            $eco_label = isset($_POST[$eco_label_key]) ? trim(sanitize_text_field(wp_unslash($_POST[$eco_label_key]))) : '';
+            if ($eco_label !== '') {
+                update_post_meta($pid, $eco_label_key, $eco_label);
+            } else {
+                delete_post_meta($pid, $eco_label_key);
+            }
+        }
+
         $eco_thumb = isset($_POST['gb_eco_thumb_id']) ? absint($_POST['gb_eco_thumb_id']) : 0;
         if ($eco_thumb && get_post_type($eco_thumb) === 'attachment') {
             set_post_thumbnail($pid, $eco_thumb);
@@ -815,6 +826,29 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
                 background: #ffffff !important;
                 color: #0f172a !important;
                 font-size: 13px !important;
+            }
+
+            /* The native select arrow renders hard against the right border,
+               which looked cramped next to the 8px radius. Swap in our own
+               chevron with a real gutter and reserve room for it so a long
+               option never runs underneath. Applies to every dashboard select,
+               not just Eco Products. Listed at both specificities so it also
+               beats the rule above, which forces a white background. */
+            .gb-main:not(.gb-tab-overview) select.gb-input,
+            .gb-main:not(.gb-tab-overview) select.gb-os-input,
+            .gb-main:not(.gb-tab-overview) select.gb-header-select,
+            .gb-main select.gb-input,
+            .gb-main select.gb-os-input,
+            .gb-main select.gb-header-select {
+                -webkit-appearance: none !important;
+                -moz-appearance: none !important;
+                appearance: none !important;
+                background-color: #ffffff !important;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+                background-repeat: no-repeat !important;
+                background-position: right 14px center !important;
+                background-size: 12px 8px !important;
+                padding-right: 40px !important;
             }
         </style>
     </main>
