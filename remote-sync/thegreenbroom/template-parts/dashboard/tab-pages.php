@@ -199,7 +199,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         ];
     } elseif ($slug === 'what-we-do') {
         $gb_page_defaults = [
-            '_gb_svc_hero_bg'    => 'https://images.unsplash.com/photo-1584622050111-993a426fbf0a?auto=format&fit=crop&w=1920&q=80',
             '_gb_svc_hero_title' => 'More Than Just a Clean Home',
             '_gb_svc_hero_sub'   => 'Professional, reliable, and 100% eco-friendly services tailored to your lifestyle.',
             '_gb_svc_head'       => 'Our Cleaning Services',
@@ -392,6 +391,9 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                         ?>
                         <?php if ($h_bg_k): ?>
                             <?php $gb_render_media_field($h_bg_k, 'Background image', $gb_field_value($h_bg_k)); ?>
+                            <?php if ($slug === 'what-we-do'): ?>
+                                <p style="margin:-10px 0 18px; color:#94a3b8; font-size:12px;">Leave this blank for the solid green header.</p>
+                            <?php endif; ?>
                         <?php endif; ?>
                         <?php if ($h_title_k && $h_sub_k): ?>
                             <div class="gb-form-row"><label class="gb-label">Headline</label><input type="text" name="<?php echo esc_attr($h_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_title_k)); ?>"></div>

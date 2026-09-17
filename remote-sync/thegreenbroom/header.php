@@ -131,7 +131,7 @@
                         'url' => null, // parent-only, not clickable
                         'children' => [
                             ['label' => 'How it Works', 'url' => '/how-it-works'],
-                            ['label' => 'What We Do', 'url' => '/what-we-do'],
+                            ['label' => 'What Cleaners Do', 'url' => '/what-we-do'],
                             ['label' => 'How We Do It', 'url' => '/how-we-do-it'],
                             ['label' => 'Eco Products', 'url' => '/eco-products']
                         ]

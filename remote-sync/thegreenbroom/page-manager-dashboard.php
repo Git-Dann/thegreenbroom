@@ -175,8 +175,23 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
     // Global Meta Saver
     foreach ($_POST as $key => $value) {
         if (strpos($key, '_gb_') === 0) {
-            // Secret fields are intentionally blank when a saved key is being kept.
-            if ($key === '_gb_brevo_api_key' && trim((string) wp_unslash($value)) === '') {
+            // Secret fields are intentionally blank when a saved key is being
+            // kept. These are write-only in the UI: the settings screen no
+            // longer renders the stored value into the page source, so a blank
+            // submission means "unchanged", never "clear it".
+            $gb_write_only_secrets = [
+                '_gb_brevo_api_key',
+                '_gb_stripe_test_secret_key',
+                '_gb_stripe_test_webhook_secret',
+                '_gb_stripe_test_connect_webhook_secret',
+                '_gb_stripe_live_secret_key',
+                '_gb_stripe_live_webhook_secret',
+                '_gb_stripe_live_connect_webhook_secret',
+                '_gb_stripe_secret_key',
+                '_gb_stripe_webhook_secret',
+                '_gb_stripe_connect_webhook_secret',
+            ];
+            if (in_array($key, $gb_write_only_secrets, true) && trim((string) wp_unslash($value)) === '') {
                 continue;
             }
             update_post_meta($pid, $key, gb_manager_sanitize_meta_value($value));

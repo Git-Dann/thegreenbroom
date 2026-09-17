@@ -14,7 +14,15 @@ $rating = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($clea
 $public_badges = function_exists('gb_get_public_cleaner_badges') ? gb_get_public_cleaner_badges($cleaner_id) : [];
 
 // Bio: capture once so the fallback can't print after the real content.
-$bio_raw = trim(get_the_content());
+/*
+ * Read the bio off the post object, not get_the_content(). This template has
+ * no have_posts()/the_post() loop, so the $page/$pages globals that
+ * get_the_content() relies on are never set and it returns an empty string —
+ * which meant every manager-written bio was discarded at render and every
+ * profile fell back to the generic sentence below.
+ */
+$bio_post = get_post(get_the_ID());
+$bio_raw  = $bio_post ? trim((string) $bio_post->post_content) : '';
 
 // Real service catalogue rather than a hard-coded list that is the same for
 // every cleaner.
@@ -198,7 +206,7 @@ $gb_services = get_posts([
                 <h2 class="gb-section-title">About</h2>
                 <div class="gb-bio-text">
                     <?php if ($bio_raw !== ''): ?>
-                        <?php the_content(); ?>
+                        <?php echo apply_filters('the_content', $bio_raw); ?>
                     <?php else: ?>
                         <p>A verified professional with The Green Broom, specialising in eco-friendly cleaning.</p>
                     <?php endif; ?>

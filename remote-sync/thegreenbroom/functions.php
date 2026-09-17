@@ -578,6 +578,54 @@ function gb_migrate_mission_title() {
 add_action( 'init', 'gb_migrate_mission_title' );
 
 /**
+ * One-time migration: rename "What We Do" to "What Cleaners Do", and restore
+ * the solid green hero.
+ *
+ * The hero lost its green because the page builder offered a stock Unsplash
+ * URL as the DEFAULT for _gb_svc_hero_bg, while the template's own fallback is
+ * background-color #1b5e20. The two disagreed, so the first "Save Content"
+ * wrote the photo in for real and the green never came back. The builder
+ * default is now gone; this clears the value it planted.
+ *
+ * Both changes are conditional: the title is only renamed while it is still
+ * the original, and the image is only cleared while it is still that exact
+ * stock URL, so a deliberate later edit is never overwritten.
+ */
+function gb_migrate_what_cleaners_do() {
+    if ( get_option( 'gb_what_cleaners_do_migrated' ) ) {
+        return;
+    }
+
+    $page_ids = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'what-we-do',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( ! empty( $page_ids ) ) {
+        $page_id = (int) $page_ids[0];
+
+        // Slug stays 'what-we-do' on purpose: changing it would break every
+        // existing link and any search ranking the page has.
+        $title = get_the_title( $page_id );
+        if ( $title === 'What We Do' || $title === 'What We Do (Services)' ) {
+            wp_update_post( array( 'ID' => $page_id, 'post_title' => 'What Cleaners Do' ) );
+        }
+
+        $stock_hero = 'https://images.unsplash.com/photo-1584622050111-993a426fbf0a';
+        $hero_bg    = trim( (string) get_post_meta( $page_id, '_gb_svc_hero_bg', true ) );
+        if ( $hero_bg !== '' && strpos( $hero_bg, $stock_hero ) === 0 ) {
+            delete_post_meta( $page_id, '_gb_svc_hero_bg' );
+        }
+    }
+
+    update_option( 'gb_what_cleaners_do_migrated', 1 );
+}
+add_action( 'init', 'gb_migrate_what_cleaners_do' );
+
+/**
  * One-time migration: point existing "Join" buttons at the new /join page.
  * Only rewrites values that are empty or still '/register' so any deliberately
  * customised link is preserved. Guarded by an option so it runs just once.

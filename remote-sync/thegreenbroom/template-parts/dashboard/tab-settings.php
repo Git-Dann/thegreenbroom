@@ -388,15 +388,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             </div>
                             <div class="gb-form-row">
                                 <label class="gb-label">Test Secret Key</label>
-                                <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true)); ?>" placeholder="sk_test_...">
+                                <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_test_...'); ?>" autocomplete="new-password">
                             </div>
                             <div class="gb-form-row" style="margin-bottom:0;">
                                 <label class="gb-label">Test Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true)); ?>" placeholder="whsec_...">
+                                <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
                             <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
                                 <label class="gb-label">Test Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true)); ?>" placeholder="whsec_...">
+                                <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
                         </div>
 
@@ -408,15 +408,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             </div>
                             <div class="gb-form-row">
                                 <label class="gb-label">Live Secret Key</label>
-                                <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true)); ?>" placeholder="sk_live_...">
+                                <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_live_...'); ?>" autocomplete="new-password">
                             </div>
                             <div class="gb-form-row" style="margin-bottom:0;">
                                 <label class="gb-label">Live Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true)); ?>" placeholder="whsec_...">
+                                <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
                             <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
                                 <label class="gb-label">Live Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true)); ?>" placeholder="whsec_...">
+                                <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
                         </div>
                     </div>
@@ -427,15 +427,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     </div>
                     <div class="gb-form-row">
                         <label class="gb-label">Legacy Fallback Secret Key (Optional)</label>
-                        <input type="password" name="_gb_stripe_secret_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_secret_key', true)); ?>" placeholder="Optional - legacy compatibility">
+                        <input type="password" name="_gb_stripe_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_secret_key', true) ? 'Saved — leave blank to keep' : 'Optional - legacy compatibility'); ?>" autocomplete="new-password">
                     </div>
                     <div class="gb-form-row" style="margin-bottom:0;">
                         <label class="gb-label">Legacy Fallback Webhook Secret (Optional)</label>
-                        <input type="password" name="_gb_stripe_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_webhook_secret', true)); ?>" placeholder="Optional - legacy compatibility">
+                        <input type="password" name="_gb_stripe_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_webhook_secret', true) ? 'Saved — leave blank to keep' : 'Optional - legacy compatibility'); ?>" autocomplete="new-password">
                     </div>
                     <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
                         <label class="gb-label">Legacy Fallback Connect Webhook Secret (Optional)</label>
-                        <input type="password" name="_gb_stripe_connect_webhook_secret" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true)); ?>" placeholder="Optional - legacy compatibility">
+                        <input type="password" name="_gb_stripe_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'Optional - legacy compatibility'); ?>" autocomplete="new-password">
                     </div>
                 </div>
             </div>

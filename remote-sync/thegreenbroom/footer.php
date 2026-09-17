@@ -171,7 +171,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
             <h2>Company</h2>
             <ul class="gb-footer-links">
                 <li><a href="/how-it-works">How It Works</a></li>
-                <li><a href="/what-we-do">What We Do</a></li>
+                <li><a href="/what-we-do">What Cleaners Do</a></li>
                 <li><a href="/how-we-do-it">How We Do It</a></li>
                 <li><a href="/eco-products">Eco Products</a></li>
                 <li><a href="/cleaner-listings">Find a Cleaner</a></li>
