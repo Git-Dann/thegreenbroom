@@ -15,7 +15,15 @@ $gb_eco_sub = get_post_meta( $gb_eco_id, '_gb_eco_hero_sub', true );
 if ( $gb_eco_sub === '' || $gb_eco_sub === null ) {
     $gb_eco_sub = 'Practical guidance for choosing and using effective, lower-impact cleaning products at home and on every job.';
 }
-$gb_eco_body     = trim( get_the_content() );
+/*
+ * Read the body straight off the post object rather than via get_the_content().
+ * This template renders outside the loop, so the $page/$pages globals that
+ * get_the_content() depends on are never set and it returns an empty string —
+ * which silently swallowed whatever a manager typed into the body field.
+ */
+$gb_eco_post = get_post( $gb_eco_id );
+$gb_eco_body = $gb_eco_post ? trim( (string) $gb_eco_post->post_content ) : '';
+
 $gb_eco_products = function_exists( 'gb_get_eco_products' ) ? gb_get_eco_products() : array();
 ?>
 
@@ -47,7 +55,7 @@ $gb_eco_products = function_exists( 'gb_get_eco_products' ) ? gb_get_eco_product
     </section>
     <div class="gb-eco-container">
         <?php if ( $gb_eco_body !== '' ) : ?>
-            <div class="gb-eco-body"><?php the_content(); ?></div>
+            <div class="gb-eco-body"><?php echo apply_filters( 'the_content', $gb_eco_body ); ?></div>
         <?php endif; ?>
 
         <?php if ( ! empty( $gb_eco_products ) ) : ?>
