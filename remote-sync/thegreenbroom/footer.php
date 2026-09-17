@@ -30,12 +30,24 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
 ?>
 
 <style>
+    /* Sticky footer.
+       #gb-site-footer already had margin-top:auto, but that does nothing unless
+       its parent is a flex column — so on short pages (e.g. Eco Products) the
+       footer sat mid-screen with dead space beneath it. These rules live here,
+       in footer.php, rather than in style.css on purpose: the manager dashboard
+       renders its own <body> and never loads this file, so it cannot be
+       affected by making the body a flex column. */
+    html { height: 100%; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    body > #page, body > .site { flex: 1 0 auto; }
+
     #gb-site-footer {
         background-color: #1b5e20; /* Dark Eco Green */
         color: white;
         padding: 60px 0 0;
         font-family: sans-serif;
         margin-top: auto;
+        flex-shrink: 0;
     }
 
     .gb-footer-container {

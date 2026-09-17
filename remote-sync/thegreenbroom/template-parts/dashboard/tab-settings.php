@@ -101,6 +101,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#email" class="gb-settings-nav-link" data-settings-target="email"><span class="gb-settings-nav-icon">✉</span><span>Email &amp; delivery<small>Brevo and sender</small></span></a>
             <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
             <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
+            <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
             <a href="#stripe" class="gb-settings-nav-link" data-settings-target="stripe"><span class="gb-settings-nav-icon">🔑</span><span>Stripe credentials<small>Keys and webhooks</small></span></a>
             <a href="#stripe-tools" class="gb-settings-nav-link" data-settings-target="stripe-tools"><span class="gb-settings-nav-icon">🛒</span><span>Stripe tools<small>Storefront preview</small></span></a>
@@ -273,6 +274,44 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <label class="gb-label">Google Reviews Shortcode / Embed</label>
                         <input type="text" name="_gb_reviews_embed" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_reviews_embed', true)); ?>" placeholder="[trustindex no-registration=google]">
                     </div>
+                </div>
+            </div>
+
+            <div id="documents" class="gb-editor-section gb-settings-panel">
+                <div class="gb-editor-header"><span class="dashicons dashicons-media-document"></span> Downloadable Documents</div>
+                <div class="gb-editor-body">
+                    <div style="margin:0 0 16px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
+                        The PDFs linked around the site (Eco Products, the cleaner and customer portals, the insurance certificate). Upload here to replace the built-in file &mdash; no developer deploy needed. Leave blank to keep the bundled version.
+                    </div>
+                    <?php foreach (gb_get_resource_definitions() as $gb_res_key => $gb_res): ?>
+                        <?php
+                        $gb_res_meta = '_gb_resource_' . sanitize_key($gb_res_key);
+                        $gb_res_id   = (int) get_post_meta($settings_id, $gb_res_meta, true);
+                        $gb_res_name = $gb_res_id ? basename((string) get_attached_file($gb_res_id)) : '';
+                        $gb_res_live = function_exists('gb_resource_is_available') && gb_resource_is_available($gb_res_key);
+                        ?>
+                        <div class="gb-doc-row" style="border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <div style="flex:1 1 220px; min-width:0;">
+                                    <div style="font-weight:700; color:#0f172a; font-size:13px;"><?php echo esc_html($gb_res['label']); ?></div>
+                                    <div class="gb-doc-current" style="font-size:11.5px; color:<?php echo $gb_res_live ? '#166534' : '#b45309'; ?>; margin-top:3px;">
+                                        <?php
+                                        if ($gb_res_name) {
+                                            echo 'Uploaded: ' . esc_html($gb_res_name);
+                                        } elseif ($gb_res_live) {
+                                            echo 'Using built-in file (' . esc_html($gb_res['file']) . ')';
+                                        } else {
+                                            echo 'No file available yet';
+                                        }
+                                        ?>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="<?php echo esc_attr($gb_res_meta); ?>" value="<?php echo esc_attr($gb_res_id); ?>">
+                                <button type="button" class="gb-btn-small-os gb-doc-pick">Upload / Replace</button>
+                                <button type="button" class="gb-btn-small-os gb-doc-clear" style="color:#991b1b;"<?php echo $gb_res_id ? '' : ' hidden'; ?>>Remove</button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
@@ -489,4 +528,33 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     var hashSection = window.location.hash ? window.location.hash.slice(1) : '';
     activate(hashSection || defaultSection, false);
 })();
+</script>
+
+<script>
+jQuery(document).ready(function ($) {
+    $('.gb-doc-pick').on('click', function (e) {
+        e.preventDefault();
+        var $row = $(this).closest('.gb-doc-row');
+        var frame = wp.media({
+            title: 'Select or upload a document',
+            button: { text: 'Use this file' },
+            multiple: false
+        });
+        frame.on('select', function () {
+            var att = frame.state().get('selection').first().toJSON();
+            $row.find('input[type=hidden]').val(att.id);
+            $row.find('.gb-doc-current').css('color', '#166534').text('Uploaded: ' + (att.filename || att.title));
+            $row.find('.gb-doc-clear').prop('hidden', false);
+        });
+        frame.open();
+    });
+
+    $('.gb-doc-clear').on('click', function (e) {
+        e.preventDefault();
+        var $row = $(this).closest('.gb-doc-row');
+        $row.find('input[type=hidden]').val('');
+        $row.find('.gb-doc-current').css('color', '#b45309').text('Will revert to the built-in file on save');
+        $(this).prop('hidden', true);
+    });
+});
 </script>

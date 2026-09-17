@@ -278,6 +278,37 @@ function gb_maybe_flush_resource_rewrite_rules() {
 }
 add_action( 'init', 'gb_maybe_flush_resource_rewrite_rules', 20 );
 
+/**
+ * Attachment ID of a manager-uploaded replacement for a bundled document.
+ *
+ * Stored as post meta on the settings page so the dashboard's existing "_gb_*"
+ * save handler persists it with no extra plumbing.
+ */
+function gb_get_resource_attachment_id( $resource ) {
+    $settings_id = gb_get_site_settings_id();
+    if ( ! $settings_id ) {
+        return 0;
+    }
+
+    return (int) get_post_meta( $settings_id, '_gb_resource_' . sanitize_key( (string) $resource ), true );
+}
+
+/**
+ * True when a document is actually available (uploaded or bundled).
+ */
+function gb_resource_is_available( $resource ) {
+    if ( gb_get_resource_attachment_id( $resource ) ) {
+        return true;
+    }
+
+    $resources = gb_get_resource_definitions();
+    if ( ! isset( $resources[ $resource ]['file'] ) ) {
+        return false;
+    }
+
+    return is_readable( trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'] );
+}
+
 function gb_get_resource_url( $resource ) {
     $resource = sanitize_key( (string) $resource );
     $resources = gb_get_resource_definitions();
@@ -335,14 +366,39 @@ function gb_handle_resource_download() {
         check_admin_referer( 'gb_download_resource_' . $resource );
     }
 
-    $file = trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'];
-    if ( ! is_readable( $file ) ) {
+    // A manager-uploaded document takes precedence over the file bundled with
+    // the theme. Without this, replacing any of these PDFs required a code
+    // deploy, which is why they could not be updated from the dashboard.
+    $file = '';
+    $mime = 'application/pdf';
+    $download_filename = sanitize_file_name( $resources[ $resource ]['file'] );
+
+    $override_id = gb_get_resource_attachment_id( $resource );
+    if ( $override_id ) {
+        $override_path = get_attached_file( $override_id );
+        if ( $override_path && is_readable( $override_path ) ) {
+            $file = $override_path;
+            $override_mime = get_post_mime_type( $override_id );
+            if ( $override_mime ) {
+                $mime = $override_mime;
+            }
+            $download_filename = sanitize_file_name( basename( $override_path ) );
+        }
+    }
+
+    if ( $file === '' ) {
+        $bundled = trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'];
+        if ( is_readable( $bundled ) ) {
+            $file = $bundled;
+        }
+    }
+
+    if ( $file === '' ) {
         wp_die( 'This resource is not available yet.', 'Resource unavailable', array( 'response' => 404 ) );
     }
 
     nocache_headers();
-    header( 'Content-Type: application/pdf' );
-    $download_filename = sanitize_file_name( $resources[ $resource ]['file'] );
+    header( 'Content-Type: ' . $mime );
     header( 'Content-Disposition: inline; filename="' . $download_filename . '"; filename*=UTF-8\'\'' . rawurlencode( $download_filename ) );
     header( 'Content-Location: ' . $download_filename );
     header( 'Content-Length: ' . (string) filesize( $file ) );
@@ -1318,6 +1374,50 @@ function gb_get_public_cleaner_badges( $cleaner_id ) {
     }
 
     return $public;
+}
+
+/**
+ * Vetting fields still outstanding on a cleaner, for the manager list.
+ *
+ * Differs from gb_cleaner_verification_missing() in one important way: the ID,
+ * address and DBS documents are permanently purged once a cleaner is approved,
+ * so on an APPROVED profile their absence means "checked, then deleted" rather
+ * than "never supplied". Reporting those as missing would flag every live
+ * cleaner. Documents are therefore only counted before approval; the fields
+ * that persist (phone, references, signed terms) are always checked.
+ */
+function gb_get_cleaner_vetting_gaps( $cleaner_id ) {
+    $cleaner_id = (int) $cleaner_id;
+    $verified   = get_post_meta( $cleaner_id, 'is_verified', true ) === '1';
+    $gaps       = array();
+
+    if ( ! $verified && class_exists( 'GB_Uploads' ) && method_exists( 'GB_Uploads', 'get_cleaner_verification_document' ) ) {
+        $doc_labels = array( 'doc_id' => 'ID', 'doc_address' => 'Address', 'doc_dbs' => 'DBS' );
+        foreach ( $doc_labels as $field => $label ) {
+            if ( empty( GB_Uploads::get_cleaner_verification_document( $cleaner_id, $field ) ) ) {
+                $gaps[] = $label;
+            }
+        }
+    }
+
+    if ( ! get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ) ) {
+        $gaps[] = 'Phone';
+    }
+
+    foreach ( array( '1', '2' ) as $n ) {
+        $ok = get_post_meta( $cleaner_id, "_gb_ref{$n}_name", true )
+           && get_post_meta( $cleaner_id, "_gb_ref{$n}_address", true )
+           && is_email( get_post_meta( $cleaner_id, "_gb_ref{$n}_email", true ) );
+        if ( ! $ok ) {
+            $gaps[] = "Ref {$n}";
+        }
+    }
+
+    if ( get_post_meta( $cleaner_id, '_gb_toa_signed', true ) !== '1' ) {
+        $gaps[] = 'Terms';
+    }
+
+    return $gaps;
 }
 
 function gb_get_email_settings() {

@@ -385,6 +385,7 @@
                     <th>Rate</th>
                     <th>Payments</th>
                     <th>Verification</th>
+                    <th>Vetting</th>
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
@@ -408,6 +409,7 @@
                     if ($loc === '') {
                         $loc = 'UK Base';
                     }
+                    $vetting_gaps = function_exists('gb_get_cleaner_vetting_gaps') ? gb_get_cleaner_vetting_gaps($cid) : [];
                 ?>
                 <tr>
                     <td>
@@ -436,6 +438,17 @@
                             <span class="pill-verified"><img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" style="height:11px;"> Verified</span>
                         <?php else: ?>
                             <span class="pill-trial" style="background:#f1f5f9; color:#64748b;"><?php echo strtoupper($st); ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if (empty($vetting_gaps)): ?>
+                            <span class="pill-active">Complete</span>
+                        <?php else: ?>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; max-width:190px;" title="Outstanding vetting fields">
+                                <?php foreach ($vetting_gaps as $gap): ?>
+                                    <span style="background:#fef2f2; color:#991b1b; border:1px solid #fee2e2; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:800; white-space:nowrap;"><?php echo esc_html($gap); ?></span>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
                     </td>
                     <td style="text-align:right;">
