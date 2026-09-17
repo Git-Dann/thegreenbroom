@@ -309,6 +309,90 @@ function gb_resource_is_available( $resource ) {
     return is_readable( trailingslashit( get_template_directory() ) . 'assets/documents/' . $resources[ $resource ]['file'] );
 }
 
+/**
+ * Published Eco Products for the public grid.
+ */
+function gb_get_eco_products( $limit = -1 ) {
+    return get_posts( array(
+        'post_type'      => 'gb_eco_product',
+        'post_status'    => 'publish',
+        'posts_per_page' => $limit,
+        'orderby'        => array( 'menu_order' => 'ASC', 'title' => 'ASC' ),
+    ) );
+}
+
+/**
+ * Resolve the link for an Eco Product: an uploaded file wins, then a manual
+ * link, otherwise nothing (the card shows as "coming soon").
+ */
+function gb_get_eco_product_link( $product_id ) {
+    $file_id = (int) get_post_meta( $product_id, '_gb_eco_file', true );
+    if ( $file_id ) {
+        $url = wp_get_attachment_url( $file_id );
+        if ( $url ) {
+            return $url;
+        }
+    }
+
+    return trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
+}
+
+/**
+ * Seed the catalogue once from the two entries the page used to hard-code, so
+ * moving to a repeatable post type does not change what visitors see today.
+ * Deliberately not gated on a logged-in manager: the public page renders from
+ * this catalogue, so it has to be populated on the first request of any kind.
+ * The autoloaded option short-circuits every subsequent page load.
+ */
+add_action( 'init', function () {
+    if ( get_option( 'gb_eco_products_seeded_v1' ) ) {
+        return;
+    }
+
+    $existing = get_posts( array( 'post_type' => 'gb_eco_product', 'post_status' => 'any', 'posts_per_page' => 1, 'fields' => 'ids' ) );
+    if ( empty( $existing ) ) {
+        // Carry over anything already typed into the old page-meta card fields
+        // so a manager's existing wording survives the migration.
+        $page      = get_page_by_path( 'eco-products' );
+        $page_id   = $page ? (int) $page->ID : 0;
+        $legacy    = function ( $key, $default ) use ( $page_id ) {
+            if ( ! $page_id ) {
+                return $default;
+            }
+            $value = trim( (string) get_post_meta( $page_id, $key, true ) );
+            return $value === '' ? $default : $value;
+        };
+
+        $seed = array(
+            array(
+                'title' => $legacy( '_gb_eco_c1_title', 'Eco Cleaning Products Guide' ),
+                'desc'  => $legacy( '_gb_eco_c1_text', 'A simple guide to plant-based products and easy alternatives for everyday cleaning.' ),
+                'link'  => function_exists( 'gb_get_resource_url' ) ? gb_get_resource_url( 'eco-cleaning-products' ) : '',
+            ),
+            array(
+                'title' => $legacy( '_gb_eco_c2_title', 'Make Your Own' ),
+                'desc'  => $legacy( '_gb_eco_c2_text', 'Simple, lower-impact ideas for making your own cleaning products. The full guide is coming soon.' ),
+                'link'  => $legacy( '_gb_eco_c2_link', '' ),
+            ),
+        );
+        $order = 0;
+        foreach ( $seed as $item ) {
+            $id = wp_insert_post( array(
+                'post_type'    => 'gb_eco_product',
+                'post_status'  => 'publish',
+                'post_title'   => $item['title'],
+                'post_content' => $item['desc'],
+                'menu_order'   => $order++,
+            ) );
+            if ( $id && ! is_wp_error( $id ) && $item['link'] !== '' ) {
+                update_post_meta( $id, '_gb_eco_link', $item['link'] );
+            }
+        }
+    }
+
+    update_option( 'gb_eco_products_seeded_v1', 1 );
+}, 20 );
+
 function gb_get_resource_url( $resource ) {
     $resource = sanitize_key( (string) $resource );
     $resources = gb_get_resource_definitions();
@@ -2915,6 +2999,17 @@ function gb_register_cpts() {
         'show_ui' => true,
         'supports' => array('title', 'editor'),
         'menu_icon' => 'dashicons-list-view',
+    ));
+
+    // 2b. Eco Products / guides shown on the Eco Products page.
+    // A repeatable post type rather than page meta: the catalogue is expected
+    // to grow to dozens or hundreds of entries, which fixed fields cannot hold.
+    register_post_type('gb_eco_product', array(
+        'labels' => array('name' => 'Eco Products', 'singular_name' => 'Eco Product'),
+        'public' => false,
+        'show_ui' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'page-attributes'),
+        'menu_icon' => 'dashicons-carrot',
     ));
 
     // 3. Bookings

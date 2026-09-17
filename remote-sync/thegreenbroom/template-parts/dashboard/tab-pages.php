@@ -276,13 +276,10 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_join_cta_link'   => '/register',
         ];
     } elseif ($slug === 'eco-products') {
+        // The cards themselves now live in the Eco Products tab as their own
+        // records, so only the page-level intro is edited here.
         $gb_page_defaults = [
             '_gb_eco_hero_sub' => 'Practical guidance for choosing and using effective, lower-impact cleaning products at home and on every job.',
-            '_gb_eco_c1_title' => 'Eco Cleaning Products Guide',
-            '_gb_eco_c1_text'  => 'A simple guide to plant-based products and easy alternatives for everyday cleaning.',
-            '_gb_eco_c2_title' => 'Make Your Own',
-            '_gb_eco_c2_text'  => 'Simple, lower-impact ideas for making your own cleaning products. The full guide is coming soon.',
-            '_gb_eco_c2_link'  => '',
         ];
     }
 
@@ -716,18 +713,13 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                 <div class="gb-editor-section">
                     <div class="gb-editor-header"><span class="dashicons dashicons-yes-alt"></span> Eco Products Page</div>
                     <div class="gb-editor-body">
-                        <p style="margin:0 0 18px; color:#64748b; font-size:13px;">The heading uses the page title above. These control the intro line and the two cards.</p>
-                        <div class="gb-form-row"><label class="gb-label">Intro line (under the heading)</label><textarea name="_gb_eco_hero_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_eco_hero_sub')); ?></textarea></div>
-                        <div class="gb-link-row">
-                            <div class="gb-form-row"><label class="gb-label">Card 1 title</label><input type="text" name="_gb_eco_c1_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_eco_c1_title')); ?>"></div>
-                            <div class="gb-form-row"><label class="gb-label">Card 2 title</label><input type="text" name="_gb_eco_c2_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_eco_c2_title')); ?>"></div>
-                        </div>
-                        <div class="gb-form-row"><label class="gb-label">Card 1 description</label><textarea name="_gb_eco_c1_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_eco_c1_text')); ?></textarea></div>
-                        <div class="gb-form-row"><label class="gb-label">Card 2 description</label><textarea name="_gb_eco_c2_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_eco_c2_text')); ?></textarea></div>
-                        <div class="gb-form-row" style="margin-bottom:0;">
-                            <label class="gb-label">Card 2 link (leave blank to show &ldquo;Coming soon&rdquo;)</label>
-                            <input type="text" name="_gb_eco_c2_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_eco_c2_link')); ?>" placeholder="/make-your-own or https://...">
-                        </div>
+                        <p style="margin:0 0 18px; color:#64748b; font-size:13px;">The heading uses the page title above. This controls the intro line below it.</p>
+                        <div class="gb-form-row" style="margin-bottom:0;"><label class="gb-label">Intro line (under the heading)</label><textarea name="_gb_eco_hero_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_eco_hero_sub')); ?></textarea></div>
+                        <p style="margin:18px 0 0; padding:12px 14px; background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; color:#166534; font-size:13px;">
+                            The product cards on this page are managed in
+                            <a href="?tab=eco-products" style="color:#166534; font-weight:700;">Eco Products</a>
+                            &mdash; add, edit and upload as many guides as you need there.
+                        </p>
                     </div>
                 </div>
                 <?php endif; ?>
