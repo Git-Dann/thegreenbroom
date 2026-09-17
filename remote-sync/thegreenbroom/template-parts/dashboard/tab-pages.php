@@ -234,6 +234,10 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_title' => 'Find Your Professional',
             '_gb_listings_sub'   => 'Find trusted local cleaners by entering your postcode.',
             '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
+            '_gb_listings_eyebrow'     => '',
+            '_gb_listings_search_head' => 'Search cleaners near you',
+            '_gb_listings_verified_link'  => 'What does Verified mean?',
+            '_gb_listings_verified_title' => 'What does Verified mean?',
         ];
     } elseif ($slug === 'join') {
         $gb_page_defaults = [
@@ -367,7 +371,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                     <div class="gb-editor-header"><span class="dashicons dashicons-format-image"></span> Hero Header</div>
                     <div class="gb-editor-body">
                         <?php 
-                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ($slug == 'join' ? '_gb_join_hero_bg' : '')));
+                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ($slug == 'join' ? '_gb_join_hero_bg' : ($slug == 'cleaner-listings' ? '_gb_listings_hero_bg' : ''))));
                             $h_title_k = $is_front
                                 ? '_gb_hero_headline'
                                 : ($slug == 'how-it-works'
@@ -391,7 +395,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                         ?>
                         <?php if ($h_bg_k): ?>
                             <?php $gb_render_media_field($h_bg_k, 'Background image', $gb_field_value($h_bg_k)); ?>
-                            <?php if ($slug === 'what-we-do'): ?>
+                            <?php if ($slug === 'what-we-do' || $slug === 'cleaner-listings'): ?>
                                 <p style="margin:-10px 0 18px; color:#94a3b8; font-size:12px;">Leave this blank for the solid green header.</p>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -730,7 +734,22 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                     <div class="gb-editor-header"><span class="dashicons dashicons-editor-paragraph"></span> Body Text Content</div>
                     <div class="gb-editor-body">
                         <?php if($slug == 'cleaner-listings'): ?>
+                            <div class="gb-form-row"><label class="gb-label">Eyebrow label above the headline (optional)</label><input type="text" name="_gb_listings_eyebrow" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_eyebrow')); ?>" placeholder="e.g. Liverpool &amp; Merseyside"></div>
+                            <div class="gb-form-row"><label class="gb-label">Heading above the search box</label><input type="text" name="_gb_listings_search_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_search_head')); ?>"></div>
                             <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;What does Verified mean?&rdquo; pop-up</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">The link shown under the search box, and the explanation it opens.</p>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Link text</label><input type="text" name="_gb_listings_verified_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_verified_link')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Pop-up heading</label><input type="text" name="_gb_listings_verified_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_verified_title')); ?>"></div>
+                                </div>
+                                <div class="gb-form-row" style="margin-bottom:0;">
+                                    <label class="gb-label">Pop-up text</label>
+                                    <textarea name="_gb_listings_verified_body" class="gb-textarea" style="min-height:190px;" placeholder="Leave blank to use the standard explanation of our vetting checks."><?php echo esc_textarea($gb_field_value('_gb_listings_verified_body')); ?></textarea>
+                                    <p style="margin-top:8px; color:#94a3b8; font-size:12px;">Leave a blank line between paragraphs. Several lines in a row become a ticked list; end a line with a colon to make it the list&rsquo;s intro. Leave the whole box empty to use the standard wording describing our actual checks.</p>
+                                </div>
+                            </div>
                         <?php elseif ($is_structured_core_page): ?>
                             <p style="margin:0; color:#64748b; font-size:13px;">This page is fully controlled by the structured fields above.</p>
                         <?php else: ?>

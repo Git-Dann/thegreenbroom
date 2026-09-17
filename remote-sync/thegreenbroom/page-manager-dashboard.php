@@ -614,13 +614,109 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         .gb-nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; }
         .gb-title { font-size: 28px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
         .gb-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 24px; }
-        @media (max-width: 1024px) { .gb-main { margin-left: 0; width: 100%; padding: 20px; } .gb-sidebar { display: none; } }
+        /* MOBILE
+           The sidebar used to be display:none below 1024px, which left the
+           dashboard with no navigation at all on a phone — every tab was
+           unreachable once you were in one. It is now a slide-in drawer
+           driven by a top bar, reusing the same nav markup. */
+        .gb-mobile-bar { display: none; }
+        .gb-sidebar-backdrop { display: none; }
+
+        @media (max-width: 1024px) {
+            .gb-main { margin-left: 0; width: 100%; padding: 20px; padding-top: 84px; }
+
+            .gb-mobile-bar {
+                display: flex; align-items: center; gap: 14px;
+                position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+                height: 64px; padding: 0 16px; box-sizing: border-box;
+                background: #0f172a; border-bottom: 1px solid rgba(255,255,255,.08);
+            }
+            .gb-mobile-bar img { height: 30px; width: auto; display: block; background: #fff; padding: 5px 8px; border-radius: 7px; }
+            .gb-mobile-title { color: #e2e8f0; font-size: 14px; font-weight: 700; margin-left: auto; text-transform: capitalize; }
+            .gb-menu-btn {
+                display: inline-flex; align-items: center; justify-content: center;
+                width: 42px; height: 42px; flex: 0 0 42px; padding: 0;
+                background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+                border-radius: 9px; color: #fff; cursor: pointer;
+            }
+            .gb-menu-btn .dashicons { font-size: 22px; width: 22px; height: 22px; }
+
+            .gb-sidebar {
+                display: flex; width: 280px; max-width: 86vw; z-index: 400;
+                transform: translateX(-100%); transition: transform .25s ease;
+                overflow-y: auto; padding-top: 20px;
+            }
+            .gb-sidebar.is-open { transform: translateX(0); }
+            .gb-sidebar-backdrop {
+                display: block; position: fixed; inset: 0; z-index: 350;
+                background: rgba(15,23,42,.55); opacity: 0; pointer-events: none;
+                transition: opacity .25s ease;
+            }
+            .gb-sidebar-backdrop.is-open { opacity: 1; pointer-events: auto; }
+            .gb-nav-item { padding: 15px 24px; }
+
+            /* Stop any single wide child forcing the whole page sideways. */
+            .gb-app, .gb-main { max-width: 100vw; overflow-x: hidden; }
+        }
+
+        @media (max-width: 760px) {
+            .gb-main { padding: 16px; padding-top: 80px; }
+
+            /* Page headers: title and action button stack instead of squashing
+               the button into two words per line. */
+            .gb-main .gb-edit-header,
+            .gb-main .gb-services-header,
+            .gb-main .gb-support-header,
+            .gb-main .gb-builder-header,
+            .gb-main .booking-controls,
+            .gb-main .gb-header,
+            .gb-main .gb-eco-toolbar,
+            .gb-main .gb-services-toolbar {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 14px !important;
+            }
+            .gb-main .gb-edit-header > *, .gb-main .gb-eco-toolbar > * { min-width: 0; }
+            .gb-main .gb-edit-header button,
+            .gb-main .gb-edit-header .gb-header-btn,
+            .gb-main .gb-eco-primary,
+            .gb-main .gb-btn-primary-os {
+                width: 100%; justify-content: center; white-space: nowrap;
+            }
+            .gb-main .gb-title { font-size: 22px !important; }
+
+            /* Two-column form rows are laid out with inline grid styles all over
+               these tabs; collapse them rather than editing every template. */
+            .gb-main [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .gb-main .gb-link-row { display: block !important; }
+
+            /* Wide tables scroll inside their card instead of clipping. */
+            .gb-main table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+            .gb-card, .gb-config-card, .gb-editor-section { padding: 16px !important; }
+
+            /* iOS zooms the page in on focus for any input under 16px. */
+            .gb-main input, .gb-main select, .gb-main textarea { font-size: 16px !important; }
+
+            .gb-eco-cards { grid-template-columns: 1fr !important; }
+            .gb-settings-shell, .gb-settings-layout { display: block !important; }
+        }
     </style>
 </head>
 <body>
 
 <div class="gb-app">
-    <nav class="gb-sidebar">
+    <header class="gb-mobile-bar">
+        <button type="button" class="gb-menu-btn" id="gb-menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="gb-sidebar">
+            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+        </button>
+        <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" alt="Green Broom">
+        <span class="gb-mobile-title"><?php echo esc_html(str_replace('-', ' ', $tab === 'overview' ? 'Dashboard' : $tab)); ?></span>
+    </header>
+    <div class="gb-sidebar-backdrop" id="gb-sidebar-backdrop" hidden></div>
+
+    <nav class="gb-sidebar" id="gb-sidebar">
         <div class="gb-brand">
             <div class="gb-logo-wrapper">
                 <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" alt="Green Broom" class="gb-logo-img">
@@ -868,6 +964,36 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         </style>
     </main>
 </div>
+
+<script>
+(function () {
+    var btn = document.getElementById('gb-menu-btn');
+    var sidebar = document.getElementById('gb-sidebar');
+    var backdrop = document.getElementById('gb-sidebar-backdrop');
+    if (!btn || !sidebar || !backdrop) { return; }
+
+    function setOpen(open) {
+        sidebar.classList.toggle('is-open', open);
+        backdrop.classList.toggle('is-open', open);
+        backdrop.hidden = !open;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+        document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    btn.addEventListener('click', function () {
+        setOpen(!sidebar.classList.contains('is-open'));
+    });
+    backdrop.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('is-open')) { setOpen(false); btn.focus(); }
+    });
+    // Leaving mobile width with the drawer open would otherwise lock scrolling.
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 1024 && sidebar.classList.contains('is-open')) { setOpen(false); }
+    });
+})();
+</script>
 
 <?php wp_footer(); ?>
 </body>
