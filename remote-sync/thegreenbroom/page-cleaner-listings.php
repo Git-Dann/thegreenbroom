@@ -83,6 +83,53 @@ $listings_link_1 = get_post_meta(get_the_ID(), '_gb_listings_link_1', true) ?: '
 $listings_btn_2  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_2', true));
 $listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '/how-it-works';
 
+/*
+ * Sales sections below the results. Paid traffic that does not search straight
+ * away still needs the case made, so the page carries the pitch itself rather
+ * than relying on the visitor going off to read other pages. Every string is
+ * editable; a blank heading hides its whole section.
+ */
+$gb_l = function ($key, $default = '') {
+    $value = trim((string) get_post_meta(get_the_ID(), $key, true));
+    return $value === '' ? $default : $value;
+};
+
+$hiw_head = $gb_l('_gb_listings_hiw_head', 'Booking a cleaner takes two minutes');
+$hiw_steps = array();
+$hiw_defaults = array(
+    array('Search your postcode', 'See the verified cleaners who cover your street, with their hourly rate shown up front.'),
+    array('Choose your cleaner', 'Read their profile, their checks and their reviews, then pick the day and time that suits you.'),
+    array('Sit back', 'They arrive with plant-based products. You pay securely online \u2014 no cash, no contracts, no awkwardness.'),
+);
+foreach ($hiw_defaults as $i => $d) {
+    $n = $i + 1;
+    $hiw_steps[] = array(
+        'title' => $gb_l("_gb_listings_hiw_{$n}_title", $d[0]),
+        'text'  => $gb_l("_gb_listings_hiw_{$n}_text", $d[1]),
+    );
+}
+
+$why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom');
+$why_cards = array();
+$why_defaults = array(
+    array('Properly vetted', 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.'),
+    array('Genuinely eco', 'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.'),
+    array('Fair to cleaners', 'Independent local cleaners set their own rates and keep the bulk of what you pay. Better paid people do better work.'),
+    array('No contracts', 'Book a one-off clean or a regular slot. Change it or cancel it whenever you need to.'),
+);
+foreach ($why_defaults as $i => $d) {
+    $n = $i + 1;
+    $why_cards[] = array(
+        'title' => $gb_l("_gb_listings_why_{$n}_title", $d[0]),
+        'text'  => $gb_l("_gb_listings_why_{$n}_text", $d[1]),
+    );
+}
+
+$lcta_title = $gb_l('_gb_listings_cta_title', 'Ready for a cleaner home?');
+$lcta_sub   = $gb_l('_gb_listings_cta_sub', 'Find a verified, eco-friendly cleaner covering your postcode today.');
+$lcta_btn   = $gb_l('_gb_listings_cta_btn', 'Search cleaners near you');
+$lcta_link  = $gb_l('_gb_listings_cta_link', '#gb-dir-search-head');
+
 $verified_link  = get_post_meta(get_the_ID(), '_gb_listings_verified_link', true) ?: 'What does Verified mean?';
 $verified_title = get_post_meta(get_the_ID(), '_gb_listings_verified_title', true) ?: 'What does Verified mean?';
 $verified_body  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_verified_body', true));
@@ -154,6 +201,37 @@ if ($verified_body === '') {
     .gb-dir-search-head { margin:0 0 22px; color:#1b5e20; font-size:1.6rem; font-weight:800; }
 
     .gb-verified-cue { margin:20px 0 0; padding-bottom:34px; }
+
+    /* SALES SECTIONS */
+    .gb-sell { padding:74px 20px; }
+    .gb-sell-inner { max-width:1120px; margin:0 auto; }
+    .gb-sell-head { text-align:center; margin:0 0 46px; color:#1b5e20; font-size:clamp(1.7rem, 3.2vw, 2.3rem); font-weight:800; letter-spacing:-.5px; }
+    .gb-sell-steps { background:#fff; }
+    .gb-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:34px; counter-reset:none; }
+    .gb-step { text-align:center; padding:0 10px; }
+    .gb-step-num { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; margin-bottom:18px; border-radius:50%; background:#1b5e20; color:#fff; font-size:1.25rem; font-weight:800; }
+    .gb-step h3 { margin:0 0 10px; color:#0f172a; font-size:1.18rem; font-weight:800; }
+    .gb-step p { margin:0; color:#64748b; line-height:1.65; font-size:.98rem; }
+
+    .gb-sell-why { background:#f0f7f1; }
+    .gb-why-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:22px; }
+    .gb-why-card { background:#fff; border:1px solid #dcefdf; border-radius:14px; padding:28px 24px; box-shadow:0 8px 22px rgba(15,23,42,.04); }
+    .gb-why-tick { display:block; position:relative; width:42px; height:42px; margin-bottom:16px; border-radius:11px; background:#e8f5e9; }
+    .gb-why-tick::before { content:""; position:absolute; left:15px; top:12px; width:8px; height:15px; border:solid #2e7d32; border-width:0 3px 3px 0; transform:rotate(45deg); }
+    .gb-why-card h3 { margin:0 0 9px; color:#1b5e20; font-size:1.08rem; font-weight:800; }
+    .gb-why-card p { margin:0; color:#64748b; line-height:1.6; font-size:.94rem; }
+
+    .gb-sell-cta { background:#fff; padding-bottom:90px; }
+    .gb-cta-box { background:#1b5e20; color:#fff; border-radius:22px; padding:64px 36px; text-align:center; box-shadow:0 22px 44px -12px rgba(27,94,32,.35); }
+    .gb-cta-box h2 { margin:0 0 14px; color:#fff; font-size:clamp(1.7rem, 3.2vw, 2.3rem); font-weight:800; }
+    .gb-cta-box p { margin:0 auto 32px; max-width:560px; color:rgba(255,255,255,.92); line-height:1.65; }
+
+    @media (max-width:760px) {
+        .gb-sell { padding:52px 18px; }
+        .gb-sell-head { margin-bottom:34px; }
+        .gb-steps { gap:30px; }
+        .gb-cta-box { padding:44px 22px; border-radius:16px; }
+    }
     .gb-verified-trigger { background:none; border:0; padding:0; color:#2e7d32; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-family:inherit; }
     .gb-verified-trigger:hover { color:#1b5e20; }
     .gb-verified-trigger:focus-visible { outline:2px solid #2e7d32; outline-offset:3px; border-radius:3px; }
@@ -403,6 +481,54 @@ if ($verified_body === '') {
         <?php echo paginate_links(array('total' => $cleaners->max_num_pages, 'current' => $paged, 'prev_text' => '←', 'next_text' => '→')); ?>
     </div>
     </div>
+
+    <?php if ($hiw_head !== ''): ?>
+    <section class="gb-sell gb-sell-steps">
+        <div class="gb-sell-inner">
+            <h2 class="gb-sell-head"><?php echo esc_html($hiw_head); ?></h2>
+            <ol class="gb-steps">
+                <?php foreach ($hiw_steps as $i => $step): if ($step['title'] === '') { continue; } ?>
+                    <li class="gb-step">
+                        <span class="gb-step-num" aria-hidden="true"><?php echo (int) ($i + 1); ?></span>
+                        <h3><?php echo esc_html($step['title']); ?></h3>
+                        <p><?php echo esc_html($step['text']); ?></p>
+                    </li>
+                <?php endforeach; ?>
+            </ol>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($why_head !== ''): ?>
+    <section class="gb-sell gb-sell-why">
+        <div class="gb-sell-inner">
+            <h2 class="gb-sell-head"><?php echo esc_html($why_head); ?></h2>
+            <div class="gb-why-grid">
+                <?php foreach ($why_cards as $card): if ($card['title'] === '') { continue; } ?>
+                    <article class="gb-why-card">
+                        <span class="gb-why-tick" aria-hidden="true"></span>
+                        <h3><?php echo esc_html($card['title']); ?></h3>
+                        <p><?php echo esc_html($card['text']); ?></p>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <?php if ($lcta_title !== ''): ?>
+    <section class="gb-sell gb-sell-cta">
+        <div class="gb-sell-inner">
+            <div class="gb-cta-box">
+                <h2><?php echo esc_html($lcta_title); ?></h2>
+                <?php if ($lcta_sub !== ''): ?><p><?php echo esc_html($lcta_sub); ?></p><?php endif; ?>
+                <?php if ($lcta_btn !== ''): ?>
+                    <a class="gb-dir-btn gb-dir-btn-primary" href="<?php echo esc_url($lcta_link); ?>"><?php echo esc_html($lcta_btn); ?></a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
 </main>
 
 <script>

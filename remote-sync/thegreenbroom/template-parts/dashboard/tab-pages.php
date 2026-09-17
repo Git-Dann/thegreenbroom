@@ -242,6 +242,12 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_link_1' => '#gb-dir-search-head',
             '_gb_listings_btn_2'  => '',
             '_gb_listings_link_2' => '/how-it-works',
+            '_gb_listings_hiw_head'     => 'Booking a cleaner takes two minutes',
+            '_gb_listings_why_head'     => 'Why book through The Green Broom',
+            '_gb_listings_cta_title'    => 'Ready for a cleaner home?',
+            '_gb_listings_cta_sub'      => 'Find a verified, eco-friendly cleaner covering your postcode today.',
+            '_gb_listings_cta_btn'      => 'Search cleaners near you',
+            '_gb_listings_cta_link'     => '#gb-dir-search-head',
         ];
     } elseif ($slug === 'join') {
         $gb_page_defaults = [
@@ -754,6 +760,41 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                             </div>
                             <div class="gb-form-row"><label class="gb-label">Heading above the search box</label><input type="text" name="_gb_listings_search_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_search_head')); ?>"></div>
                             <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;How it works&rdquo; steps</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">Three steps shown below the results. Clear the heading to hide the whole section.</p>
+                                <div class="gb-form-row"><label class="gb-label">Section heading</label><input type="text" name="_gb_listings_hiw_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_hiw_head')); ?>"></div>
+                                <?php for ($gb_n = 1; $gb_n <= 3; $gb_n++): ?>
+                                    <div class="gb-link-row">
+                                        <div class="gb-form-row"><label class="gb-label">Step <?php echo $gb_n; ?> title</label><input type="text" name="_gb_listings_hiw_<?php echo $gb_n; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_hiw_' . $gb_n . '_title')); ?>"></div>
+                                        <div class="gb-form-row"><label class="gb-label">Step <?php echo $gb_n; ?> text</label><input type="text" name="_gb_listings_hiw_<?php echo $gb_n; ?>_text" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_hiw_' . $gb_n . '_text')); ?>"></div>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+
+                            <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;Why book with us&rdquo; cards</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">Four benefit cards. Clear a card&rsquo;s title to hide that card, or the heading to hide the section.</p>
+                                <div class="gb-form-row"><label class="gb-label">Section heading</label><input type="text" name="_gb_listings_why_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_why_head')); ?>"></div>
+                                <?php for ($gb_n = 1; $gb_n <= 4; $gb_n++): ?>
+                                    <div class="gb-link-row">
+                                        <div class="gb-form-row"><label class="gb-label">Card <?php echo $gb_n; ?> title</label><input type="text" name="_gb_listings_why_<?php echo $gb_n; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_why_' . $gb_n . '_title')); ?>"></div>
+                                        <div class="gb-form-row"><label class="gb-label">Card <?php echo $gb_n; ?> text</label><input type="text" name="_gb_listings_why_<?php echo $gb_n; ?>_text" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_why_' . $gb_n . '_text')); ?>"></div>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+
+                            <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Closing call to action</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">The green banner at the bottom of the page. Clear the heading to hide it.</p>
+                                <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_listings_cta_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_cta_title')); ?>"></div>
+                                <div class="gb-form-row"><label class="gb-label">Supporting line</label><input type="text" name="_gb_listings_cta_sub" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_cta_sub')); ?>"></div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Button text</label><input type="text" name="_gb_listings_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_cta_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Button link</label><input type="text" name="_gb_listings_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_cta_link')); ?>"></div>
+                                </div>
+                            </div>
+
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;What does Verified mean?&rdquo; pop-up</h4>
                                 <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">The link shown under the search box, and the explanation it opens.</p>
