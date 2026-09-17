@@ -1258,25 +1258,66 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
         }
     }
 
+    // 'public' marks the checks a customer actually weighs when deciding to let
+    // someone into their home. Address/phone/terms are internal vetting admin —
+    // they matter to the manager, not to a booker, so they stay off the profile.
+    $svg = function ( $paths ) {
+        return '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $paths . '</svg>';
+    };
+
     $badges = array(
-        array( 'label' => 'DBS Checked',        'icon' => '🛡️', 'done' => $verified, 'note' => 'Background check completed before approval' ),
-        array( 'label' => 'ID Verified',        'icon' => '🪪', 'done' => $verified, 'note' => 'Government photo ID confirmed' ),
-        array( 'label' => 'Address Confirmed',  'icon' => '🏠', 'done' => $verified, 'note' => 'Proof of address confirmed' ),
-        array( 'label' => 'References Checked', 'icon' => '📇', 'done' => $refs_ok,  'note' => 'Two references supplied and checked' ),
-        array( 'label' => 'Phone Verified',     'icon' => '📱', 'done' => (bool) get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ), 'note' => 'Contact number on file' ),
-        array( 'label' => 'Terms Signed',       'icon' => '✍️', 'done' => get_post_meta( $cleaner_id, '_gb_toa_signed', true ) === '1', 'note' => 'Signed the Terms of Association' ),
+        array(
+            'label' => 'DBS Checked', 'done' => $verified, 'public' => true,
+            'note'  => 'Enhanced DBS background check completed before this profile went live',
+            'svg'   => $svg( '<path d="M12 3l7 3v5.5c0 4.2-2.9 7.8-7 8.9-4.1-1.1-7-4.7-7-8.9V6l7-3z"/><path d="M9 12.2l2.1 2.1L15.2 10"/>' ),
+        ),
+        array(
+            'label' => 'ID Verified', 'done' => $verified, 'public' => true,
+            'note'  => 'Government photo ID checked against this person',
+            'svg'   => $svg( '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6 16.2c.5-1.4 1.7-2.1 3-2.1s2.5.7 3 2.1"/><path d="M15 10.5h4M15 13.5h4"/>' ),
+        ),
+        array(
+            'label' => 'References Checked', 'done' => $refs_ok, 'public' => true,
+            'note'  => 'Two independent references supplied and checked',
+            'svg'   => $svg( '<circle cx="9" cy="9" r="3"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6S13.9 16 14.5 19"/><path d="M16 6.6a3 3 0 0 1 0 5.5"/><path d="M17.6 14.7c1.9.6 3 2 3.4 4.3"/>' ),
+        ),
+        // Internal vetting — deliberately not shown on the public profile.
+        array( 'label' => 'Address Confirmed', 'done' => $verified, 'public' => false, 'note' => 'Proof of address confirmed', 'svg' => $svg( '<path d="M4 10.5L12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5z"/>' ) ),
+        array( 'label' => 'Phone Verified', 'done' => (bool) get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ), 'public' => false, 'note' => 'Contact number on file', 'svg' => $svg( '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/>' ) ),
+        array( 'label' => 'Terms Signed', 'done' => get_post_meta( $cleaner_id, '_gb_toa_signed', true ) === '1', 'public' => false, 'note' => 'Signed the Terms of Association', 'svg' => $svg( '<path d="M4 18.5c3-1 4-6 6.5-6s1.5 4 4 4 3-3 5.5-3"/>' ) ),
     );
 
     // Insurance is provided at platform level when configured that way.
     $settings_id = gb_get_site_settings_id();
     $insurance   = $settings_id ? get_post_meta( $settings_id, '_gb_require_insurance', true ) : '';
-    if ( $insurance === 'provided' ) {
-        $badges[] = array( 'label' => 'Insured', 'icon' => '☂️', 'done' => $verified, 'note' => 'Covered by The Green Broom insurance' );
-    } elseif ( $insurance === 'yes' ) {
-        $badges[] = array( 'label' => 'Insured', 'icon' => '☂️', 'done' => $verified, 'note' => 'Proof of insurance provided' );
+    if ( $insurance === 'provided' || $insurance === 'yes' ) {
+        $badges[] = array(
+            'label' => 'Insured', 'done' => $verified, 'public' => true,
+            'note'  => $insurance === 'provided'
+                ? 'Covered by The Green Broom’s insurance policy'
+                : 'Proof of insurance provided',
+            'svg'   => $svg( '<path d="M12 3.6c-4.3 0-7.8 3.3-7.8 7.4h15.6c0-4.1-3.5-7.4-7.8-7.4z"/><path d="M12 11v6.3a2.1 2.1 0 0 0 4.2 0"/>' ),
+        );
     }
 
     return $badges;
+}
+
+/**
+ * Only the completed, customer-relevant checks — what a booker sees.
+ *
+ * Incomplete checks are omitted rather than shown greyed out: a public profile
+ * should display earned trust signals, not advertise gaps.
+ */
+function gb_get_public_cleaner_badges( $cleaner_id ) {
+    $public = array();
+    foreach ( gb_get_cleaner_verification_badges( $cleaner_id ) as $badge ) {
+        if ( ! empty( $badge['public'] ) && ! empty( $badge['done'] ) ) {
+            $public[] = $badge;
+        }
+    }
+
+    return $public;
 }
 
 function gb_get_email_settings() {

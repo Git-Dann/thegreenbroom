@@ -8,8 +8,10 @@ $verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
 $location     = get_post_meta($cleaner_id, 'location', true);
 $member_since = get_the_date('Y', $cleaner_id);
 
-$rating  = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0, 'rated' => 0, 'total' => 0];
-$badges  = function_exists('gb_get_cleaner_verification_badges') ? gb_get_cleaner_verification_badges($cleaner_id) : [];
+$rating = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0, 'rated' => 0, 'total' => 0];
+
+// Only completed, customer-relevant checks reach the public profile.
+$public_badges = function_exists('gb_get_public_cleaner_badges') ? gb_get_public_cleaner_badges($cleaner_id) : [];
 
 // Bio: capture once so the fallback can't print after the real content.
 $bio_raw = trim(get_the_content());
@@ -75,15 +77,29 @@ $gb_services = get_posts([
     .gb-bio-text { line-height: 1.75; color: #334155; font-size: 15.5px; }
     .gb-bio-text p { margin: 0 0 14px; }
 
-    /* ---------- VERIFIED CHECKS ---------- */
-    .gb-checks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-    .gb-check {
-        display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 11px;
-        border: 1px solid #dcfce7; background: #f2fdf5; font-size: 13.5px; font-weight: 700; color: #166534;
+    /* ---------- VERIFIED CHECKS (sidebar icons + tooltip) ---------- */
+    .gb-verify { margin-top: 22px; padding-top: 20px; border-top: 1px solid #e8ecf1; }
+    .gb-verify-head { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; text-align: center; }
+    .gb-verify-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .gb-verify-chip {
+        width: 44px; height: 44px; border-radius: 12px; background: #f2fdf5; border: 1px solid #dcfce7;
+        color: #1b7a33; display: inline-flex; align-items: center; justify-content: center;
+        position: relative; cursor: help; outline: none; transition: background .15s, border-color .15s;
     }
-    .gb-check.is-pending { border-color: #e6e9ee; background: #f8fafc; color: #94a3b8; font-weight: 600; }
-    .gb-check .gb-check-ico { font-size: 17px; line-height: 1; flex-shrink: 0; }
-    .gb-check .gb-check-tick { margin-left: auto; font-weight: 900; }
+    .gb-verify-chip:hover, .gb-verify-chip:focus-visible { background: #e4f8ea; border-color: #bbe9c6; }
+    /* Tooltip */
+    .gb-verify-chip::after {
+        content: attr(data-tip); position: absolute; bottom: calc(100% + 9px); left: 50%; transform: translateX(-50%);
+        background: #0f172a; color: #fff; font-size: 11.5px; font-weight: 700; letter-spacing: .2px;
+        padding: 6px 10px; border-radius: 7px; white-space: nowrap; opacity: 0; pointer-events: none;
+        transition: opacity .15s; z-index: 5;
+    }
+    .gb-verify-chip::before {
+        content: ""; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+        border: 5px solid transparent; border-top-color: #0f172a; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 5;
+    }
+    .gb-verify-chip:hover::after, .gb-verify-chip:focus-visible::after,
+    .gb-verify-chip:hover::before, .gb-verify-chip:focus-visible::before { opacity: 1; }
 
     /* ---------- SERVICES ---------- */
     .gb-services-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 11px; }
@@ -189,24 +205,6 @@ $gb_services = get_posts([
                 </div>
             </div>
 
-            <?php if (!empty($badges)): ?>
-            <div class="gb-block">
-                <h2 class="gb-section-title">Verified Checks</h2>
-                <div class="gb-checks-grid">
-                    <?php foreach ($badges as $badge): ?>
-                        <div class="gb-check <?php echo $badge['done'] ? '' : 'is-pending'; ?>" title="<?php echo esc_attr($badge['note']); ?>">
-                            <span class="gb-check-ico"><?php echo $badge['icon']; ?></span>
-                            <span><?php echo esc_html($badge['label']); ?></span>
-                            <span class="gb-check-tick"><?php echo $badge['done'] ? '✓' : '—'; ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <p style="margin:12px 0 0; color:#94a3b8; font-size:12.5px; line-height:1.6;">
-                    Identity, address and DBS documents are checked before a profile goes live, then permanently deleted for data protection.
-                </p>
-            </div>
-            <?php endif; ?>
-
             <?php if (!empty($gb_services)): ?>
             <div class="gb-block">
                 <h2 class="gb-section-title">Services Available</h2>
@@ -306,10 +304,22 @@ $gb_services = get_posts([
                 <a href="<?php echo esc_url(home_url('/book?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
                 <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 
+                <?php if (!empty($public_badges)): ?>
+                <div class="gb-verify">
+                    <div class="gb-verify-head">Verified</div>
+                    <div class="gb-verify-row">
+                        <?php foreach ($public_badges as $badge): ?>
+                            <span class="gb-verify-chip" tabindex="0" role="img"
+                                  aria-label="<?php echo esc_attr($badge['label'] . ': ' . $badge['note']); ?>"
+                                  data-tip="<?php echo esc_attr($badge['label']); ?>">
+                                <?php echo $badge['svg']; ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <ul class="gb-trust-list">
-                    <?php if ($verified): ?>
-                        <li><span>✓</span> ID, address and DBS checked before approval</li>
-                    <?php endif; ?>
                     <li><span>✓</span> Eco-friendly products as standard</li>
                     <li><span>✓</span> Secure payment through the platform</li>
                     <li><span>✓</span> Support team on hand if anything goes wrong</li>
