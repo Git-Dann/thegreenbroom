@@ -1,178 +1,319 @@
 <?php
 /* Template Name: Cleaner Profile (Single) */
-get_header(); 
+get_header();
 
-$cleaner_id = get_the_ID();
-$rate       = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
-$verified   = get_post_meta($cleaner_id, 'is_verified', true);
-$location   = get_post_meta($cleaner_id, 'location', true) ?: 'Manchester, UK';
-$review_count = get_comments_number($cleaner_id);
+$cleaner_id   = get_the_ID();
+$rate         = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
+$verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
+$location     = get_post_meta($cleaner_id, 'location', true);
+$member_since = get_the_date('Y', $cleaner_id);
+
+$rating  = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0, 'rated' => 0, 'total' => 0];
+$badges  = function_exists('gb_get_cleaner_verification_badges') ? gb_get_cleaner_verification_badges($cleaner_id) : [];
+
+// Bio: capture once so the fallback can't print after the real content.
+$bio_raw = trim(get_the_content());
+
+// Real service catalogue rather than a hard-coded list that is the same for
+// every cleaner.
+$gb_services = get_posts([
+    'post_type'      => 'gb_service',
+    'post_status'    => 'publish',
+    'posts_per_page' => 8,
+    'orderby'        => 'menu_order title',
+    'order'          => 'ASC',
+]);
 ?>
 
 <style>
-    /* PAGE LAYOUT - Updated to Brand Green */
-    .gb-profile-header { background: #2e7d32; color: white; padding: 80px 20px 100px; text-align: center; position: relative; }
-    .gb-profile-avatar { width: 140px; height: 140px; border-radius: 50%; border: 4px solid white; object-fit: cover; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); background: #fff; }
-    
-    /* Name - Forced White */
-    .gb-profile-name { font-size: 36px; font-weight: 800; margin: 0; color: #ffffff !important; }
-    
-    /* Verified Badge - White Pill for contrast */
-    .gb-verified-badge { 
-        background: #ffffff; 
-        color: #2e7d32; 
-        padding: 8px 16px; 
-        border-radius: 20px; 
-        font-size: 13px; 
-        font-weight: 700; 
-        text-transform: uppercase; 
-        display: inline-flex; 
-        align-items: center; 
-        gap: 6px; 
-        margin-top: 15px; 
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    /* ---------- HERO ---------- */
+    /* Centring is forced explicitly here: the avatar and badge were rendering
+       hard-left because text-align alone doesn't centre a block-level image,
+       and a flex ancestor would ignore it too. display:block + margin auto
+       centres in normal flow, align-self covers the flex case, and float:none
+       guards against any inherited float. */
+    .gb-profile-header {
+        background: linear-gradient(160deg, #2e7d32 0%, #1b5e20 100%);
+        color: #fff; padding: 64px 20px 110px; text-align: center; position: relative;
+        display: block;
+    }
+    .gb-profile-avatar {
+        width: 132px; height: 132px; border-radius: 50%; border: 5px solid rgba(255,255,255,0.9);
+        object-fit: cover; box-shadow: 0 14px 34px rgba(0,0,0,0.22); background: #fff;
+        display: block; margin-left: auto; margin-right: auto; margin-bottom: 18px;
+        float: none; align-self: center;
+    }
+    .gb-profile-header > * { margin-left: auto; margin-right: auto; }
+    .gb-profile-name { font-size: clamp(26px, 4vw, 36px); font-weight: 800; margin: 0; color: #fff !important; letter-spacing: -0.5px; }
+    .gb-verified-badge {
+        background: #fff; color: #1b5e20; padding: 7px 15px; border-radius: 999px; font-size: 12px;
+        font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px;
+        margin-top: 14px; letter-spacing: 0.6px; box-shadow: 0 6px 16px rgba(0,0,0,0.14);
     }
     .gb-verified-badge img { height: 14px; width: auto; }
-    
-    .gb-profile-container { max-width: 1000px; margin: -60px auto 60px; padding: 0 20px; position: relative; z-index: 10; }
-    .gb-profile-card { background: white; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; display: grid; grid-template-columns: 2fr 1fr; }
-    
-    /* CONTENT & SIDEBAR */
-    .gb-profile-content { padding: 50px; }
-    .gb-profile-sidebar { background: #f8fafc; padding: 50px 30px; border-left: 1px solid #e2e8f0; text-align: center; }
-    .gb-section-title { font-size: 18px; font-weight: 800; color: #1d1d1f; margin: 0 0 20px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .gb-bio-text { line-height: 1.8; color: #334155; font-size: 16px; margin-bottom: 40px; }
-    
-    /* SERVICES LIST - Green Checks */
-    .gb-services-list { list-style: none; padding: 0; margin: 0 0 40px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .gb-services-list li { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #475569; font-weight: 500; }
-    .gb-check-icon { color: #2e7d32; font-weight: bold; }
 
-    /* REVIEWS STYLING */
-    .gb-review-card { background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #f1f5f9; position: relative; text-align: left; }
-    .gb-rev-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .gb-rev-author { font-weight: 700; color: #1d1d1f; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-    .gb-rev-verified { background: #dcfce7; color: #166534; font-size: 10px; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-    .gb-rev-date { font-size: 12px; color: #94a3b8; }
-    .gb-rev-body { font-size: 14px; color: #475569; line-height: 1.6; font-style: italic; }
-    .gb-star-row { color: #fbbf24; font-size: 12px; margin-bottom: 8px; display: block; text-align: left; }
+    /* Meta strip under the name */
+    .gb-hero-meta {
+        margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px 26px;
+        justify-content: center; align-items: center; color: rgba(255,255,255,0.92); font-size: 14px; font-weight: 600;
+    }
+    .gb-hero-meta span.gb-hero-item { display: inline-flex; align-items: center; gap: 7px; }
 
-    /* BUTTONS - Brand Green */
-    .gb-price-tag { font-size: 42px; font-weight: 800; color: #1d1d1f; display: block; line-height: 1; }
-    .gb-price-sub { font-size: 14px; color: #64748b; margin-bottom: 30px; display: block; font-weight: 500; }
-    .gb-btn-book { display: block; width: 100%; background: #2e7d32; color: white; padding: 18px; border-radius: 10px; font-weight: 700; text-decoration: none; transition: 0.2s; box-shadow: 0 4px 15px rgba(46, 125, 50, 0.2); font-size: 16px; margin-bottom: 15px; border:none; cursor: pointer; }
-    .gb-btn-book:hover { background: #1b5e20; transform: translateY(-2px); }
-    .gb-btn-msg { display: block; width: 100%; background: white; color: #1d1d1f; border: 2px solid #e2e8f0; padding: 16px; border-radius: 10px; font-weight: 700; text-decoration: none; transition: 0.2s; font-size: 15px; box-sizing: border-box; cursor: pointer; }
+    /* ---------- LAYOUT ---------- */
+    .gb-profile-container { max-width: 1060px; margin: -70px auto 70px; padding: 0 20px; position: relative; z-index: 10; }
+    .gb-profile-card {
+        background: #fff; border-radius: 18px; box-shadow: 0 18px 44px rgba(15,23,42,0.08);
+        border: 1px solid #e8ecf1; display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); overflow: hidden;
+    }
+    .gb-profile-content { padding: 44px; min-width: 0; }
+    .gb-profile-sidebar { background: #f7f9fb; padding: 36px 28px; border-left: 1px solid #e8ecf1; }
+    .gb-section-title {
+        font-size: 12px; font-weight: 800; color: #64748b; margin: 0 0 16px;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .gb-block { margin-bottom: 40px; }
+    .gb-bio-text { line-height: 1.75; color: #334155; font-size: 15.5px; }
+    .gb-bio-text p { margin: 0 0 14px; }
+
+    /* ---------- VERIFIED CHECKS ---------- */
+    .gb-checks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+    .gb-check {
+        display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 11px;
+        border: 1px solid #dcfce7; background: #f2fdf5; font-size: 13.5px; font-weight: 700; color: #166534;
+    }
+    .gb-check.is-pending { border-color: #e6e9ee; background: #f8fafc; color: #94a3b8; font-weight: 600; }
+    .gb-check .gb-check-ico { font-size: 17px; line-height: 1; flex-shrink: 0; }
+    .gb-check .gb-check-tick { margin-left: auto; font-weight: 900; }
+
+    /* ---------- SERVICES ---------- */
+    .gb-services-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 11px; }
+    .gb-services-list li { display: flex; align-items: center; gap: 9px; font-size: 14.5px; color: #475569; font-weight: 500; }
+    .gb-check-icon { color: #2e7d32; font-weight: 900; }
+
+    /* ---------- REVIEWS ---------- */
+    .gb-rating-summary {
+        display: flex; align-items: center; gap: 22px; padding: 20px 22px; border: 1px solid #e8ecf1;
+        border-radius: 14px; background: #fbfcfd; margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .gb-rating-score { font-size: 42px; font-weight: 800; color: #0f172a; line-height: 1; }
+    .gb-rating-meta { color: #64748b; font-size: 13.5px; margin-top: 5px; }
+    .gb-review-card { background: #fff; border-radius: 13px; padding: 20px; margin-bottom: 14px; border: 1px solid #e8ecf1; text-align: left; }
+    .gb-rev-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 9px; flex-wrap: wrap; }
+    .gb-rev-author { font-weight: 800; color: #0f172a; font-size: 14.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .gb-rev-verified { background: #dcfce7; color: #166534; font-size: 10px; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.4px; }
+    .gb-rev-date { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    .gb-rev-body { font-size: 14.5px; color: #475569; line-height: 1.7; margin-top: 8px; }
+    .gb-rev-body p { margin: 0; }
+
+    /* Star picker on the review form */
+    .gb-star-pick { display: inline-flex; flex-direction: row-reverse; gap: 4px; }
+    .gb-star-pick input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .gb-star-pick label { font-size: 26px; color: #d7dbe0; cursor: pointer; line-height: 1; transition: color .12s; }
+    .gb-star-pick input:checked ~ label,
+    .gb-star-pick label:hover, .gb-star-pick label:hover ~ label { color: #f59e0b; }
+
+    /* ---------- SIDEBAR ---------- */
+    .gb-price-box { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e8ecf1; margin-bottom: 20px; }
+    .gb-price-tag { font-size: 40px; font-weight: 800; color: #0f172a; display: block; line-height: 1; }
+    .gb-price-sub { font-size: 13.5px; color: #64748b; display: block; font-weight: 500; margin-top: 6px; }
+    .gb-btn-book { display: block; width: 100%; background: #2e7d32; color: #fff; padding: 16px; border-radius: 10px; font-weight: 700; text-decoration: none; text-align: center; transition: .2s; box-shadow: 0 6px 16px rgba(46,125,50,.22); font-size: 15.5px; margin-bottom: 11px; border: none; cursor: pointer; box-sizing: border-box; }
+    .gb-btn-book:hover { background: #1b5e20; }
+    .gb-btn-msg { display: block; width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #dfe5ec; padding: 14px; border-radius: 10px; font-weight: 700; text-decoration: none; text-align: center; transition: .2s; font-size: 14.5px; box-sizing: border-box; cursor: pointer; }
     .gb-btn-msg:hover { border-color: #cbd5e1; background: #f1f5f9; }
+    .gb-trust-list { list-style: none; padding: 0; margin: 22px 0 0; }
+    .gb-trust-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: #64748b; margin-bottom: 10px; line-height: 1.5; }
+    .gb-trust-list li span { color: #2e7d32; font-weight: 900; flex-shrink: 0; }
 
-    /* MODAL */
-    .gb-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .gb-modal-content { background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 450px; position: relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideUp 0.3s ease; text-align: left; }
-    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .gb-close-modal { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #94a3b8; }
-    .gb-modal input, .gb-modal textarea { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; box-sizing: border-box; }
-    .gb-modal textarea { height: 120px; resize: none; }
+    /* ---------- MODAL ---------- */
+    .gb-modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
+    .gb-modal-content { background: #fff; padding: 36px; border-radius: 16px; width: 100%; max-width: 450px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25); text-align: left; max-height: 90vh; overflow-y: auto; }
+    .gb-close-modal { position: absolute; top: 14px; right: 18px; font-size: 24px; cursor: pointer; color: #94a3b8; }
+    .gb-modal input, .gb-modal textarea { width: 100%; padding: 12px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; box-sizing: border-box; }
+    .gb-modal textarea { height: 120px; resize: vertical; }
     .gb-modal label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #334155; }
 
-    @media (max-width: 800px) { .gb-profile-card { grid-template-columns: 1fr; } .gb-profile-sidebar { border-left: none; border-top: 1px solid #e2e8f0; } }
+    @media (max-width: 860px) {
+        .gb-profile-card { grid-template-columns: 1fr; }
+        .gb-profile-sidebar { border-left: none; border-top: 1px solid #e8ecf1; }
+        .gb-profile-content { padding: 30px 22px; }
+        .gb-profile-header { padding: 48px 18px 96px; }
+    }
 </style>
 
 <div class="gb-profile-header">
-    <?php if(has_post_thumbnail()): ?>
+    <?php if (has_post_thumbnail()): ?>
         <?php the_post_thumbnail('medium', ['class' => 'gb-profile-avatar']); ?>
     <?php else: ?>
-        <img src="https://www.gravatar.com/avatar/?d=mp&s=150" class="gb-profile-avatar" alt="Cleaner Avatar">
+        <img src="https://www.gravatar.com/avatar/?d=mp&s=150" class="gb-profile-avatar" alt="">
     <?php endif; ?>
-    
+
     <h1 class="gb-profile-name"><?php the_title(); ?></h1>
-    <?php if($verified): ?>
-        <span class="gb-verified-badge">
-            <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png">
-            Verified Professional
-        </span>
+
+    <?php if ($verified): ?>
+        <div>
+            <span class="gb-verified-badge">
+                <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" alt="">
+                Verified Professional
+            </span>
+        </div>
     <?php endif; ?>
+
+    <div class="gb-hero-meta">
+        <?php if ($rating['rated'] > 0): ?>
+            <span class="gb-hero-item">
+                <?php echo gb_render_stars($rating['average'], 15); ?>
+                <strong><?php echo esc_html(number_format($rating['average'], 1)); ?></strong>
+                (<?php echo (int) $rating['rated']; ?>)
+            </span>
+        <?php endif; ?>
+        <span class="gb-hero-item">🗓️ Member since <?php echo esc_html($member_since); ?></span>
+        <?php if ($location): ?>
+            <span class="gb-hero-item">📍 <?php echo esc_html($location); ?></span>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="gb-profile-container">
     <div class="gb-profile-card">
-        
+
         <div class="gb-profile-content">
-            <h3 class="gb-section-title">About Me</h3>
-            <div class="gb-bio-text">
-                <?php the_content(); ?>
-                <?php if(empty(get_the_content())): ?>
-                    <p>I am a verified professional with The Green Broom. I specialize in eco-friendly cleaning and take pride in delivering a spotless home.</p>
-                <?php endif; ?>
+
+            <div class="gb-block">
+                <h2 class="gb-section-title">About</h2>
+                <div class="gb-bio-text">
+                    <?php if ($bio_raw !== ''): ?>
+                        <?php the_content(); ?>
+                    <?php else: ?>
+                        <p>A verified professional with The Green Broom, specialising in eco-friendly cleaning.</p>
+                    <?php endif; ?>
+                </div>
             </div>
 
-            <h3 class="gb-section-title">My Services</h3>
-            <ul class="gb-services-list">
-                <li><span class="gb-check-icon">✓</span> Standard Cleaning</li>
-                <li><span class="gb-check-icon">✓</span> Deep Cleaning</li>
-                <li><span class="gb-check-icon">✓</span> Move In/Out</li>
-                <li><span class="gb-check-icon">✓</span> Eco Supplies Included</li>
-            </ul>
-            
-            <p style="color:#64748b; margin:0 0 40px;">📍 Service Area: <strong><?php echo esc_html($location); ?></strong></p>
-            
-            <hr style="border:0; border-top:1px solid #e2e8f0; margin-bottom:40px;">
-
-            <h3 class="gb-section-title">Client Reviews (<?php echo $review_count; ?>)</h3>
-            
-            <div class="gb-reviews-list">
-                <?php 
-                $comments = get_comments(['post_id' => $cleaner_id, 'status' => 'approve']);
-                if ( $comments ) :
-                    foreach ( $comments as $comment ) : 
-                        $c_email = $comment->comment_author_email;
-                        $is_client = gb_is_verified_client($c_email, $cleaner_id); 
-                ?>
-                    <div class="gb-review-card">
-                        <div class="gb-rev-header">
-                            <div class="gb-rev-author">
-                                <?php echo get_comment_author($comment); ?>
-                                <?php if($is_client): ?>
-                                    <span class="gb-rev-verified" title="Booked with this cleaner">✓ Verified Client</span>
-                                <?php endif; ?>
-                            </div>
-                            <span class="gb-rev-date"><?php echo get_comment_date('M j, Y', $comment); ?></span>
+            <?php if (!empty($badges)): ?>
+            <div class="gb-block">
+                <h2 class="gb-section-title">Verified Checks</h2>
+                <div class="gb-checks-grid">
+                    <?php foreach ($badges as $badge): ?>
+                        <div class="gb-check <?php echo $badge['done'] ? '' : 'is-pending'; ?>" title="<?php echo esc_attr($badge['note']); ?>">
+                            <span class="gb-check-ico"><?php echo $badge['icon']; ?></span>
+                            <span><?php echo esc_html($badge['label']); ?></span>
+                            <span class="gb-check-tick"><?php echo $badge['done'] ? '✓' : '—'; ?></span>
                         </div>
-                        <span class="gb-star-row">★★★★★</span>
-                        <div class="gb-rev-body">"<?php echo get_comment_text($comment); ?>"</div>
-                    </div>
-                <?php endforeach; 
-                else : ?>
-                    <p style="color:#94a3b8; font-style:italic;">No reviews yet. Be the first to book!</p>
-                <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+                <p style="margin:12px 0 0; color:#94a3b8; font-size:12.5px; line-height:1.6;">
+                    Identity, address and DBS documents are checked before a profile goes live, then permanently deleted for data protection.
+                </p>
             </div>
+            <?php endif; ?>
 
-            <div style="margin-top:30px; text-align: left;">
-                <button onclick="document.getElementById('gb-review-form-wrap').style.display='block'; this.style.display='none';" class="gb-btn-msg" style="width:auto; display:inline-block; font-size:13px; padding:10px 20px;">+ Write a Review</button>
-                
-                <div id="gb-review-form-wrap" style="display:none; margin-top:20px; background:#f8fafc; padding:20px; border-radius:12px;">
-                    <?php comment_form([
-                        'title_reply' => '',
-                        'class_submit' => 'gb-btn-book',
-                        'label_submit' => 'Post Review',
-                        'comment_notes_after' => '',
-                        'comment_field' => '<p class="comment-form-comment"><label for="comment">Your Review</label><textarea id="comment" name="comment" cols="45" rows="4" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></textarea></p>'
-                    ]); ?>
+            <?php if (!empty($gb_services)): ?>
+            <div class="gb-block">
+                <h2 class="gb-section-title">Services Available</h2>
+                <ul class="gb-services-list">
+                    <?php foreach ($gb_services as $service): ?>
+                        <li><span class="gb-check-icon">✓</span> <?php echo esc_html(get_the_title($service)); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php endif; ?>
+
+            <div class="gb-block" style="margin-bottom:0;">
+                <h2 class="gb-section-title">Client Reviews<?php echo $rating['total'] ? ' (' . (int) $rating['total'] . ')' : ''; ?></h2>
+
+                <?php if ($rating['rated'] > 0): ?>
+                    <div class="gb-rating-summary">
+                        <div>
+                            <div class="gb-rating-score"><?php echo esc_html(number_format($rating['average'], 1)); ?></div>
+                        </div>
+                        <div>
+                            <?php echo gb_render_stars($rating['average'], 19); ?>
+                            <div class="gb-rating-meta">
+                                Based on <?php echo (int) $rating['rated']; ?> rated review<?php echo $rating['rated'] === 1 ? '' : 's'; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <div class="gb-reviews-list">
+                    <?php
+                    $comments = get_comments(['post_id' => $cleaner_id, 'status' => 'approve', 'type' => 'comment']);
+                    if ($comments) :
+                        foreach ($comments as $comment) :
+                            $c_email    = $comment->comment_author_email;
+                            $is_client  = function_exists('gb_is_verified_client') ? gb_is_verified_client($c_email, $cleaner_id) : false;
+                            $c_rating   = (int) get_comment_meta($comment->comment_ID, 'gb_rating', true);
+                    ?>
+                        <div class="gb-review-card">
+                            <div class="gb-rev-header">
+                                <div class="gb-rev-author">
+                                    <?php echo esc_html(get_comment_author($comment)); ?>
+                                    <?php if ($is_client): ?>
+                                        <span class="gb-rev-verified" title="Booked with this cleaner">✓ Verified Client</span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="gb-rev-date"><?php echo get_comment_date('j M Y', $comment); ?></span>
+                            </div>
+                            <?php if ($c_rating >= 1): ?>
+                                <?php echo gb_render_stars($c_rating, 14); ?>
+                            <?php endif; ?>
+                            <div class="gb-rev-body"><?php echo wpautop(esc_html($comment->comment_content)); ?></div>
+                        </div>
+                    <?php endforeach;
+                    else : ?>
+                        <p style="color:#94a3b8;">No reviews yet — be the first to book and leave one.</p>
+                    <?php endif; ?>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <button onclick="document.getElementById('gb-review-form-wrap').style.display='block'; this.style.display='none';" class="gb-btn-msg" style="width:auto; display:inline-block; font-size:13px; padding:10px 20px;">+ Write a Review</button>
+
+                    <div id="gb-review-form-wrap" style="display:none; margin-top:18px; background:#f7f9fb; padding:22px; border-radius:13px; border:1px solid #e8ecf1;">
+                        <?php
+                        $gb_star_field = '<p class="comment-form-rating" style="margin:0 0 16px;">'
+                            . '<label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#334155;">Your Rating</label>'
+                            . '<span class="gb-star-pick">';
+                        // Reversed order so the CSS sibling selector can fill stars to the left.
+                        for ($i = 5; $i >= 1; $i--) {
+                            $gb_star_field .= '<input type="radio" id="gb-star-' . $i . '" name="gb_rating" value="' . $i . '"' . ($i === 5 ? ' checked' : '') . '>'
+                                . '<label for="gb-star-' . $i . '" title="' . $i . ' star' . ($i === 1 ? '' : 's') . '">&#9733;</label>';
+                        }
+                        $gb_star_field .= '</span></p>';
+
+                        comment_form([
+                            'title_reply'         => '',
+                            'class_submit'        => 'gb-btn-book',
+                            'label_submit'        => 'Post Review',
+                            'comment_notes_after' => '',
+                            'comment_field'       => $gb_star_field
+                                . '<p class="comment-form-comment"><label for="comment" style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#334155;">Your Review</label>'
+                                . '<textarea id="comment" name="comment" cols="45" rows="4" required style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea></p>',
+                        ]);
+                        ?>
+                    </div>
                 </div>
             </div>
 
         </div>
 
         <div class="gb-profile-sidebar">
-            <span class="gb-price-tag">£<?php echo esc_html($rate); ?></span>
-            <span class="gb-price-sub">per hour</span>
-            
-            <a href="<?php echo home_url('/book?cleaner=' . $cleaner_id); ?>" class="gb-btn-book">Book Now</a>
-            
-            <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
-            
-            <div style="font-size:13px; color:#64748b; margin-top:15px; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <span class="dashicons dashicons-shield"></span> 100% Satisfaction Guaranteed
+            <div style="position: sticky; top: 24px;">
+                <div class="gb-price-box">
+                    <span class="gb-price-tag">£<?php echo esc_html($rate); ?></span>
+                    <span class="gb-price-sub">per hour</span>
+                </div>
+
+                <a href="<?php echo esc_url(home_url('/book?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
+
+                <ul class="gb-trust-list">
+                    <?php if ($verified): ?>
+                        <li><span>✓</span> ID, address and DBS checked before approval</li>
+                    <?php endif; ?>
+                    <li><span>✓</span> Eco-friendly products as standard</li>
+                    <li><span>✓</span> Secure payment through the platform</li>
+                    <li><span>✓</span> Support team on hand if anything goes wrong</li>
+                </ul>
             </div>
         </div>
 
@@ -184,26 +325,26 @@ $review_count = get_comments_number($cleaner_id);
         <span class="gb-close-modal" onclick="closeMsgModal()">&times;</span>
         <h3 style="margin-top:0; color:#0f172a;">Message <?php the_title(); ?></h3>
         <p style="color:#64748b; font-size:14px; margin-bottom:20px;">Ask a question before you book. We'll notify them immediately.</p>
-        
+
         <form id="gb-msg-form">
             <input type="hidden" name="action" value="gb_send_message">
-            <input type="hidden" name="cleaner_id" value="<?php echo $cleaner_id; ?>">
+            <input type="hidden" name="cleaner_id" value="<?php echo (int) $cleaner_id; ?>">
             <?php wp_nonce_field('gb_msg_nonce', 'security'); ?>
-            
+
             <div style="display:none;">
-                <input type="text" name="gb_honeypot" value="" autocomplete="off">
+                <input type="text" name="gb_honeypot" value="" autocomplete="off" tabindex="-1">
             </div>
 
             <label>Your Name</label>
             <input type="text" name="sender_name" required placeholder="e.g. John Smith">
-            
+
             <label>Your Email</label>
             <input type="email" name="sender_email" required placeholder="john@example.com">
-            
+
             <label>Message</label>
             <textarea name="message_body" required placeholder="Hi, do you bring your own vacuum?"></textarea>
-            
-            <button type="submit" class="gb-btn-book" style="margin-top:10px;">Send Message</button>
+
+            <button type="submit" class="gb-btn-book" style="margin-top:6px;">Send Message</button>
         </form>
         <div id="gb-msg-response" style="margin-top:15px; text-align:center; font-weight:600; font-size:14px;"></div>
     </div>
@@ -212,17 +353,17 @@ $review_count = get_comments_number($cleaner_id);
 <script>
     function openMsgModal() { document.getElementById('gb-msg-modal').style.display = 'flex'; }
     function closeMsgModal() { document.getElementById('gb-msg-modal').style.display = 'none'; }
-    
+
     jQuery(document).ready(function($){
         $('#gb-msg-form').on('submit', function(e){
             e.preventDefault();
-            var btn = $(this).find('button');
+            var btn = $(this).find('button[type=submit]');
             var resp = $('#gb-msg-response');
-            
+
             btn.text('Sending...').prop('disabled', true);
-            
+
             $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                url: '<?php echo esc_url(admin_url('admin-ajax.php')); ?>',
                 type: 'POST',
                 dataType: 'json',
                 data: $(this).serialize(),

@@ -1158,6 +1158,127 @@ function gb_get_site_settings_id() {
     return (int) get_option( 'page_on_front' );
 }
 
+/* ==========================================================================
+   CLEANER REVIEWS: REAL STAR RATINGS
+   ==========================================================================
+   Reviews are WordPress comments on the gb_cleaner post. Previously the
+   profile printed a hard-coded five stars on every review, which is both
+   misleading and looks fake. A rating (1-5) is now captured with the review
+   and stored as comment meta, and the profile shows the real per-review score
+   plus a computed average.
+   ========================================================================== */
+
+function gb_get_cleaner_rating( $cleaner_id ) {
+    $comments = get_comments( array(
+        'post_id' => (int) $cleaner_id,
+        'status'  => 'approve',
+        'type'    => 'comment',
+    ) );
+
+    $sum = 0;
+    $rated = 0;
+    foreach ( $comments as $comment ) {
+        $rating = (int) get_comment_meta( $comment->comment_ID, 'gb_rating', true );
+        if ( $rating >= 1 && $rating <= 5 ) {
+            $sum += $rating;
+            $rated++;
+        }
+    }
+
+    return array(
+        'average' => $rated ? round( $sum / $rated, 1 ) : 0.0,
+        'rated'   => $rated,
+        'total'   => count( $comments ),
+    );
+}
+
+function gb_refresh_cleaner_rating( $cleaner_id ) {
+    $rating = gb_get_cleaner_rating( $cleaner_id );
+    update_post_meta( $cleaner_id, '_gb_rating_avg', $rating['average'] );
+    update_post_meta( $cleaner_id, '_gb_rating_count', $rating['rated'] );
+
+    return $rating;
+}
+
+// Capture the star rating submitted alongside a review.
+add_action( 'comment_post', function ( $comment_id, $approved, $commentdata ) {
+    $post_id = isset( $commentdata['comment_post_ID'] ) ? (int) $commentdata['comment_post_ID'] : 0;
+    if ( ! $post_id || get_post_type( $post_id ) !== 'gb_cleaner' ) {
+        return;
+    }
+
+    $rating = isset( $_POST['gb_rating'] ) ? (int) $_POST['gb_rating'] : 0;
+    if ( $rating >= 1 && $rating <= 5 ) {
+        add_comment_meta( $comment_id, 'gb_rating', $rating, true );
+    }
+
+    gb_refresh_cleaner_rating( $post_id );
+}, 10, 3 );
+
+// Keep the average honest when a review is approved, unapproved or trashed.
+add_action( 'wp_set_comment_status', function ( $comment_id, $status ) {
+    $comment = get_comment( $comment_id );
+    if ( $comment && get_post_type( $comment->comment_post_ID ) === 'gb_cleaner' ) {
+        gb_refresh_cleaner_rating( (int) $comment->comment_post_ID );
+    }
+}, 10, 2 );
+
+/**
+ * Star markup for a 0-5 value.
+ */
+function gb_render_stars( $value, $size = 14 ) {
+    $value = (float) $value;
+    $out = '<span class="gb-stars" style="font-size:' . (int) $size . 'px; letter-spacing:1px; white-space:nowrap;">';
+    for ( $i = 1; $i <= 5; $i++ ) {
+        $filled = $value >= ( $i - 0.25 );
+        $out .= '<span style="color:' . ( $filled ? '#f59e0b' : '#d7dbe0' ) . ';">&#9733;</span>';
+    }
+
+    return $out . '</span>';
+}
+
+/**
+ * The trust checks shown publicly on a cleaner profile.
+ *
+ * A cleaner cannot be approved until Government ID, proof of address and a DBS
+ * certificate have all been supplied (gb_cleaner_verification_missing() hard
+ * blocks it), and those documents are then permanently deleted for data
+ * protection. So 'is_verified' is the durable record that those checks passed —
+ * the badges must never be driven off the documents themselves, which are gone.
+ */
+function gb_get_cleaner_verification_badges( $cleaner_id ) {
+    $cleaner_id = (int) $cleaner_id;
+    $verified   = get_post_meta( $cleaner_id, 'is_verified', true ) === '1';
+
+    $refs_ok = true;
+    foreach ( array( '1', '2' ) as $n ) {
+        if ( ! get_post_meta( $cleaner_id, "_gb_ref{$n}_name", true ) ) {
+            $refs_ok = false;
+            break;
+        }
+    }
+
+    $badges = array(
+        array( 'label' => 'DBS Checked',        'icon' => '🛡️', 'done' => $verified, 'note' => 'Background check completed before approval' ),
+        array( 'label' => 'ID Verified',        'icon' => '🪪', 'done' => $verified, 'note' => 'Government photo ID confirmed' ),
+        array( 'label' => 'Address Confirmed',  'icon' => '🏠', 'done' => $verified, 'note' => 'Proof of address confirmed' ),
+        array( 'label' => 'References Checked', 'icon' => '📇', 'done' => $refs_ok,  'note' => 'Two references supplied and checked' ),
+        array( 'label' => 'Phone Verified',     'icon' => '📱', 'done' => (bool) get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ), 'note' => 'Contact number on file' ),
+        array( 'label' => 'Terms Signed',       'icon' => '✍️', 'done' => get_post_meta( $cleaner_id, '_gb_toa_signed', true ) === '1', 'note' => 'Signed the Terms of Association' ),
+    );
+
+    // Insurance is provided at platform level when configured that way.
+    $settings_id = gb_get_site_settings_id();
+    $insurance   = $settings_id ? get_post_meta( $settings_id, '_gb_require_insurance', true ) : '';
+    if ( $insurance === 'provided' ) {
+        $badges[] = array( 'label' => 'Insured', 'icon' => '☂️', 'done' => $verified, 'note' => 'Covered by The Green Broom insurance' );
+    } elseif ( $insurance === 'yes' ) {
+        $badges[] = array( 'label' => 'Insured', 'icon' => '☂️', 'done' => $verified, 'note' => 'Proof of insurance provided' );
+    }
+
+    return $badges;
+}
+
 function gb_get_email_settings() {
     $settings_id = gb_get_site_settings_id();
     $verification_setting = get_post_meta( $settings_id, '_gb_require_email_verification', true );
