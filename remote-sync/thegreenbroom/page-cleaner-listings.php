@@ -78,7 +78,9 @@ if ($listings_usps_raw === '') {
 }
 $listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_replace("\r\n", "\n", $listings_usps_raw))), 'strlen'));
 
-$listings_btn_1  = get_post_meta(get_the_ID(), '_gb_listings_btn_1', true) ?: 'Find a cleaner near you';
+// No hero button by default: the search sits directly below and is already in
+// view, so a button that only scrolls to it is noise. Still available if set.
+$listings_btn_1  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_1', true));
 $listings_link_1 = get_post_meta(get_the_ID(), '_gb_listings_link_1', true) ?: '#gb-dir-search-head';
 $listings_btn_2  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_2', true));
 $listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '/how-it-works';
@@ -132,6 +134,8 @@ $lcta_link  = $gb_l('_gb_listings_cta_link', '#gb-dir-search-head');
 
 $verified_link  = get_post_meta(get_the_ID(), '_gb_listings_verified_link', true) ?: 'What does Verified mean?';
 $verified_title = get_post_meta(get_the_ID(), '_gb_listings_verified_title', true) ?: 'What does Verified mean?';
+$verified_card_raw = get_post_meta(get_the_ID(), '_gb_listings_verified_card', true);
+$verified_card  = ($verified_card_raw === '' || $verified_card_raw === null) ? 1 : (int) $verified_card_raw;
 $verified_body  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_verified_body', true));
 if ($verified_body === '') {
     // Defaults describe the checks gb_cleaner_verification_missing() actually
@@ -200,7 +204,7 @@ if ($verified_body === '') {
     .gb-dir-search { max-width:1000px; margin:0 auto; padding:54px 20px 10px; text-align:center; }
     .gb-dir-search-head { margin:0 0 22px; color:#1b5e20; font-size:1.6rem; font-weight:800; }
 
-    .gb-verified-cue { margin:20px 0 0; padding-bottom:34px; }
+    .gb-verified-cue { margin:14px 0 0; }
 
     /* SALES SECTIONS */
     .gb-sell { padding:74px 20px; }
@@ -232,7 +236,7 @@ if ($verified_body === '') {
         .gb-steps { gap:30px; }
         .gb-cta-box { padding:44px 22px; border-radius:16px; }
     }
-    .gb-verified-trigger { background:none; border:0; padding:0; color:#2e7d32; font-size:14px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-family:inherit; }
+    .gb-verified-trigger { background:none; border:0; padding:0; color:#2e7d32; font-size:13.5px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-family:inherit; text-align:left; }
     .gb-verified-trigger:hover { color:#1b5e20; }
     .gb-verified-trigger:focus-visible { outline:2px solid #2e7d32; outline-offset:3px; border-radius:3px; }
 
@@ -379,9 +383,6 @@ if ($verified_body === '') {
             </select>
             <button type="submit" class="gb-search-btn">Search</button>
         </form>
-        <p class="gb-verified-cue">
-            <button type="button" class="gb-verified-trigger" aria-haspopup="dialog" data-gb-open-verified><?php echo esc_html($verified_link); ?></button>
-        </p>
     </section>
 
     <div class="gb-verified-modal" id="gb-verified-modal" role="dialog" aria-modal="true" aria-labelledby="gb-verified-modal-title" hidden>
@@ -504,11 +505,16 @@ if ($verified_body === '') {
         <div class="gb-sell-inner">
             <h2 class="gb-sell-head"><?php echo esc_html($why_head); ?></h2>
             <div class="gb-why-grid">
-                <?php foreach ($why_cards as $card): if ($card['title'] === '') { continue; } ?>
+                <?php foreach ($why_cards as $card_i => $card): if ($card['title'] === '') { continue; } ?>
                     <article class="gb-why-card">
                         <span class="gb-why-tick" aria-hidden="true"></span>
                         <h3><?php echo esc_html($card['title']); ?></h3>
                         <p><?php echo esc_html($card['text']); ?></p>
+                        <?php if ($verified_card === $card_i + 1 && $verified_link !== ''): ?>
+                            <p class="gb-verified-cue">
+                                <button type="button" class="gb-verified-trigger" aria-haspopup="dialog" data-gb-open-verified><?php echo esc_html($verified_link); ?></button>
+                            </p>
+                        <?php endif; ?>
                     </article>
                 <?php endforeach; ?>
             </div>

@@ -238,7 +238,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_search_head' => 'Search cleaners near you',
             '_gb_listings_verified_link'  => 'What does Verified mean?',
             '_gb_listings_verified_title' => 'What does Verified mean?',
-            '_gb_listings_btn_1'  => 'Find a cleaner near you',
+            '_gb_listings_verified_card'  => '1',
+            '_gb_listings_btn_1'  => '',
             '_gb_listings_link_1' => '#gb-dir-search-head',
             '_gb_listings_btn_2'  => '',
             '_gb_listings_link_2' => '/how-it-works',
@@ -801,6 +802,16 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 <div class="gb-link-row">
                                     <div class="gb-form-row"><label class="gb-label">Link text</label><input type="text" name="_gb_listings_verified_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_verified_link')); ?>"></div>
                                     <div class="gb-form-row"><label class="gb-label">Pop-up heading</label><input type="text" name="_gb_listings_verified_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_verified_title')); ?>"></div>
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Show the link on which &ldquo;Why book with us&rdquo; card?</label>
+                                    <?php $gb_vcard_raw = $gb_field_value('_gb_listings_verified_card'); $gb_vcard = ($gb_vcard_raw === '' ? 1 : (int) $gb_vcard_raw); ?>
+                                    <select name="_gb_listings_verified_card" class="gb-input" style="height:44px;">
+                                        <option value="0" <?php selected($gb_vcard, 0); ?>>Do not show the link</option>
+                                        <?php for ($gb_n = 1; $gb_n <= 4; $gb_n++): ?>
+                                            <option value="<?php echo $gb_n; ?>" <?php selected($gb_vcard, $gb_n); ?>>Card <?php echo $gb_n; ?><?php $gb_ct = $gb_field_value('_gb_listings_why_' . $gb_n . '_title'); echo $gb_ct !== '' ? ' — ' . esc_html($gb_ct) : ''; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
                                 </div>
                                 <div class="gb-form-row" style="margin-bottom:0;">
                                     <label class="gb-label">Pop-up text</label>
