@@ -39,7 +39,11 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
        affected by making the body a flex column. */
     html { height: 100%; }
     body { min-height: 100vh; display: flex; flex-direction: column; }
-    body > #page, body > .site { flex: 1 0 auto; }
+    /* The footer is nested inside #page (not a direct child of body), so #page
+       has to be the flex column as well — otherwise it stretches to full height
+       while its children stop short, leaving the gap under the footer. */
+    body > #page, body > .site { flex: 1 0 auto; display: flex; flex-direction: column; min-width: 0; }
+    #page > #content, #page > .site-content, .site > .site-content { flex: 1 0 auto; }
 
     #gb-site-footer {
         background-color: #1b5e20; /* Dark Eco Green */
