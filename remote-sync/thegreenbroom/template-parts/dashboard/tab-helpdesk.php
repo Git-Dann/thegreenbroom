@@ -51,6 +51,14 @@ if (isset($_POST['gb_resolve_ticket'])) {
     .gb-helpdesk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .gb-helpdesk-table th { text-align: left; padding: 12px 15px; border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
     .gb-helpdesk-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+
+    /* Keep the action buttons fully visible: the select column added width, so
+       the card scrolls instead of clipping, dates stay on one line, and the
+       Actions column is never squeezed or cut off. */
+    .gb-helpdesk-table { min-width: 900px; }
+    .gb-helpdesk-table td:first-child, .gb-helpdesk-table th:first-child { width: 36px; padding-left: 12px; padding-right: 0; }
+    .gb-helpdesk-table td:nth-child(2) { white-space: nowrap; }
+    .gb-helpdesk-table td:last-child, .gb-helpdesk-table th:last-child { white-space: nowrap; padding-right: 20px; }
     
     .gb-filter-bar { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; }
     .gb-search-container { flex-grow: 1; position: relative; }
@@ -142,7 +150,7 @@ if (isset($_POST['gb_resolve_ticket'])) {
     </div>
 </form>
 
-<div class="gb-card" style="padding:0; overflow:hidden; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
+<div class="gb-card" style="padding:0; overflow-x:auto; background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
     <table class="gb-helpdesk-table">
         <thead>
             <tr>

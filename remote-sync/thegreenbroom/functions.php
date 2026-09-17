@@ -1029,9 +1029,12 @@ function gb_message_spam_score( $name, $email, $subject, $message ) {
     $keywords = [
         'playstation', 'xbox', 'nintendo', 'giveaway', 'sweepstake', 'prize', 'jackpot',
         'casino', 'betting', 'crypto', 'bitcoin', 'forex', 'viagra', 'cialis', 'porn',
-        'seo boost', 'seo service', 'backlink', 'rank your website', 'rank higher',
+        'seo', 'seo boost', 'seo service', 'backlink', 'rank your website', 'rank higher',
         'web traffic', 'buy traffic', 'email list', 'b2b data', 'b2b leads', 'lead list',
-        'database of', 'marketing list', 'telegra.ph', 'bit.ly', 'tinyurl',
+        'database of', 'marketing list', 'telegra.ph', 'bit.ly', 'tinyurl', 'qrli',
+        'cutt.ly', 'shorturl', 't.me/',
+        'promo code', 'promotional code', 'voucher code', 'gift card', 'claim your',
+        'you have won', 'congratulations', 'reviewing your website',
         'shutting down', 'final notice', 'act now', 'limited offer', 'work from home',
         'make money', 'earn money', 'investment opportunity', 'loan offer',
     ];
@@ -1044,6 +1047,23 @@ function gb_message_spam_score( $name, $email, $subject, $message ) {
     // Shouty subjects.
     $subject_letters = preg_replace( '/[^a-z]/i', '', $subject );
     if ( strlen( $subject_letters ) > 10 && strtoupper( $subject_letters ) === $subject_letters ) {
+        $score += 3;
+    }
+
+    // Shouty bodies (e.g. "GET CRACKING WITH A $25,000 PROMO CODE").
+    $message_letters = preg_replace( '/[^a-z]/i', '', $message );
+    if ( strlen( $message_letters ) > 15 && strtoupper( $message_letters ) === $message_letters ) {
+        $score += 4;
+    }
+
+    // Large money amounts are a lure, not a cleaning enquiry.
+    if ( preg_match( '/[$£€]\s?\d{1,3}(?:,\d{3})+/u', $subject . ' ' . $message ) ) {
+        $score += 3;
+    }
+
+    // Sender domains with no plausible relevance to a UK-only cleaning service.
+    $domain = strtolower( substr( strrchr( (string) $email, '@' ) ?: '', 1 ) );
+    if ( $domain !== '' && preg_match( '/\.(ru|su|cn|tk|top|xyz)$/', $domain ) ) {
         $score += 3;
     }
 
@@ -3276,17 +3296,34 @@ add_action('init', function () {
             'posts_per_page' => 2000,
             'fields'         => 'ids',
         ]);
+        // First pass: fingerprint every message so identical mass-repeats can be
+        // caught on volume alone, whatever the wording.
+        $groups = [];
+        $rows = [];
         foreach ($candidates as $id) {
-            if (get_post_meta($id, '_gb_spam', true) === '1') {
-                continue;
-            }
             $post = get_post($id);
             if (!$post) {
                 continue;
             }
+            $fingerprint = md5(strtolower(trim($post->post_title)) . '|' . strtolower(trim($post->post_content)));
+            $groups[$fingerprint] = isset($groups[$fingerprint]) ? $groups[$fingerprint] + 1 : 1;
+            $rows[$id] = [
+                'post'        => $post,
+                'fingerprint' => $fingerprint,
+            ];
+        }
+
+        foreach ($rows as $id => $row) {
+            if (get_post_meta($id, '_gb_spam', true) === '1') {
+                continue;
+            }
+            $post = $row['post'];
             $sname = (string) get_post_meta($id, '_gb_sender_name', true);
             $semail = (string) get_post_meta($id, '_gb_sender_email', true);
-            if (gb_message_looks_like_spam($sname, $semail, $post->post_title, $post->post_content)) {
+
+            $is_bulk_repeat = $groups[$row['fingerprint']] >= 3;
+
+            if ($is_bulk_repeat || gb_message_looks_like_spam($sname, $semail, $post->post_title, $post->post_content)) {
                 update_post_meta($id, '_gb_spam', '1');
                 $done++;
             }

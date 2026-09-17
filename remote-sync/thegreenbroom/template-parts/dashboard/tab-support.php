@@ -34,6 +34,11 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
     /* Avatar & Status */
     .gb-avatar-circle { width: 36px; height: 36px; background: #f1f5f9; border-radius: 50%; color: #64748b; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
     .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: 800; text-transform: uppercase; }
+
+    /* Same anti-clipping rules as the Helpdesk table. */
+    .gb-booking-table { min-width: 900px; }
+    .gb-booking-table td:first-child, .gb-booking-table th:first-child { width: 36px; padding-left: 12px; padding-right: 0; }
+    .gb-booking-table td:last-child, .gb-booking-table th:last-child { white-space: nowrap; padding-right: 20px; }
 </style>
 
 <?php if ($action == 'view_message' && isset($_GET['id'])): 
@@ -203,7 +208,7 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
         </div>
     </form>
 
-    <div class="gb-card" style="padding:0; overflow:hidden;">
+    <div class="gb-card" style="padding:0; overflow-x:auto;">
         <table class="gb-booking-table">
             <thead>
                 <tr>
