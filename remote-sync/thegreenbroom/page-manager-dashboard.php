@@ -158,6 +158,11 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
                 wp_die('Invalid service target.');
             }
             break;
+        case 'save_eco_product':
+            if ($pid && get_post_type($pid) !== 'gb_eco_product') {
+                wp_die('Invalid eco product target.');
+            }
+            break;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -360,6 +365,60 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
         ], home_url('/manager-dashboard'))); exit;
     }
 
+    // E2. SAVE ECO PRODUCTS
+    if ($save_action === 'save_eco_product') {
+        $eco_status = isset($_POST['post_status']) ? sanitize_key(wp_unslash($_POST['post_status'])) : 'publish';
+        if (!in_array($eco_status, ['publish', 'draft'], true)) {
+            $eco_status = 'publish';
+        }
+
+        $post_data = [
+            'ID'           => $pid,
+            'post_title'   => isset($_POST['post_title']) ? sanitize_text_field(wp_unslash($_POST['post_title'])) : '',
+            'post_content' => isset($_POST['post_content']) ? wp_kses_post(wp_unslash($_POST['post_content'])) : '',
+            'post_status'  => $eco_status,
+            'post_type'    => 'gb_eco_product',
+            'menu_order'   => isset($_POST['menu_order']) ? intval(wp_unslash($_POST['menu_order'])) : 0,
+        ];
+        if ($pid === 0) {
+            unset($post_data['ID']);
+            $pid = wp_insert_post($post_data);
+        } else {
+            wp_update_post($post_data);
+        }
+
+        if (!$pid || is_wp_error($pid)) {
+            wp_redirect(home_url('/manager-dashboard?tab=eco-products&msg=save_failed')); exit;
+        }
+
+        // On a brand new product the global _gb_ meta saver above ran against
+        // post 0, so these fields have to be written once the post exists.
+        $eco_file = isset($_POST['_gb_eco_file']) ? absint($_POST['_gb_eco_file']) : 0;
+        if ($eco_file && get_post_type($eco_file) === 'attachment') {
+            update_post_meta($pid, '_gb_eco_file', $eco_file);
+        } else {
+            delete_post_meta($pid, '_gb_eco_file');
+        }
+
+        // Site-relative paths ("/make-your-own") are as valid here as absolute
+        // URLs, and esc_url_raw() would keep them, so only trim and strip tags.
+        $eco_link = isset($_POST['_gb_eco_link']) ? trim(sanitize_text_field(wp_unslash($_POST['_gb_eco_link']))) : '';
+        if ($eco_link !== '') {
+            update_post_meta($pid, '_gb_eco_link', $eco_link);
+        } else {
+            delete_post_meta($pid, '_gb_eco_link');
+        }
+
+        $eco_thumb = isset($_POST['gb_eco_thumb_id']) ? absint($_POST['gb_eco_thumb_id']) : 0;
+        if ($eco_thumb && get_post_type($eco_thumb) === 'attachment') {
+            set_post_thumbnail($pid, $eco_thumb);
+        } else {
+            delete_post_thumbnail($pid);
+        }
+
+        wp_redirect(home_url('/manager-dashboard?tab=eco-products&msg=saved')); exit;
+    }
+
     if ($save_action === 'save_settings') {
         $settings_section = isset($_POST['_gb_settings_section']) ? sanitize_key(wp_unslash($_POST['_gb_settings_section'])) : 'env';
         $allowed_settings_sections = ['env', 'safeguarding', 'email', 'social', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
@@ -448,14 +507,15 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         }
     }
 
-    // Unified delete: services, bookings, cleaners, blog posts, pages.
+    // Unified delete: eco products, services, bookings, cleaners, blog posts, pages.
     if ($action === 'delete_entity') {
         $type_to_tab = [
-            'gb_service' => 'services',
-            'gb_booking' => 'bookings',
-            'gb_cleaner' => 'cleaners',
-            'post'       => 'blog',
-            'page'       => 'pages',
+            'gb_service'     => 'services',
+            'gb_eco_product' => 'eco-products',
+            'gb_booking'     => 'bookings',
+            'gb_cleaner'     => 'cleaners',
+            'post'           => 'blog',
+            'page'           => 'pages',
         ];
         $ptype = get_post_type($mid);
         if ($mid && isset($type_to_tab[$ptype])) {
@@ -540,6 +600,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         <a href="?tab=bookings" class="gb-nav-item <?php echo $tab=='bookings'?'active':''; ?>"><span class="dashicons dashicons-calendar-alt"></span> Bookings</a>
         <a href="?tab=cleaners" class="gb-nav-item <?php echo $tab=='cleaners'?'active':''; ?>"><span class="dashicons dashicons-id"></span> Manage Cleaners</a>
         <a href="?tab=pages" class="gb-nav-item <?php echo $tab=='pages'?'active':''; ?>"><span class="dashicons dashicons-welcome-write-blog"></span> Content</a>
+        <a href="?tab=eco-products" class="gb-nav-item <?php echo $tab=='eco-products'?'active':''; ?>"><span class="dashicons dashicons-carrot"></span> Eco Products</a>
         <a href="?tab=blog" class="gb-nav-item <?php echo $tab=='blog'?'active':''; ?>"><span class="dashicons dashicons-edit"></span> Blog & SEO</a>
         <a href="?tab=support" class="gb-nav-item <?php echo $tab=='support'?'active':''; ?>"><span class="dashicons dashicons-email"></span> Inbox</a>
         <a href="?tab=helpdesk" class="gb-nav-item <?php echo $tab=='helpdesk'?'active':''; ?>">
@@ -557,6 +618,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
         <?php if($msg == 'approved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Cleaner approved.</div><?php endif; ?>
         <?php if($msg == 'deleted'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">🗑️ Item deleted.</div><?php endif; ?>
+        <?php if($msg == 'save_failed'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">⚠️ That could not be saved. Please check the title is filled in and try again.</div><?php endif; ?>
 
         <?php 
         $file = get_template_directory() . '/template-parts/dashboard/tab-' . $tab . '.php';
