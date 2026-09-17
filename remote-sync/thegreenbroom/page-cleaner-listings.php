@@ -201,7 +201,7 @@ if ($verified_body === '') {
     .gb-dir-trust { background:#e8f5e9; padding:18px 20px; text-align:center; border-bottom:1px solid #c8e6c9; }
     .gb-dir-trust span { font-weight:700; color:#1b5e20; font-size:.9rem; text-transform:uppercase; letter-spacing:1px; }
 
-    .gb-dir-search { max-width:1000px; margin:0 auto; padding:54px 20px 10px; text-align:center; }
+    .gb-dir-search { max-width:1000px; margin:0 auto; padding:54px 20px 52px; text-align:center; }
     .gb-dir-search-head { margin:0 0 22px; color:#1b5e20; font-size:1.6rem; font-weight:800; }
 
     .gb-verified-cue { margin:14px 0 0; }
@@ -302,12 +302,24 @@ if ($verified_body === '') {
     }
     
     .gb-card-body { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
-    .gb-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
+    .gb-card-header { display: flex; justify-content: space-between; align-items: start; gap: 10px; margin-bottom: 10px; min-width: 0; }
     .gb-card-name { margin: 0; font-size: 20px; font-weight: 800; color: #1d1d1f; }
     .gb-card-rate { color: #2e7d32; font-weight: 700; font-size: 16px; }
     
     .gb-card-meta { font-size: 13px; color: #64748b; margin-bottom: 15px; display: flex; gap: 15px; }
-    .gb-card-excerpt { font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 25px; flex-grow: 1; }
+    /* Fixed two-line bio: a long bio used to stretch its card past the others
+       in the row. The height is set rather than max-height so a short or empty
+       bio still leaves the buttons aligned across every card. */
+    .gb-card-excerpt {
+        font-size: 14px; color: #475569; line-height: 1.6; margin-bottom: 25px;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden; height: 3.2em; overflow-wrap: anywhere;
+    }
+    /* A long business name would otherwise wrap and push the card taller. */
+    .gb-card-name { min-width: 0; }
+    .gb-card-name a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gb-card-rate { flex: 0 0 auto; white-space: nowrap; }
+    .gb-card-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
     .gb-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto; }
     
