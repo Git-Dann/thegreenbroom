@@ -99,7 +99,7 @@ $hiw_steps = array();
 $hiw_defaults = array(
     array('Search your postcode', 'See the verified cleaners who cover your street, with their hourly rate shown up front.'),
     array('Choose your cleaner', 'Read their profile, their checks and their reviews, then pick the day and time that suits you.'),
-    array('Sit back', 'They arrive with plant-based products. You pay securely online \u2014 no cash, no contracts, no awkwardness.'),
+    array('Sit back', 'They arrive with plant-based products. You pay securely online — no cash, no contracts, no awkwardness.'),
 );
 foreach ($hiw_defaults as $i => $d) {
     $n = $i + 1;
@@ -162,7 +162,7 @@ if ($verified_body === '') {
        gets a proper header rather than an immediate search box. */
     .gb-dir-hero {
         background: #2e7d32; /* Brand Green, and the fallback when no image is set */
-        padding: 120px 20px;
+        padding: 86px 20px 78px;
         text-align: center;
         color: white;
         position: relative;
@@ -275,7 +275,7 @@ if ($verified_body === '') {
        back when the search sat inside it. With the search now its own section
        that pull dragged the cards over the search box and hid the "What does
        Verified mean?" link underneath. */
-    .gb-dir-container { max-width: 1200px; margin: 0 auto 60px; padding: 0 20px; position: relative; z-index: 1; }
+    .gb-dir-container { max-width: 1200px; margin: 0 auto 10px; padding: 0 20px; position: relative; z-index: 1; }
     .gb-cleaner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
     
     /* CARD DESIGN */
