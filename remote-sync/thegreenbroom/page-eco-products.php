@@ -63,9 +63,23 @@ $gb_eco_products = function_exists( 'gb_get_eco_products' ) ? gb_get_eco_product
                 <?php foreach ( $gb_eco_products as $gb_eco_product ) :
                     $gb_eco_link  = function_exists( 'gb_get_eco_product_link' ) ? gb_get_eco_product_link( $gb_eco_product->ID ) : '';
                     $gb_eco_thumb = get_the_post_thumbnail_url( $gb_eco_product->ID, 'medium_large' );
-                    $gb_eco_desc  = trim( wp_strip_all_tags( $gb_eco_product->post_content ) );
-                    // Uploaded files open in a new tab; an internal path stays in place.
-                    $gb_eco_external = $gb_eco_link !== '' && strpos( $gb_eco_link, '/' ) !== 0;
+                    // Prefer the short card description; guides now hold a full
+                    // write-up in post_content, which would flood the card.
+                    $gb_eco_desc = trim( (string) $gb_eco_product->post_excerpt );
+                    if ( $gb_eco_desc === '' ) {
+                        $gb_eco_desc = wp_trim_words( wp_strip_all_tags( $gb_eco_product->post_content ), 24 );
+                    }
+                    /*
+                     * Uploaded files and outside links open in a new tab; anything
+                     * on this site stays in place. Checked by host, not by leading
+                     * slash: a guide's own page resolves to an absolute URL on our
+                     * own domain and would otherwise be treated as external.
+                     */
+                    $gb_eco_external = false;
+                    if ( $gb_eco_link !== '' && strpos( $gb_eco_link, '/' ) !== 0 ) {
+                        $gb_link_host = wp_parse_url( $gb_eco_link, PHP_URL_HOST );
+                        $gb_eco_external = $gb_link_host && $gb_link_host !== wp_parse_url( home_url(), PHP_URL_HOST );
+                    }
                     $gb_eco_cta  = function_exists( 'gb_get_eco_product_cta_label' ) ? gb_get_eco_product_cta_label( $gb_eco_product->ID ) : 'View guide';
                     $gb_eco_soon = function_exists( 'gb_get_eco_product_soon_label' ) ? gb_get_eco_product_soon_label( $gb_eco_product->ID ) : 'Coming soon';
                 ?>

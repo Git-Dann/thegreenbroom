@@ -59,7 +59,8 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
     }
 
     $title   = $post ? $post->post_title : '';
-    $desc    = $post ? $post->post_content : '';
+    $excerpt = $post ? $post->post_excerpt : '';
+    $body    = $post ? $post->post_content : '';
     $order   = $post ? (int) $post->menu_order : 0;
     $status  = $post ? get_post_status($pid) : 'publish';
     if (!in_array($status, ['publish', 'draft'], true)) {
@@ -104,8 +105,20 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
             </div>
 
             <div class="gb-form-row">
-                <label class="gb-label">Description</label>
-                <textarea name="post_content" class="gb-textarea" rows="5" style="height:auto;" placeholder="A short summary shown on the card."><?php echo esc_textarea($desc); ?></textarea>
+                <label class="gb-label">Card description</label>
+                <textarea name="post_excerpt" class="gb-textarea" rows="3" style="height:auto;" placeholder="One or two lines, shown on the card on the Eco Products page."><?php echo esc_textarea($excerpt); ?></textarea>
+            </div>
+
+            <div class="gb-form-row">
+                <label class="gb-label">Full guide (optional)</label>
+                <?php
+                wp_editor($body, 'gb_eco_body', array(
+                    'textarea_name' => 'post_content',
+                    'textarea_rows' => 16,
+                    'media_buttons' => true,
+                ));
+                ?>
+                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Write the guide here and it gets its own page, which the card links to automatically. Leave blank if the card should open an uploaded file or a link instead.</p>
             </div>
 
             <div class="gb-form-row" id="gb-eco-file">
@@ -274,7 +287,11 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                     </div>
                     <div class="gb-eco-card-body">
                         <h2><?php the_title(); ?></h2>
-                        <p><?php echo esc_html(wp_trim_words(wp_strip_all_tags(get_the_content()), 18)); ?></p>
+                        <p><?php
+                            $eco_card_desc = trim((string) get_the_excerpt());
+                            if ($eco_card_desc === '') { $eco_card_desc = wp_strip_all_tags(get_the_content()); }
+                            echo esc_html(wp_trim_words($eco_card_desc, 18));
+                        ?></p>
                         <div class="gb-eco-card-meta">
                             <?php if ($eco_status === 'publish'): ?>
                                 <span class="gb-eco-chip ok">Published</span>

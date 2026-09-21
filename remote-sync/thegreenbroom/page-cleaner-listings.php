@@ -36,7 +36,7 @@ if ( $search_term !== '' ) {
 
 $service_filter = isset($_GET['service']) ? sanitize_key(wp_unslash($_GET['service'])) : '';
 $service_filters = [
-    'standard' => 'Standard Clean',
+    'standard' => 'Regular Clean',
     'deep'     => 'Deep Clean',
     'moving'   => 'End of Tenancy',
 ];
@@ -133,30 +133,24 @@ $lcta_btn   = $gb_l('_gb_listings_cta_btn', 'Search cleaners near you');
 $lcta_link  = $gb_l('_gb_listings_cta_link', '#gb-dir-search-head');
 
 $verified_link  = get_post_meta(get_the_ID(), '_gb_listings_verified_link', true) ?: 'What does Verified mean?';
-$verified_title = get_post_meta(get_the_ID(), '_gb_listings_verified_title', true) ?: 'What does Verified mean?';
+$verified_title = get_post_meta(get_the_ID(), '_gb_listings_verified_title', true) ?: '🍃 Green Broom Verified';
 $verified_card_raw = get_post_meta(get_the_ID(), '_gb_listings_verified_card', true);
 $verified_card  = ($verified_card_raw === '' || $verified_card_raw === null) ? 1 : (int) $verified_card_raw;
 $verified_body  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_verified_body', true));
 if ($verified_body === '') {
-    // Defaults describe the checks gb_cleaner_verification_missing() actually
-    // enforces before a cleaner can go live, so the promise matches the code.
-    $verified_body = "Every cleaner showing the Verified badge has passed the same checks before we let them take a booking:
-"
-        . "Government-issued photo ID confirmed
-"
-        . "DBS certificate supplied and checked
-"
-        . "Proof of address confirmed
-"
-        . "Two references supplied and contacted
-"
-        . "Contact number confirmed
-"
-        . "Signed our Terms of Association
-"
-        . "
-"
-        . "A cleaner cannot be listed until all of the above are complete. Once they are approved we permanently delete the ID, address and DBS documents from our systems — we keep the result of the check, not your cleaner's paperwork.";
+    // Client-supplied wording. Deliberately verbatim: it names exactly the
+    // three checks they stand behind, and carries the qualifier that these
+    // checks do not guarantee suitability. Do not "improve" this copy.
+    $verified_body = "A local cleaner. A cleaner you can trust.\n"
+        . "\n"
+        . "We believe finding someone to clean your home should be straightforward. That's why The Green Broom brings together local, self-employed cleaners and gives homeowners the information they need to choose confidently.\n"
+        . "\n"
+        . "A cleaner receives the Green Broom Verified badge when the following checks have been completed:\n"
+        . "Government issued I/D uploaded during application, checked and verified\n"
+        . "Basic DBS Certificate uploaded during application, checked and verified; DBS status is periodically reviewed.\n"
+        . "Two Character Reference contact details uploaded during application. We contact referees and written replies remain on file for the duration of the applicant's membership.\n"
+        . "\n"
+        . "Green Broom Verified means the cleaner has completed the verification checks shown above. These checks are designed to provide additional confidence but do not guarantee a cleaner's suitability.";
 }
 ?>
 
@@ -389,7 +383,7 @@ if ($verified_body === '') {
             <label class="gb-sr-only" for="cleaner-search-service">Service type</label>
             <select id="cleaner-search-service" name="service" class="gb-search-select">
             <option value="">Any Service</option>
-            <option value="standard" <?php selected($service_filter, 'standard'); ?>>Standard Clean</option>
+            <option value="standard" <?php selected($service_filter, 'standard'); ?>>Regular Clean</option>
             <option value="deep" <?php selected($service_filter, 'deep'); ?>>Deep Clean</option>
             <option value="moving" <?php selected($service_filter, 'moving'); ?>>Move In/Out</option>
             </select>

@@ -87,7 +87,15 @@ $gb_services = get_posts([
 
     /* ---------- VERIFIED CHECKS (sidebar icons + tooltip) ---------- */
     .gb-verify { margin-top: 22px; padding-top: 20px; border-top: 1px solid #e8ecf1; }
-    .gb-verify-head { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; text-align: center; }
+    .gb-verify-head { font-size: 12px; font-weight: 800; color: #1b5e20; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px; text-align: center; }
+    /* The client's spec shows these checks as readable ticked lines rather
+       than icon-only chips, so the label sits beside the icon. */
+    .gb-verify-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .gb-verify-item { display: flex; align-items: center; gap: 10px; }
+    .gb-verify-ico { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px; background: #f0fdf4; color: #2e7d32; }
+    .gb-verify-ico svg { width: 16px; height: 16px; display: block; }
+    .gb-verify-label { font-size: 13px; font-weight: 600; color: #334155; line-height: 1.35; }
+    .gb-verify-date { margin: 14px 0 0; text-align: center; font-size: 11.5px; color: #94a3b8; }
     .gb-verify-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .gb-verify-chip {
         width: 44px; height: 44px; border-radius: 12px; background: #f2fdf5; border: 1px solid #dcfce7;
@@ -313,17 +321,20 @@ $gb_services = get_posts([
                 <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 
                 <?php if (!empty($public_badges)): ?>
+                <?php $gb_verified_on = function_exists('gb_get_cleaner_verified_date') ? gb_get_cleaner_verified_date($cleaner_id) : ''; ?>
                 <div class="gb-verify">
-                    <div class="gb-verify-head">Verified</div>
-                    <div class="gb-verify-row">
+                    <div class="gb-verify-head">&#127811; Green Broom Verified</div>
+                    <ul class="gb-verify-list">
                         <?php foreach ($public_badges as $badge): ?>
-                            <span class="gb-verify-chip" tabindex="0" role="img"
-                                  aria-label="<?php echo esc_attr($badge['label'] . ': ' . $badge['note']); ?>"
-                                  data-tip="<?php echo esc_attr($badge['label']); ?>">
-                                <?php echo $badge['svg']; ?>
-                            </span>
+                            <li class="gb-verify-item" title="<?php echo esc_attr($badge['note']); ?>">
+                                <span class="gb-verify-ico" aria-hidden="true"><?php echo $badge['svg']; ?></span>
+                                <span class="gb-verify-label"><?php echo esc_html($badge['label']); ?></span>
+                            </li>
                         <?php endforeach; ?>
-                    </div>
+                    </ul>
+                    <?php if ($gb_verified_on !== ''): ?>
+                        <p class="gb-verify-date">Green Broom Verified &mdash; <?php echo esc_html($gb_verified_on); ?></p>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
 

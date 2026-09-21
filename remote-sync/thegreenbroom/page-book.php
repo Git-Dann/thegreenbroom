@@ -30,7 +30,7 @@ if ($service_query->have_posts()) {
     wp_reset_postdata();
 } else {
     $services[0] = [
-        'label'            => 'Standard Clean',
+        'label'            => 'Regular Clean',
         'extra_cost'       => 0.0,
         'default_duration' => 3,
     ];

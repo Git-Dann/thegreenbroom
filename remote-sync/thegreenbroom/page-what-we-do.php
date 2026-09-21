@@ -23,10 +23,10 @@ $svc_head   = get_post_meta(get_the_ID(), '_gb_svc_head', true)       ?: 'Our Cl
 $svc_sub    = get_post_meta(get_the_ID(), '_gb_svc_sub', true)        ?: 'Choose the level of clean that fits your needs. All services use plant-based, non-toxic products.';
 
 // Service 1 (Standard)
-$s1_title   = get_post_meta(get_the_ID(), '_gb_svc_1_title', true)    ?: 'Standard Clean';
+$s1_title   = get_post_meta(get_the_ID(), '_gb_svc_1_title', true)    ?: 'Regular Clean';
 $s1_desc    = get_post_meta(get_the_ID(), '_gb_svc_1_desc', true)     ?: 'Perfect for keeping your home fresh on a weekly or fortnightly basis.';
 $s1_list    = get_post_meta(get_the_ID(), '_gb_svc_1_list', true)     ?: "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins";
-$s1_btn     = get_post_meta(get_the_ID(), '_gb_svc_1_btn', true)      ?: 'Find Standard Cleaners';
+$s1_btn     = get_post_meta(get_the_ID(), '_gb_svc_1_btn', true)      ?: 'Find Regular Cleaners';
 $s1_link    = get_post_meta(get_the_ID(), '_gb_svc_1_link', true)     ?: '/cleaner-listings?service=standard';
 
 // Service 2 (Deep)

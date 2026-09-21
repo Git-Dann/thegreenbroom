@@ -391,6 +391,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             'ID'           => $pid,
             'post_title'   => isset($_POST['post_title']) ? sanitize_text_field(wp_unslash($_POST['post_title'])) : '',
             'post_content' => isset($_POST['post_content']) ? wp_kses_post(wp_unslash($_POST['post_content'])) : '',
+            'post_excerpt' => isset($_POST['post_excerpt']) ? sanitize_textarea_field(wp_unslash($_POST['post_excerpt'])) : '',
             'post_status'  => $eco_status,
             'post_type'    => 'gb_eco_product',
             'menu_order'   => isset($_POST['menu_order']) ? intval(wp_unslash($_POST['menu_order'])) : 0,

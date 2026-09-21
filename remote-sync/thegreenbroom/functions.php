@@ -334,7 +334,19 @@ function gb_get_eco_product_link( $product_id ) {
         }
     }
 
-    return trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
+    $link = trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
+    if ( $link !== '' ) {
+        return $link;
+    }
+
+    // No file and no link, but the guide has its own write-up: send readers to
+    // its page rather than showing the card as unavailable.
+    $post = get_post( $product_id );
+    if ( $post && trim( (string) $post->post_content ) !== '' ) {
+        return (string) get_permalink( $product_id );
+    }
+
+    return '';
 }
 
 /**
@@ -624,6 +636,70 @@ function gb_migrate_what_cleaners_do() {
     update_option( 'gb_what_cleaners_do_migrated', 1 );
 }
 add_action( 'init', 'gb_migrate_what_cleaners_do' );
+
+require_once get_template_directory() . '/inc/eco-guide-content.php';
+
+/**
+ * One-time migration: publish the two client-written Eco Product guides.
+ *
+ * Renames "Eco Cleaning Products Guide" to "A Quick & Easy Way to Get Started"
+ * and gives both it and "Make Your Own" their full write-ups, which also
+ * activates "Make Your Own" - a guide with content resolves to its own page,
+ * so the card stops reading "Coming soon".
+ *
+ * Each field is only written while it still holds the seeded placeholder, so
+ * anything the client has since edited in Manager OS is never overwritten.
+ * Also flushes rewrite rules once, because the post type has just become
+ * public and its /eco-guide/ URLs would otherwise 404.
+ */
+function gb_migrate_eco_guides() {
+    if ( get_option( 'gb_eco_guides_seeded_v1' ) ) {
+        return;
+    }
+
+    $content = gb_eco_guide_seed_content();
+    $targets = array(
+        'Eco Cleaning Products Guide' => $content['koh'],
+        'Make Your Own'               => $content['diy'],
+    );
+
+    $products = get_posts( array(
+        'post_type'      => 'gb_eco_product',
+        'post_status'    => array( 'publish', 'draft', 'pending' ),
+        'posts_per_page' => -1,
+    ) );
+
+    $seeded_descriptions = array(
+        'A simple guide to plant-based products and easy alternatives for everyday cleaning.',
+        'Simple, lower-impact ideas for making your own cleaning products. The full guide is coming soon.',
+    );
+
+    foreach ( $products as $product ) {
+        if ( ! isset( $targets[ $product->post_title ] ) ) {
+            continue;
+        }
+        $new = $targets[ $product->post_title ];
+
+        // Only replace the body while it is still the one-line placeholder.
+        $body_is_placeholder = in_array( trim( (string) $product->post_content ), $seeded_descriptions, true )
+            || trim( (string) $product->post_content ) === '';
+        if ( ! $body_is_placeholder ) {
+            continue;
+        }
+
+        wp_update_post( array(
+            'ID'           => $product->ID,
+            'post_title'   => $new['title'],
+            'post_content' => wp_kses_post( $new['body'] ),
+            'post_excerpt' => $new['desc'],
+            'post_status'  => 'publish',
+        ) );
+    }
+
+    flush_rewrite_rules( false );
+    update_option( 'gb_eco_guides_seeded_v1', 1 );
+}
+add_action( 'init', 'gb_migrate_eco_guides', 30 );
 
 /**
  * One-time migration: point existing "Join" buttons at the new /join page.
@@ -1322,6 +1398,12 @@ function gb_sync_cleaner_verification_state( $cleaner_id, $post_status ) {
     $is_verified = $post_status === 'publish';
     update_post_meta( $cleaner_id, 'is_verified', $is_verified ? '1' : '0' );
 
+    // Stamp the date the badge was granted, once, so the profile can show
+    // "Green Broom Verified - <date>" rather than an unqualified claim.
+    if ( $is_verified && ! get_post_meta( $cleaner_id, '_gb_verified_date', true ) ) {
+        update_post_meta( $cleaner_id, '_gb_verified_date', current_time( 'mysql' ) );
+    }
+
     if ( $author_id < 1 ) {
         return;
     }
@@ -1334,6 +1416,24 @@ function gb_sync_cleaner_verification_state( $cleaner_id, $post_status ) {
     }
 
     delete_user_meta( $author_id, 'gb_verification_status' );
+}
+
+/**
+ * When the Green Broom Verified badge was granted. Cleaners approved before
+ * the date was recorded fall back to the date their profile went live, which
+ * is the same moment - approval is what publishes them.
+ */
+function gb_get_cleaner_verified_date( $cleaner_id ) {
+    $cleaner_id = (int) $cleaner_id;
+    if ( get_post_meta( $cleaner_id, 'is_verified', true ) !== '1' ) {
+        return '';
+    }
+    $date = trim( (string) get_post_meta( $cleaner_id, '_gb_verified_date', true ) );
+    if ( $date === '' ) {
+        $date = get_post_field( 'post_date', $cleaner_id );
+    }
+    $ts = $date ? strtotime( $date ) : false;
+    return $ts ? date_i18n( 'j F Y', $ts ) : '';
 }
 
 function gb_purge_cleaner_verification_documents( $cleaner_id, $fields = [] ) {
@@ -1470,19 +1570,22 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
     };
 
     $badges = array(
+        // Labels and notes are the client's own verification wording, in their
+        // order. Note this is a BASIC DBS check, not an Enhanced one - the
+        // previous copy overstated it, which matters on a public trust claim.
         array(
-            'label' => 'DBS Checked', 'done' => $verified, 'public' => true,
-            'note'  => 'Enhanced DBS background check completed before this profile went live',
-            'svg'   => $svg( '<path d="M12 3l7 3v5.5c0 4.2-2.9 7.8-7 8.9-4.1-1.1-7-4.7-7-8.9V6l7-3z"/><path d="M9 12.2l2.1 2.1L15.2 10"/>' ),
-        ),
-        array(
-            'label' => 'ID Verified', 'done' => $verified, 'public' => true,
-            'note'  => 'Government photo ID checked against this person',
+            'label' => 'Identity verified', 'done' => $verified, 'public' => true,
+            'note'  => 'Government issued I/D uploaded during application, checked and verified',
             'svg'   => $svg( '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6 16.2c.5-1.4 1.7-2.1 3-2.1s2.5.7 3 2.1"/><path d="M15 10.5h4M15 13.5h4"/>' ),
         ),
         array(
-            'label' => 'References Checked', 'done' => $refs_ok, 'public' => true,
-            'note'  => 'Two independent references supplied and checked',
+            'label' => 'Basic DBS certificate verified', 'done' => $verified, 'public' => true,
+            'note'  => 'Basic DBS Certificate uploaded during application, checked and verified; DBS status is periodically reviewed',
+            'svg'   => $svg( '<path d="M12 3l7 3v5.5c0 4.2-2.9 7.8-7 8.9-4.1-1.1-7-4.7-7-8.9V6l7-3z"/><path d="M9 12.2l2.1 2.1L15.2 10"/>' ),
+        ),
+        array(
+            'label' => '2 references verified', 'done' => $refs_ok, 'public' => true,
+            'note'  => 'Two character references supplied during application; we contact referees and written replies remain on file',
             'svg'   => $svg( '<circle cx="9" cy="9" r="3"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6S13.9 16 14.5 19"/><path d="M16 6.6a3 3 0 0 1 0 5.5"/><path d="M17.6 14.7c1.9.6 3 2 3.4 4.3"/>' ),
         ),
         // Internal vetting — deliberately not shown on the public profile.
@@ -3068,11 +3171,19 @@ function gb_register_cpts() {
     // 2b. Eco Products / guides shown on the Eco Products page.
     // A repeatable post type rather than page meta: the catalogue is expected
     // to grow to dozens or hundreds of entries, which fixed fields cannot hold.
+    // Public so each guide gets a real page. The catalogue now holds full
+    // write-ups, not just links out to PDFs, so a product with content needs
+    // somewhere to be read.
     register_post_type('gb_eco_product', array(
         'labels' => array('name' => 'Eco Products', 'singular_name' => 'Eco Product'),
-        'public' => false,
+        'public' => true,
+        'publicly_queryable' => true,
         'show_ui' => true,
-        'supports' => array('title', 'editor', 'thumbnail', 'page-attributes'),
+        'show_in_nav_menus' => false,
+        'has_archive' => false,
+        'exclude_from_search' => false,
+        'rewrite' => array('slug' => 'eco-guide', 'with_front' => false),
+        'supports' => array('title', 'editor', 'thumbnail', 'page-attributes', 'excerpt'),
         'menu_icon' => 'dashicons-carrot',
     ));
 
