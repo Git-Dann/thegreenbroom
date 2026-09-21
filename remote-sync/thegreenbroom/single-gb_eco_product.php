@@ -12,6 +12,8 @@ get_header();
 
 $gb_guide      = get_post( get_the_ID() );
 $gb_guide_body = $gb_guide ? trim( (string) $gb_guide->post_content ) : '';
+// Anything reaching this template has already passed gb_eco_product_has_guide();
+// a stub is redirected to its file before we get here.
 $gb_guide_file = function_exists( 'gb_get_eco_product_link' ) ? gb_get_eco_product_link( get_the_ID() ) : '';
 $gb_guide_thumb = get_the_post_thumbnail_url( get_the_ID(), 'large' );
 // Only offer a download when there is a real file or external link, not when

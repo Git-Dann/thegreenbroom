@@ -341,12 +341,27 @@ function gb_get_eco_product_link( $product_id ) {
 
     // No file and no link, but the guide has its own write-up: send readers to
     // its page rather than showing the card as unavailable.
-    $post = get_post( $product_id );
-    if ( $post && trim( (string) $post->post_content ) !== '' ) {
+    if ( gb_eco_product_has_guide( $product_id ) ) {
         return (string) get_permalink( $product_id );
     }
 
     return '';
+}
+
+/**
+ * Whether an Eco Product carries a real write-up worth its own page.
+ *
+ * Deliberately a word count rather than a non-empty check: a body holding
+ * just a heading line is a stub, and both the card link and the guide page
+ * must agree on that, or a card links to a page that redirects straight back.
+ */
+function gb_eco_product_has_guide( $product_id ) {
+    $post = get_post( (int) $product_id );
+    if ( ! $post ) {
+        return false;
+    }
+
+    return str_word_count( wp_strip_all_tags( (string) $post->post_content ) ) >= 60;
 }
 
 /**
@@ -717,8 +732,10 @@ function gb_redirect_empty_eco_guides() {
 
     $product_id = get_queried_object_id();
     $post       = $product_id ? get_post( $product_id ) : null;
-    if ( $post && trim( (string) $post->post_content ) !== '' ) {
-        return; // Has a real write-up; let the guide page render.
+
+    // Same test the card link uses, so the two can never disagree.
+    if ( $post && gb_eco_product_has_guide( $product_id ) ) {
+        return;
     }
 
     $file_id = (int) get_post_meta( $product_id, '_gb_eco_file', true );
