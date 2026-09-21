@@ -26,13 +26,33 @@ $bio_raw  = $bio_post ? trim((string) $bio_post->post_content) : '';
 
 // Real service catalogue rather than a hard-coded list that is the same for
 // every cleaner.
-$gb_services = get_posts([
-    'post_type'      => 'gb_service',
-    'post_status'    => 'publish',
-    'posts_per_page' => 8,
-    'orderby'        => 'menu_order title',
-    'order'          => 'ASC',
-]);
+/*
+ * The services THIS cleaner offers, from their own gb_services meta.
+ *
+ * This previously queried every published gb_service, so every profile
+ * claimed the cleaner offered the full catalogue regardless of what they had
+ * actually selected - a misrepresentation to customers, and it disagreed with
+ * the service filter on the listings page, which does read the meta.
+ *
+ * Shown in catalogue order, and only for services still published, so a
+ * retired or renamed service does not linger on a profile.
+ */
+$gb_selected_services = get_post_meta( $cleaner_id, 'gb_services', true );
+$gb_selected_services = is_array( $gb_selected_services ) ? array_filter( array_map( 'trim', $gb_selected_services ) ) : array();
+
+$gb_services = array();
+if ( ! empty( $gb_selected_services ) ) {
+    $gb_services = get_posts([
+        'post_type'      => 'gb_service',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'orderby'        => 'menu_order title',
+        'order'          => 'ASC',
+    ]);
+    $gb_services = array_values( array_filter( $gb_services, function ( $service ) use ( $gb_selected_services ) {
+        return in_array( $service->post_title, $gb_selected_services, true );
+    } ) );
+}
 ?>
 
 <style>
