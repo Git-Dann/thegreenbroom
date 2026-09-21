@@ -35,15 +35,56 @@ if ( $search_term !== '' ) {
 }
 
 $service_filter = isset($_GET['service']) ? sanitize_key(wp_unslash($_GET['service'])) : '';
-$service_filters = [
-    'standard' => 'Regular Clean',
-    'deep'     => 'Deep Clean',
-    'moving'   => 'End of Tenancy',
+
+/*
+ * The filter reads the real Services catalogue rather than a list kept here.
+ *
+ * The old hard-coded map doubled as the query value, not just the label, so a
+ * service renamed in Manager OS silently stopped matching, and the dropdown
+ * could offer services that no longer existed while missing new ones. It also
+ * already disagreed with itself: the option read "Move In/Out" while the
+ * filter searched for "End of Tenancy".
+ *
+ * Matching now uses each service's own title, so the two can never drift.
+ */
+$gb_service_catalogue = get_posts([
+    'post_type'   => 'gb_service',
+    'post_status' => 'publish',
+    'numberposts' => -1,
+    'orderby'     => 'title',
+    'order'       => 'ASC',
+]);
+
+// Older links and ad campaigns point at ?service=standard|deep|moving, so keep
+// those working by mapping them onto whatever the service is called now.
+$gb_service_aliases = [
+    'standard' => ['standard-clean', 'regular-clean', 'standard', 'regular'],
+    'deep'     => ['deep-clean', 'deep'],
+    'moving'   => ['end-of-tenancy', 'move-in-out', 'moving-clean', 'moving'],
 ];
-if ( isset($service_filters[$service_filter]) ) {
+
+$gb_active_service = null;
+if ( $service_filter !== '' ) {
+    foreach ( $gb_service_catalogue as $gb_svc ) {
+        if ( $gb_svc->post_name === $service_filter ) {
+            $gb_active_service = $gb_svc;
+            break;
+        }
+    }
+    if ( ! $gb_active_service && isset( $gb_service_aliases[ $service_filter ] ) ) {
+        foreach ( $gb_service_catalogue as $gb_svc ) {
+            if ( in_array( $gb_svc->post_name, $gb_service_aliases[ $service_filter ], true ) ) {
+                $gb_active_service = $gb_svc;
+                break;
+            }
+        }
+    }
+}
+
+if ( $gb_active_service ) {
     $meta_filters[] = [
         'key'     => 'gb_services',
-        'value'   => $service_filters[$service_filter],
+        'value'   => $gb_active_service->post_title,
         'compare' => 'LIKE',
     ];
 }
@@ -69,6 +110,16 @@ $listings_hero_bg = trim((string) get_post_meta(get_the_ID(), '_gb_listings_hero
 $listings_trust   = trim((string) get_post_meta(get_the_ID(), '_gb_trust_banner', true));
 $listings_eyebrow = trim((string) get_post_meta(get_the_ID(), '_gb_listings_eyebrow', true));
 $listings_search_head = get_post_meta(get_the_ID(), '_gb_listings_search_head', true) ?: 'Search cleaners near you';
+
+// Search and card labels. Previously fixed in the template, which meant the
+// two highest-value buttons on the page could not be reworded without a deploy.
+$listings_ph_postcode  = get_post_meta(get_the_ID(), '_gb_listings_ph_postcode', true) ?: 'Search by postcode...';
+$listings_any_service  = get_post_meta(get_the_ID(), '_gb_listings_any_service', true) ?: 'Any Service';
+$listings_search_btn   = get_post_meta(get_the_ID(), '_gb_listings_search_btn', true) ?: 'Search';
+$listings_results_line = get_post_meta(get_the_ID(), '_gb_listings_results', true) ?: 'Found {count} results for "{term}"';
+$listings_btn_profile  = get_post_meta(get_the_ID(), '_gb_listings_btn_profile', true) ?: 'View Profile';
+$listings_btn_book     = get_post_meta(get_the_ID(), '_gb_listings_btn_book', true) ?: 'Book Now';
+$listings_badge        = get_post_meta(get_the_ID(), '_gb_listings_badge', true) ?: 'Verified';
 
 // Selling points and call to action for the hero. Paid traffic arrives cold,
 // so the header has to make the case before asking anyone to search.
@@ -379,15 +430,19 @@ if ($verified_body === '') {
         <h2 id="gb-dir-search-head" class="gb-dir-search-head"><?php echo esc_html($listings_search_head); ?></h2>
         <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
             <label class="gb-sr-only" for="cleaner-search-postcode">Search by postcode</label>
-            <input id="cleaner-search-postcode" type="text" name="k" class="gb-search-input" placeholder="Search by postcode..." value="<?php echo esc_attr($search_term); ?>" maxlength="10" autocomplete="postal-code" inputmode="text">
-            <label class="gb-sr-only" for="cleaner-search-service">Service type</label>
-            <select id="cleaner-search-service" name="service" class="gb-search-select">
-            <option value="">Any Service</option>
-            <option value="standard" <?php selected($service_filter, 'standard'); ?>>Regular Clean</option>
-            <option value="deep" <?php selected($service_filter, 'deep'); ?>>Deep Clean</option>
-            <option value="moving" <?php selected($service_filter, 'moving'); ?>>Move In/Out</option>
-            </select>
-            <button type="submit" class="gb-search-btn">Search</button>
+            <input id="cleaner-search-postcode" type="text" name="k" class="gb-search-input" placeholder="<?php echo esc_attr($listings_ph_postcode); ?>" value="<?php echo esc_attr($search_term); ?>" maxlength="10" autocomplete="postal-code" inputmode="text">
+            <?php if ( ! empty( $gb_service_catalogue ) ) : ?>
+                <label class="gb-sr-only" for="cleaner-search-service">Service type</label>
+                <select id="cleaner-search-service" name="service" class="gb-search-select">
+                    <option value=""><?php echo esc_html( $listings_any_service ); ?></option>
+                    <?php foreach ( $gb_service_catalogue as $gb_svc ) : ?>
+                        <option value="<?php echo esc_attr( $gb_svc->post_name ); ?>" <?php selected( $gb_active_service && $gb_active_service->ID === $gb_svc->ID ); ?>>
+                            <?php echo esc_html( $gb_svc->post_title ); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php endif; ?>
+            <button type="submit" class="gb-search-btn"><?php echo esc_html($listings_search_btn); ?></button>
         </form>
     </section>
 
@@ -425,7 +480,16 @@ if ($verified_body === '') {
     <?php if ( $search_error ) : ?>
         <p style="margin-bottom: 30px; color: #b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 14px;"><?php echo esc_html($search_error); ?></p>
     <?php elseif ( $search_term !== '' ) : ?>
-        <p style="margin-bottom: 30px; color: #64748b;">Found <strong><?php echo $cleaners->found_posts; ?></strong> results for "<?php echo esc_html($search_term); ?>"</p>
+        <?php
+        // {count} and {term} are substituted after escaping, so a manager can
+        // reorder or reword the sentence without being able to inject markup.
+        $gb_results_text = str_replace(
+            array( '{count}', '{term}' ),
+            array( '<strong>' . (int) $cleaners->found_posts . '</strong>', esc_html( $search_term ) ),
+            esc_html( $listings_results_line )
+        );
+        ?>
+        <p style="margin-bottom: 30px; color: #64748b;"><?php echo $gb_results_text; ?></p>
     <?php endif; ?>
 
     <div class="gb-cleaner-grid">
@@ -450,7 +514,7 @@ if ($verified_body === '') {
                     <?php if($is_verified): ?>
                         <span class="gb-card-verified">
                             <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" style="height:14px; width:auto;" alt="" aria-hidden="true">
-                            Verified
+                            <?php echo esc_html($listings_badge); ?>
                         </span>
                     <?php endif; ?>
                     
@@ -471,8 +535,8 @@ if ($verified_body === '') {
                     </div>
                     
                     <div class="gb-card-actions">
-                        <a href="<?php the_permalink(); ?>" class="gb-btn-outline">View Profile</a>
-                        <a href="<?php echo home_url('/book?cleaner=' . get_the_ID()); ?>" class="gb-btn-solid">Book Now</a>
+                        <a href="<?php the_permalink(); ?>" class="gb-btn-outline"><?php echo esc_html($listings_btn_profile); ?></a>
+                        <a href="<?php echo home_url('/book?cleaner=' . get_the_ID()); ?>" class="gb-btn-solid"><?php echo esc_html($listings_btn_book); ?></a>
                     </div>
                 </div>
             </div>

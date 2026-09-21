@@ -236,6 +236,13 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
             '_gb_listings_eyebrow'     => '',
             '_gb_listings_search_head' => 'Search cleaners near you',
+            '_gb_listings_ph_postcode' => 'Search by postcode...',
+            '_gb_listings_any_service' => 'Any Service',
+            '_gb_listings_search_btn'  => 'Search',
+            '_gb_listings_results'     => 'Found {count} results for "{term}"',
+            '_gb_listings_btn_profile' => 'View Profile',
+            '_gb_listings_btn_book'    => 'Book Now',
+            '_gb_listings_badge'       => 'Verified',
             '_gb_listings_verified_link'  => 'What does Verified mean?',
             '_gb_listings_verified_title' => '🍃 Green Broom Verified',
             '_gb_listings_verified_card'  => '1',
@@ -760,6 +767,28 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 <div class="gb-form-row"><label class="gb-label">Second button link</label><input type="text" name="_gb_listings_link_2" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_link_2')); ?>"></div>
                             </div>
                             <div class="gb-form-row"><label class="gb-label">Heading above the search box</label><input type="text" name="_gb_listings_search_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_search_head')); ?>"></div>
+                            <div style="margin:22px 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Search box &amp; cleaner card labels</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">The wording on the search form and on each cleaner card. The service dropdown fills itself from your Services list, so there is nothing to set here for that.</p>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Postcode box placeholder</label><input type="text" name="_gb_listings_ph_postcode" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_ph_postcode')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">&ldquo;Any service&rdquo; option</label><input type="text" name="_gb_listings_any_service" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_any_service')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Search button</label><input type="text" name="_gb_listings_search_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_search_btn')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Verified badge on cards</label><input type="text" name="_gb_listings_badge" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_badge')); ?>"></div>
+                                </div>
+                                <div class="gb-link-row">
+                                    <div class="gb-form-row"><label class="gb-label">Card button 1 (profile)</label><input type="text" name="_gb_listings_btn_profile" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_btn_profile')); ?>"></div>
+                                    <div class="gb-form-row"><label class="gb-label">Card button 2 (booking)</label><input type="text" name="_gb_listings_btn_book" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_btn_book')); ?>"></div>
+                                </div>
+                                <div class="gb-form-row" style="margin-bottom:0;">
+                                    <label class="gb-label">Results line</label>
+                                    <input type="text" name="_gb_listings_results" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_results')); ?>">
+                                    <p style="margin-top:8px; color:#94a3b8; font-size:12px;">Use <code>{count}</code> for the number of cleaners found and <code>{term}</code> for what they searched.</p>
+                                </div>
+                            </div>
+
                             <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;How it works&rdquo; steps</h4>
