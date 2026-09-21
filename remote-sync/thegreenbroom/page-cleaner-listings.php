@@ -82,14 +82,28 @@ if ( $service_filter !== '' ) {
 }
 
 if ( $gb_active_service ) {
+    /*
+     * gb_services is saved as an array, so it lives in the database as a
+     * serialised string. Matching the title wrapped in quotes pins it to a
+     * whole element: a bare LIKE '%Deep Clean%' would also match a service
+     * called "Deep Cleaning", quietly returning cleaners who do not offer it.
+     */
     $meta_filters[] = [
         'key'     => 'gb_services',
-        'value'   => $gb_active_service->post_title,
+        'value'   => '"' . $gb_active_service->post_title . '"',
         'compare' => 'LIKE',
     ];
 }
+/*
+ * Always wrap in a clause list. Assigning a single flat clause directly -
+ * ['key' => .., 'value' => .., 'compare' => ..] - is silently discarded:
+ * WP_Meta_Query::sanitize_query() skips entries that are not arrays, so every
+ * key of a flat clause is thrown away and no filtering happens at all. That
+ * is why the service filter never narrowed the results, while the postcode
+ * search worked - its ['relation' => 'OR', [..], [..]] entries are arrays.
+ */
 if ( count($meta_filters) === 1 ) {
-    $args['meta_query'] = $meta_filters[0];
+    $args['meta_query'] = [ $meta_filters[0] ];
 } elseif ( count($meta_filters) > 1 ) {
     $args['meta_query'] = array_merge(['relation' => 'AND'], $meta_filters);
 }
