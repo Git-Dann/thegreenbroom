@@ -702,6 +702,52 @@ function gb_migrate_eco_guides() {
 add_action( 'init', 'gb_migrate_eco_guides', 30 );
 
 /**
+ * An Eco Product only deserves its own page when it actually has a write-up.
+ *
+ * The post type is public so guides written in Manager OS get a real page,
+ * but most guides are an uploaded file instead. Without this, those resolve
+ * to a near-empty "this guide is being written" page that search engines can
+ * index and visitors can land on. Send them somewhere useful instead:
+ * the attached file or link if there is one, otherwise the Eco Products page.
+ */
+function gb_redirect_empty_eco_guides() {
+    if ( ! is_singular( 'gb_eco_product' ) ) {
+        return;
+    }
+
+    $product_id = get_queried_object_id();
+    $post       = $product_id ? get_post( $product_id ) : null;
+    if ( $post && trim( (string) $post->post_content ) !== '' ) {
+        return; // Has a real write-up; let the guide page render.
+    }
+
+    $file_id = (int) get_post_meta( $product_id, '_gb_eco_file', true );
+    $target  = $file_id ? wp_get_attachment_url( $file_id ) : '';
+    if ( ! $target ) {
+        $target = trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
+    }
+    if ( ! $target ) {
+        $page   = get_page_by_path( 'eco-products' );
+        $target = $page ? get_permalink( $page ) : home_url( '/' );
+    }
+
+    /*
+     * wp_safe_redirect() refuses off-site hosts and would bounce an external
+     * guide link to wp-admin. This target is manager-entered, not visitor
+     * input, so an outside host is legitimate here - but keep the safe
+     * variant for anything on our own domain.
+     */
+    $target_host = wp_parse_url( $target, PHP_URL_HOST );
+    if ( $target_host && $target_host !== wp_parse_url( home_url(), PHP_URL_HOST ) ) {
+        wp_redirect( esc_url_raw( $target ), 302 );
+    } else {
+        wp_safe_redirect( $target, 302 );
+    }
+    exit;
+}
+add_action( 'template_redirect', 'gb_redirect_empty_eco_guides' );
+
+/**
  * One-time migration: point existing "Join" buttons at the new /join page.
  * Only rewrites values that are empty or still '/register' so any deliberately
  * customised link is preserved. Guarded by an option so it runs just once.
