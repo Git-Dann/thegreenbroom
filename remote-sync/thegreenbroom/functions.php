@@ -239,6 +239,61 @@ function gb_ensure_cookie_policy_page() {
 }
 add_action( 'init', 'gb_ensure_cookie_policy_page' );
 
+/**
+ * Make the legal pages genuinely editable.
+ *
+ * Privacy, Terms and the Subscribers' Terms rendered from a hardcoded array in
+ * page-legal.php that always beat the page's own content, so a manager could
+ * edit them, get a success message, and see no change on the live site. This
+ * copies the existing copy into each page once; from then on the dashboard is
+ * the source of truth.
+ *
+ * It only ever writes into an EMPTY page, so it cannot overwrite an edit, and
+ * it is safe to re-run. The option is set per page rather than once for the
+ * batch, so a page that fails this time is retried on the next load instead of
+ * being silently skipped forever.
+ */
+function gb_seed_legal_page_content() {
+    if ( ! function_exists( 'gb_get_legal_seed_documents' ) ) {
+        return;
+    }
+
+    foreach ( gb_get_legal_seed_documents() as $slug => $doc ) {
+        $option = 'gb_legal_seeded_' . str_replace( '-', '_', $slug );
+        if ( get_option( $option ) ) {
+            continue;
+        }
+
+        $page = get_page_by_path( $slug );
+        if ( ! $page instanceof WP_Post ) {
+            continue;
+        }
+
+        if ( trim( (string) $page->post_content ) !== '' ) {
+            update_option( $option, 1 );
+            continue;
+        }
+
+        $update = array(
+            'ID'           => $page->ID,
+            'post_content' => $doc['html'],
+        );
+
+        // The old array carried its own display title ("Privacy Notice" for a
+        // page called "Privacy"). Keep the heading the public already sees, and
+        // make it editable along with everything else.
+        if ( $doc['title'] !== '' && $doc['title'] !== $page->post_title ) {
+            $update['post_title'] = $doc['title'];
+        }
+
+        $result = wp_update_post( $update, true );
+        if ( ! is_wp_error( $result ) ) {
+            update_option( $option, 1 );
+        }
+    }
+}
+add_action( 'init', 'gb_seed_legal_page_content', 20 );
+
 function gb_get_cookie_policy_seed_content() {
     $contact = function_exists( 'gb_get_contact_page_url' ) ? gb_get_contact_page_url() : home_url( '/contact/' );
     $privacy = function_exists( 'gb_get_privacy_page_url' ) ? gb_get_privacy_page_url() : home_url( '/privacy/' );
@@ -749,6 +804,7 @@ add_action( 'init', 'gb_migrate_what_cleaners_do' );
 
 require_once get_template_directory() . '/inc/eco-guide-content.php';
 require_once get_template_directory() . '/inc/cookie-consent.php';
+require_once get_template_directory() . '/inc/legal-content.php';
 
 /**
  * One-time migration: publish the two client-written Eco Product guides.
@@ -2864,84 +2920,29 @@ function gb_get_subscriber_terms_page_url() {
     return gb_get_page_url_by_slug( 'subscribers-terms-of-association', '/subscribers-terms-of-association/' );
 }
 
-function gb_get_subscriber_terms_of_association_sections() {
-    return array(
-        array(
-            'id' => 'about-the-green-broom',
-            'heading' => '1. About The Green Broom',
-            'paragraphs' => array(
-                'The Green Broom is a UK eco-friendly cleaner platform that connects homeowners and other members seeking cleaning services with a database of verified and vetted, self-employed cleaners.',
-            ),
-        ),
-        array(
-            'id' => 'membership',
-            'heading' => '2. Membership',
-            'paragraphs' => array(
-                'Access to The Green Broom database and its member services is available to subscribers who pay the applicable quarterly or annual membership fee. Membership provides exceptional value and remains active for the period for which the subscription has been paid.',
-            ),
-        ),
-        array(
-            'id' => 'member-benefits',
-            'heading' => '3. Member Benefits',
-            'paragraphs' => array(
-                'While subscribed, members may benefit from:',
-            ),
-            'items' => array(
-                'Access to the database of verified and vetted self-employed cleaners.',
-                'The ability to make bookings through the platform.',
-                'Cashless payment facilities.',
-                'The ability to leave reviews of cleaners.',
-                'Insurance cover provided by The Green Broom, subject to the applicable terms, conditions and exclusions.',
-            ),
-        ),
-        array(
-            'id' => 'self-employed-cleaners',
-            'heading' => '4. Self-Employed Cleaners',
-            'paragraphs' => array(
-                'Members acknowledge and agree that all cleaners listed on The Green Broom are self-employed and independent contractors. Cleaners are not employees, agents or representatives of The Green Broom and are not supplied or employed by The Green Broom.',
-            ),
-        ),
-        array(
-            'id' => 'private-arrangement',
-            'heading' => '5. Private Arrangement Between Member and Cleaner',
-            'paragraphs' => array(
-                "The Green Broom's role is to provide a platform that enables members and cleaners to find and connect with one another. Once a member chooses a cleaner, the cleaning arrangement is a private agreement between the member and the self-employed cleaner.",
-                'Members are free to contact cleaners directly and, where appropriate, arrange future cleaning services directly with them. The Green Broom does not become a party to such arrangements and does not charge an ongoing commission or fee for cleaning services arranged between members and cleaners.',
-            ),
-        ),
-        array(
-            'id' => 'responsibility-for-services',
-            'heading' => '6. Responsibility for Cleaning Services',
-            'paragraphs' => array(
-                'The member and cleaner are responsible for agreeing the scope, timing, price and other terms of any cleaning service. The Green Broom does not direct or control how a self-employed cleaner carries out their work.',
-            ),
-        ),
-        array(
-            'id' => 'platform-role',
-            'heading' => '7. Platform Role',
-            'paragraphs' => array(
-                'The Green Broom provides the platform, database and associated member services but does not itself provide cleaning services. Its role is principally to facilitate connection between members and independent, self-employed cleaners.',
-            ),
-        ),
-        array(
-            'id' => 'membership-continuation',
-            'heading' => '8. Membership Continuation',
-            'paragraphs' => array(
-                "The benefits of membership, including access to the database and platform services, continue only while a member's subscription remains active. The cleaner's subscription must also be active. The Green Broom reserves the right to amend or update these terms from time to time, with reasonable notice where appropriate.",
-            ),
-        ),
-        array(
-            'id' => 'acceptance-of-terms',
-            'heading' => '9. Acceptance of These Terms',
-            'paragraphs' => array(
-                'By subscribing to The Green Broom, the member confirms that they have read, understood and accepted these Terms of Association, including the fact that cleaners are self-employed and that any cleaning arrangement is a private arrangement between the member and the cleaner.',
-            ),
-        ),
-    );
-}
+/*
+ * gb_get_subscriber_terms_of_association_sections() used to live here and was
+ * the real text of the Subscribers' Terms page. It has moved into
+ * inc/legal-content.php as seed copy, and the page's own content is now what
+ * renders. Editing a copy here would have changed nothing, so it is gone
+ * rather than left looking authoritative.
+ */
 
+/**
+ * Fingerprint of the subscriber terms as currently published, recorded against
+ * each sign-up. Now that the page is editable, this has to hash what the page
+ * actually says - hashing the old hardcoded array would pin every future
+ * acceptance to a version nobody was ever shown.
+ */
 function gb_get_subscriber_terms_of_association_version() {
-    return substr( md5( wp_json_encode( gb_get_subscriber_terms_of_association_sections() ) ), 0, 8 );
+    $page = get_page_by_path( 'subscribers-terms-of-association' );
+    $body = $page instanceof WP_Post ? trim( (string) $page->post_content ) : '';
+
+    if ( $body === '' && function_exists( 'gb_get_legal_seed_content' ) ) {
+        $body = gb_get_legal_seed_content( 'subscribers-terms-of-association' );
+    }
+
+    return substr( md5( $body ), 0, 8 );
 }
 
 function gb_get_blog_url() {
