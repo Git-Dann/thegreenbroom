@@ -718,8 +718,9 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-main .gb-media-preview.is-empty { min-height: 0; height: 88px; }
             .gb-main .gb-media-preview img { max-height: 180px; object-fit: contain; }
 
-            /* Wide tables scroll inside their card instead of clipping. */
-            .gb-main table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            /* Tables scroll via .gb-table-scroll rather than display:block on
+               the table itself, which detaches thead from tbody and misaligns
+               every column. */
 
             .gb-card, .gb-config-card, .gb-editor-section { padding: 16px !important; }
 
@@ -965,6 +966,22 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
                 color: #0f172a !important;
                 font-size: 13px !important;
             }
+
+            /* TABLES
+               Three listing tables had neither a scroll container nor a minimum
+               width, so rather than scrolling they compressed: every cell
+               wrapped, names broke across lines and the vetting chips stacked
+               into a column. They now scroll, with a floor on the width so the
+               columns keep readable proportions at any screen size. */
+            .gb-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .gb-table-scroll > table { width: 100%; }
+            .gb-table-scroll > .gb-table-os { min-width: 1040px; }
+            .gb-table-scroll > .gb-blog-table { min-width: 820px; }
+            .gb-table-scroll > .gb-booking-table { min-width: 900px; }
+            /* Short cells should never wrap - a rate or an action button broken
+               over two lines is what made those rows so tall. */
+            .gb-main .gb-table-os td:first-child, .gb-main .gb-table-os th:first-child { min-width: 210px; }
+            .gb-main .pill-verified, .gb-main .pill-trial, .gb-main .pill-active { white-space: nowrap; }
 
             /* The native select arrow renders hard against the right border,
                which looked cramped next to the 8px radius. Swap in our own

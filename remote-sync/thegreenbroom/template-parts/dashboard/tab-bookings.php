@@ -316,6 +316,7 @@ $gb_payment_class = static function($payment_status) {
     </div>
 
     <div class="gb-card" style="padding:0; overflow:hidden;">
+        <div class="gb-table-scroll">
         <table class="gb-booking-table">
             <thead>
                 <tr>
@@ -406,5 +407,6 @@ $gb_payment_class = static function($payment_status) {
                 <?php endif; ?>
             </tbody>
         </table>
+        </div>
     </div>
 <?php endif; ?>

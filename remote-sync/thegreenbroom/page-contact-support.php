@@ -10,7 +10,10 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
 <style>
     #gb-page-wrapper { width: 100vw; position: relative; left: 50%; margin-left: -50vw; background: #f4f6f8; min-height: 100vh; font-family: sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 40px 20px; box-sizing: border-box; }
     
-    .gb-support-card { background: white; padding: 50px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    /* box-sizing was missing, so width:100% plus 100px of horizontal padding
+       pushed the card past the viewport on every phone. */
+    .gb-support-card { background: white; padding: 50px; border-radius: 12px; max-width: 500px; width: 100%; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    @media (max-width: 600px) { .gb-support-card { padding: 28px 20px; } }
     
     /* Back Link Style */
     .gb-back-link { display: inline-flex; align-items: center; color: #666; text-decoration: none; font-weight: 600; margin-bottom: 20px; font-size: 0.9rem; align-self: flex-start; max-width: 500px; width: 100%; margin: 0 auto 20px; }

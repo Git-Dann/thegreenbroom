@@ -199,6 +199,7 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
         </form>
     </div>
     <div class="gb-card" style="padding:0; overflow:hidden; border: 1px solid #e2e8f0; border-radius:12px; background: white;">
+        <div class="gb-table-scroll">
         <table class="gb-blog-table">
             <thead>
                 <tr><th style="width:40%;">Article Title</th><th>SEO Score</th><th>Status</th><th>Date</th><th style="text-align:right;">Action</th></tr>
@@ -223,5 +224,6 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
 <?php endif; ?>

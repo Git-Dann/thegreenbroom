@@ -145,6 +145,35 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
     @media (max-width: 600px) {
         .gb-footer-container { grid-template-columns: 1fr; }
     }
+
+    /*
+     * SITE-WIDE MOBILE GUARDS
+     * Scoped here deliberately: footer.php loads on every public page and
+     * never on the manager dashboard, which renders its own <body>.
+     */
+
+    /* The logo is a 974x139 image shown at 40px high, so it renders 280px
+       wide. With the white plate's padding that pushed past a 320px phone
+       and gave every single page a sideways scroll. */
+    .gb-footer-logo { max-width: 100%; }
+    .gb-footer-brand, .gb-footer-brand > div { max-width: 100%; box-sizing: border-box; }
+
+    @media (max-width: 480px) {
+        .gb-footer-logo { height: 32px; }
+    }
+
+    /* Safety net: nothing should be able to scroll the page sideways. */
+    @media (max-width: 900px) {
+        html, body { overflow-x: hidden; }
+        img, video, iframe, table { max-width: 100%; }
+    }
+
+    /* iOS zooms the whole page in when a focused field is under 16px.
+       Public forms (login, register, contact, the message modal) were all
+       below that. */
+    @media (max-width: 768px) {
+        input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; }
+    }
 </style>
 
 <footer id="gb-site-footer">

@@ -326,7 +326,9 @@ if ($verified_body === '') {
     
     /* SEARCH BAR */
     .gb-search-wrapper { max-width: 800px; margin: 0 auto; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap; }
-    .gb-search-input { flex: 1; padding: 15px 20px; border: none; outline: none; font-size: 16px; color: #333; min-width: 200px; }
+    .gb-search-input { flex: 1; padding: 15px 20px; border: none; outline: none; font-size: 16px; color: #333; min-width: 200px; box-sizing: border-box; }
+    /* The 200px floor plus padding overflowed a 320px handset. */
+    @media (max-width: 420px) { .gb-search-input { min-width: 0; width: 100%; padding: 14px 16px; } }
     .gb-search-select { flex: 0.5; padding: 15px 20px; border-left: 1px solid #eee; border-top: none; border-right: none; border-bottom: none; outline: none; font-size: 16px; color: #333; background: white; min-width: 150px; }
     
     /* Search Button (Emerald) */

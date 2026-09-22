@@ -416,6 +416,7 @@
     </div>
 
     <div class="gb-os-card" style="padding:0; overflow:hidden;">
+        <div class="gb-table-scroll">
         <table class="gb-table-os">
             <thead>
                 <tr>
@@ -474,8 +475,20 @@
                         <?php endif; ?>
                     </td>
                     <td>
-                        <?php if($st == 'publish'): ?>
+                        <?php
+                        /*
+                         * Use the same rule as the public badge. Reading post
+                         * status alone showed cleaners as "Verified" here while
+                         * the badge was correctly withheld on their profile -
+                         * and while the Vetting column in this very row listed
+                         * the missing checks. One rule, one answer.
+                         */
+                        $gb_row_verified = function_exists('gb_cleaner_is_fully_verified') && gb_cleaner_is_fully_verified($cid);
+                        ?>
+                        <?php if ($gb_row_verified): ?>
                             <span class="pill-verified"><img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-icon-logo.png" style="height:11px;"> Verified</span>
+                        <?php elseif ($st == 'publish'): ?>
+                            <span class="pill-trial" style="background:#fffbeb; color:#92400e; border:1px solid #fde68a;" title="Live, but at least one Green Broom Verified check is outstanding, so the public badge is hidden.">Live &mdash; checks due</span>
                         <?php else: ?>
                             <span class="pill-trial" style="background:#f1f5f9; color:#64748b;"><?php echo strtoupper($st); ?></span>
                         <?php endif; ?>
@@ -501,5 +514,6 @@
                 <?php endwhile; wp_reset_postdata(); endif; ?>
             </tbody>
         </table>
+        </div>
     </div>
 <?php } ?>
