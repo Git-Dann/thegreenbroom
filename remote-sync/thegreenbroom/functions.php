@@ -294,6 +294,53 @@ function gb_seed_legal_page_content() {
 }
 add_action( 'init', 'gb_seed_legal_page_content', 20 );
 
+/**
+ * One-off repair for the Terms page.
+ *
+ * Making the legal pages editable had a consequence I got wrong: the seeding
+ * migration only writes into an EMPTY page, and the Terms page was not empty -
+ * it held a 37-word, two-section placeholder that had never been visible,
+ * because the hardcoded array was covering it. Handing the page back its own
+ * content therefore dropped three sections the public had been reading:
+ * Cleaner Standards, Cancellations and Support, and Liability.
+ *
+ * This restores the fuller text that was actually published. It is deliberately
+ * narrow: it fires only on the Terms page, only while the content still matches
+ * that placeholder's signature, so it cannot touch a page anyone has since
+ * edited. WordPress keeps the placeholder in the page's revision history.
+ */
+function gb_restore_terms_page_content() {
+    if ( get_option( 'gb_legal_terms_restored' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'terms' );
+    if ( ! $page instanceof WP_Post ) {
+        return;
+    }
+
+    $body  = trim( (string) $page->post_content );
+    $words = str_word_count( wp_strip_all_tags( $body ) );
+    $is_placeholder = $words > 0 && $words < 80 && strpos( $body, 'Acceptance of Terms' ) !== false;
+
+    if ( ! $is_placeholder ) {
+        // Already restored, already edited, or never the placeholder. Either
+        // way this is not ours to rewrite.
+        update_option( 'gb_legal_terms_restored', 1 );
+        return;
+    }
+
+    $result = wp_update_post( array(
+        'ID'           => $page->ID,
+        'post_content' => gb_get_legal_seed_content( 'terms' ),
+    ), true );
+
+    if ( ! is_wp_error( $result ) ) {
+        update_option( 'gb_legal_terms_restored', 1 );
+    }
+}
+add_action( 'init', 'gb_restore_terms_page_content', 21 );
+
 function gb_get_cookie_policy_seed_content() {
     $contact = function_exists( 'gb_get_contact_page_url' ) ? gb_get_contact_page_url() : home_url( '/contact/' );
     $privacy = function_exists( 'gb_get_privacy_page_url' ) ? gb_get_privacy_page_url() : home_url( '/privacy/' );
