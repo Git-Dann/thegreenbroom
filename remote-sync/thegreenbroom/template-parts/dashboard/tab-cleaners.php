@@ -497,17 +497,29 @@
                         <?php if (empty($vetting_gaps)): ?>
                             <span class="pill-active">Complete</span>
                         <?php else: ?>
-                            <div style="display:flex; flex-wrap:wrap; gap:4px; max-width:190px;" title="Outstanding vetting fields">
-                                <?php foreach ($vetting_gaps as $gap): ?>
-                                    <span style="background:#fef2f2; color:#991b1b; border:1px solid #fee2e2; border-radius:999px; padding:2px 8px; font-size:10px; font-weight:800; white-space:nowrap;"><?php echo esc_html($gap); ?></span>
+                            <?php
+                            // Seven chips stacked one per line made the row three
+                            // times taller than it needed to be. Show a count and
+                            // the first few; the rest are in the tooltip.
+                            $gb_gap_total = count($vetting_gaps);
+                            $gb_gap_shown = array_slice($vetting_gaps, 0, 3);
+                            $gb_gap_rest  = $gb_gap_total - count($gb_gap_shown);
+                            ?>
+                            <div class="gb-vetting-cell" title="Outstanding: <?php echo esc_attr(implode(', ', $vetting_gaps)); ?>">
+                                <span class="gb-vetting-count"><?php echo (int) $gb_gap_total; ?> outstanding</span>
+                                <?php foreach ($gb_gap_shown as $gap): ?>
+                                    <span class="gb-vetting-chip"><?php echo esc_html($gap); ?></span>
                                 <?php endforeach; ?>
+                                <?php if ($gb_gap_rest > 0): ?>
+                                    <span class="gb-vetting-chip gb-vetting-more">+<?php echo (int) $gb_gap_rest; ?></span>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td style="text-align:right;">
                         <div style="display:flex; justify-content:flex-end; gap:8px;">
-                            <a href="?tab=cleaners&action=edit&id=<?php echo $cid; ?>" style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 14px; font-weight: 700; color: #334155; text-decoration: none; font-size: 11px;">Edit Profile</a>
-                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $cid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $cid)); ?>" style="background: white; border: 1px solid #fecaca; border-radius: 6px; padding: 6px 14px; font-weight: 700; color: #ef4444; text-decoration: none; font-size: 11px;" onclick="return confirm('Delete this cleaner profile? It will be moved to trash.');">Delete</a>
+                            <a class="gb-row-btn" href="?tab=cleaners&action=edit&id=<?php echo $cid; ?>">Edit Profile</a>
+                            <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['action' => 'delete_entity', 'id' => $cid], home_url('/manager-dashboard')), 'gb_manager_action_delete_entity_' . $cid)); ?>" class="gb-row-btn gb-row-btn-danger" onclick="return confirm('Delete this cleaner profile? It will be moved to trash.');">Delete</a>
                         </div>
                     </td>
                 </tr>

@@ -978,9 +978,56 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-table-scroll > .gb-table-os { min-width: 1040px; }
             .gb-table-scroll > .gb-blog-table { min-width: 820px; }
             .gb-table-scroll > .gb-booking-table { min-width: 900px; }
+            /* Column 1 is the avatar, not the name. An earlier min-width here
+               overrode the header's width:60px and stretched that cell to 210px,
+               leaving a large gap before the name. !important is needed because
+               the unified table rule above sets padding with it. Scoped through
+               .gb-table-scroll so the bookings sub-table inside the cleaner
+               editor, which shares this class, is untouched. */
+            .gb-table-scroll > table.gb-table-os td:first-child,
+            .gb-table-scroll > table.gb-table-os th:first-child {
+                /* Sized to the 36px avatar itself: anything wider leaves dead
+                   space inside the cell, which reads as a gap before the name. */
+                width: 36px !important; min-width: 36px !important;
+                padding-right: 0 !important; padding-left: 14px !important;
+            }
+            .gb-table-scroll > table.gb-table-os td:nth-child(2),
+            .gb-table-scroll > table.gb-table-os th:nth-child(2) {
+                padding-left: 10px !important; min-width: 190px;
+            }
+            /* Names were breaking across two lines once the column was starved. */
+            .gb-table-scroll > table.gb-table-os td:nth-child(2) strong { white-space: nowrap; }
+
+            /* VETTING CELL
+               Seven chips in a starved column stacked one per line and tripled
+               the row height. Give the column room so they flow, and show a
+               count with the first few rather than every one. */
+            .gb-table-scroll > table.gb-table-os td:nth-child(7) { min-width: 210px; }
+            .gb-vetting-cell { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+            .gb-vetting-count { font-size: 11px; font-weight: 800; color: #92400e; white-space: nowrap; }
+            .gb-vetting-chip {
+                background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2;
+                border-radius: 999px; padding: 2px 8px; font-size: 10px;
+                font-weight: 800; white-space: nowrap;
+            }
+            .gb-vetting-more { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+            /* ROW ACTIONS
+               These were inline-styled links with no nowrap, so "Edit Profile"
+               broke over two lines and set the row height. */
+            .gb-table-scroll > table.gb-table-os td:last-child { white-space: nowrap; }
+            .gb-row-btn {
+                display: inline-flex; align-items: center; white-space: nowrap;
+                background: #fff; border: 1px solid #e2e8f0; border-radius: 7px;
+                padding: 7px 12px; font-weight: 700; color: #334155;
+                text-decoration: none; font-size: 11px; line-height: 1;
+            }
+            .gb-row-btn:hover { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+            .gb-row-btn-danger { border-color: #fecaca; color: #ef4444; }
+            .gb-row-btn-danger:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
+
             /* Short cells should never wrap - a rate or an action button broken
                over two lines is what made those rows so tall. */
-            .gb-main .gb-table-os td:first-child, .gb-main .gb-table-os th:first-child { min-width: 210px; }
             .gb-main .pill-verified, .gb-main .pill-trial, .gb-main .pill-active { white-space: nowrap; }
 
             /* The native select arrow renders hard against the right border,
