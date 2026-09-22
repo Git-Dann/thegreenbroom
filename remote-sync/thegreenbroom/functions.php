@@ -1613,7 +1613,17 @@ function gb_render_stars( $value, $size = 14 ) {
  * protection. So 'is_verified' is the durable record that those checks passed —
  * the badges must never be driven off the documents themselves, which are gone.
  */
-function gb_get_cleaner_verification_badges( $cleaner_id ) {
+/**
+ * The three checks the Green Broom Verified badge stands on, per the client's
+ * published rule: government ID, Basic DBS certificate, two character
+ * references.
+ *
+ * Each is an explicit manager-set flag, so the badge reflects a decision
+ * somebody actually made rather than something inferred. Where a flag has
+ * never been set the old derivation is used, so cleaners approved before these
+ * controls existed do not suddenly lose badges they legitimately hold.
+ */
+function gb_get_cleaner_checks( $cleaner_id ) {
     $cleaner_id = (int) $cleaner_id;
     $verified   = get_post_meta( $cleaner_id, 'is_verified', true ) === '1';
 
@@ -1624,6 +1634,44 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
             break;
         }
     }
+
+    $resolve = function ( $key, $fallback ) use ( $cleaner_id ) {
+        $stored = get_post_meta( $cleaner_id, $key, true );
+        if ( $stored === '1' ) {
+            return true;
+        }
+        if ( $stored === '0' ) {
+            return false;
+        }
+        return (bool) $fallback; // Never set: fall back to how it used to be derived.
+    };
+
+    return array(
+        'id'   => $resolve( '_gb_check_id', $verified ),
+        'dbs'  => $resolve( '_gb_check_dbs', $verified ),
+        'refs' => $resolve( '_gb_check_refs', $refs_ok ),
+    );
+}
+
+/**
+ * Whether a cleaner has completed every check the public badge promises.
+ * The profile must not show the badge on a partial set - the pop-up tells
+ * customers all three are done.
+ */
+function gb_cleaner_is_fully_verified( $cleaner_id ) {
+    if ( get_post_meta( (int) $cleaner_id, 'is_verified', true ) !== '1' ) {
+        return false;
+    }
+    $checks = gb_get_cleaner_checks( $cleaner_id );
+    return $checks['id'] && $checks['dbs'] && $checks['refs'];
+}
+
+function gb_get_cleaner_verification_badges( $cleaner_id ) {
+    $cleaner_id = (int) $cleaner_id;
+    $verified   = get_post_meta( $cleaner_id, 'is_verified', true ) === '1';
+
+    $checks  = gb_get_cleaner_checks( $cleaner_id );
+    $refs_ok = $checks['refs'];
 
     // 'public' marks the checks a customer actually weighs when deciding to let
     // someone into their home. Address/phone/terms are internal vetting admin —
@@ -1637,12 +1685,12 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
         // order. Note this is a BASIC DBS check, not an Enhanced one - the
         // previous copy overstated it, which matters on a public trust claim.
         array(
-            'label' => 'Identity verified', 'done' => $verified, 'public' => true,
+            'label' => 'Identity verified', 'done' => $checks['id'], 'public' => true,
             'note'  => 'Government issued I/D uploaded during application, checked and verified',
             'svg'   => $svg( '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6 16.2c.5-1.4 1.7-2.1 3-2.1s2.5.7 3 2.1"/><path d="M15 10.5h4M15 13.5h4"/>' ),
         ),
         array(
-            'label' => 'Basic DBS certificate verified', 'done' => $verified, 'public' => true,
+            'label' => 'Basic DBS certificate verified', 'done' => $checks['dbs'], 'public' => true,
             'note'  => 'Basic DBS Certificate uploaded during application, checked and verified; DBS status is periodically reviewed',
             'svg'   => $svg( '<path d="M12 3l7 3v5.5c0 4.2-2.9 7.8-7 8.9-4.1-1.1-7-4.7-7-8.9V6l7-3z"/><path d="M9 12.2l2.1 2.1L15.2 10"/>' ),
         ),

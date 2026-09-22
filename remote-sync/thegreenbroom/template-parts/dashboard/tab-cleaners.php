@@ -189,6 +189,46 @@
                     </div>
                 </div>
 
+                <?php
+                /*
+                 * The three checks the public Green Broom Verified badge stands
+                 * on. Recorded explicitly here because the badge is a promise to
+                 * customers: it should reflect a decision a manager made, not
+                 * something inferred from whatever files happen to be present -
+                 * especially as those files are deleted on approval.
+                 */
+                $gb_checks = function_exists('gb_get_cleaner_checks') ? gb_get_cleaner_checks($pid) : array('id'=>false,'dbs'=>false,'refs'=>false);
+                $gb_all_checks = $gb_checks['id'] && $gb_checks['dbs'] && $gb_checks['refs'];
+                ?>
+                <div class="gb-os-card">
+                    <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Green Broom Verified checks</div></div></div>
+                    <div class="gb-os-body">
+                        <p style="margin:0 0 14px; font-size:12.5px; color:#64748b;">
+                            The badge shown to customers means all three of these are complete. Tick each one as you confirm it.
+                            <?php if (!$gb_all_checks): ?>
+                                <strong style="color:#b45309;">The badge is currently hidden on this cleaner&rsquo;s profile and listing because at least one check is outstanding.</strong>
+                            <?php endif; ?>
+                        </p>
+                        <?php foreach ([
+                            'id'   => ['_gb_check_id', 'Identity verified', 'Government issued I/D uploaded, checked and verified'],
+                            'dbs'  => ['_gb_check_dbs', 'Basic DBS certificate verified', 'Basic DBS Certificate checked and verified; status periodically reviewed'],
+                            'refs' => ['_gb_check_refs', '2 references verified', 'Two character references supplied, referees contacted and replies on file'],
+                        ] as $gb_ck => $gb_cfg): list($gb_meta, $gb_lbl, $gb_note) = $gb_cfg; ?>
+                            <label style="display:flex; gap:11px; align-items:flex-start; padding:11px 0; border-bottom:1px solid #f1f5f9;">
+                                <input type="hidden" name="<?php echo esc_attr($gb_meta); ?>" value="0">
+                                <input type="checkbox" name="<?php echo esc_attr($gb_meta); ?>" value="1" <?php checked($gb_checks[$gb_ck]); ?> style="margin-top:3px;">
+                                <span>
+                                    <span style="display:block; font-size:13px; font-weight:700; color:#0f172a;"><?php echo esc_html($gb_lbl); ?></span>
+                                    <span style="display:block; font-size:11.5px; color:#64748b; margin-top:2px;"><?php echo esc_html($gb_note); ?></span>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                        <p style="margin:14px 0 0; font-size:11.5px; color:#94a3b8;">
+                            Never ticked before? The badge falls back to how it worked previously, so nobody already approved loses it unexpectedly. Saving this panel makes the record explicit.
+                        </p>
+                    </div>
+                </div>
+
                 <div class="gb-os-card">
                     <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Verification Documents</div></div></div>
                     <div class="gb-os-body">

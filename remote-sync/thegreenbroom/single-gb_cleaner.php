@@ -340,7 +340,16 @@ if ( ! empty( $gb_selected_services ) ) {
                 <a href="<?php echo esc_url(home_url('/book?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
                 <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 
-                <?php if (!empty($public_badges)): ?>
+                <?php
+                /*
+                 * Only show the badge when every check behind it is complete.
+                 * The pop-up tells customers the badge means ID, Basic DBS and
+                 * two references have all been done, so showing it on a partial
+                 * set would be a claim the platform has not actually met.
+                 */
+                $gb_fully_verified = function_exists('gb_cleaner_is_fully_verified') && gb_cleaner_is_fully_verified($cleaner_id);
+                ?>
+                <?php if ($gb_fully_verified && !empty($public_badges)): ?>
                 <?php $gb_verified_on = function_exists('gb_get_cleaner_verified_date') ? gb_get_cleaner_verified_date($cleaner_id) : ''; ?>
                 <div class="gb-verify">
                     <div class="gb-verify-head">&#127811; Green Broom Verified</div>

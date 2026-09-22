@@ -511,7 +511,11 @@ if ($verified_body === '') {
             <?php while($cleaners->have_posts()): $cleaners->the_post(); 
                 $rate = get_post_meta(get_the_ID(), 'hourly_rate', true) ?: '15';
                 $location = get_post_meta(get_the_ID(), 'location', true) ?: 'Manchester, UK';
-                $is_verified = get_post_meta(get_the_ID(), 'is_verified', true);
+                // Same rule as the profile: the card badge means all three checks
+                // are done, so it must not appear on a partial set.
+                $is_verified = function_exists('gb_cleaner_is_fully_verified')
+                    ? gb_cleaner_is_fully_verified(get_the_ID())
+                    : get_post_meta(get_the_ID(), 'is_verified', true);
             ?>
             <div class="gb-cleaner-card">
                 <div class="gb-card-img-wrap">

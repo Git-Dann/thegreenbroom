@@ -692,6 +692,32 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-main [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .gb-main .gb-link-row { display: block !important; }
 
+            /* The rule above only reaches INLINE grid styles. These layouts are
+               defined in each tab's stylesheet with a fixed second column
+               (1fr 320px, 280px 1fr, and so on), so they never collapsed and
+               forced the panel sideways - which is how the page builder's
+               image field ended up overlapping its own buttons. */
+            .gb-main .gb-blog-layout,
+            .gb-main .gb-builder-layout,
+            .gb-main .gb-os-grid,
+            .gb-main .gb-settings-shell,
+            .gb-main .gb-support-grid,
+            .gb-main .gb-grid-overview,
+            .gb-main .gb-quick-action-grid,
+            .gb-main .gb-media-field {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* Media picker: stack the field, let its buttons wrap instead of
+               being squeezed, and cap the preview so it cannot dominate. */
+            .gb-main .gb-media-toolbar { flex-wrap: wrap !important; }
+            .gb-main .gb-media-input-row { flex: 1 1 100% !important; }
+            .gb-main .gb-media-actions { width: 100%; }
+            .gb-main .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; }
+            .gb-main .gb-media-preview { max-height: 180px; }
+            .gb-main .gb-media-preview.is-empty { min-height: 0; height: 88px; }
+            .gb-main .gb-media-preview img { max-height: 180px; object-fit: contain; }
+
             /* Wide tables scroll inside their card instead of clipping. */
             .gb-main table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
