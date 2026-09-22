@@ -118,7 +118,12 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                     'media_buttons' => true,
                 ));
                 ?>
-                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Write the guide here and it gets its own page, which the card links to automatically. Leave blank if the card should open an uploaded file or a link instead.</p>
+                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">
+                    Write the guide here and it becomes a proper web page on the site, which the card links to.
+                    This is the best option for anything customers should read: it works on a phone and Google can index it.
+                    If you also attach a file below, it appears as a &ldquo;Download the full guide&rdquo; button on that page.
+                    Leave this blank and the card links straight to the file or link instead.
+                </p>
             </div>
 
             <div class="gb-form-row" id="gb-eco-file">
@@ -135,7 +140,11 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                     <button type="button" class="gb-eco-btn" id="gb-eco-file-pick">Upload / choose file</button>
                     <button type="button" class="gb-eco-btn danger" id="gb-eco-file-clear" <?php echo $file_id ? '' : 'hidden'; ?>>Remove file</button>
                 </div>
-                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">PDFs, images or any media library file. This is what the &ldquo;View guide&rdquo; button opens.</p>
+                <p style="color:#94a3b8; font-size:12px; margin-top:8px;">
+                    Optional. If the guide above is written, this becomes a download button on its page.
+                    If it is blank, the card opens this file directly &mdash; avoid Word documents and ZIP archives for that,
+                    since many phones cannot open them.
+                </p>
             </div>
 
             <div class="gb-form-row">
@@ -298,7 +307,10 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                             <?php else: ?>
                                 <span class="gb-eco-chip muted">Hidden</span>
                             <?php endif; ?>
-                            <?php if ($has_file): ?>
+                            <?php if (function_exists('gb_eco_product_has_guide') && gb_eco_product_has_guide($eid)): ?>
+                                <span class="gb-eco-chip ok">Web page</span>
+                                <?php if ($has_file): ?><span class="gb-eco-chip muted">+ download</span><?php endif; ?>
+                            <?php elseif ($has_file): ?>
                                 <span class="gb-eco-chip ok">File</span>
                             <?php elseif ($eco_link !== ''): ?>
                                 <span class="gb-eco-chip ok">Link</span>

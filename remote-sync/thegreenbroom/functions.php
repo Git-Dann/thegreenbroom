@@ -326,6 +326,20 @@ function gb_get_eco_products( $limit = -1 ) {
  * link, otherwise nothing (the card shows as "coming soon").
  */
 function gb_get_eco_product_link( $product_id ) {
+    /*
+     * A written guide wins over an attached file.
+     *
+     * The file used to take priority, which meant a guide written in the
+     * dashboard was unreachable as long as a document was attached - and the
+     * two live guides were serving a .docx and a .zip to visitors. A Word file
+     * or an archive is a poor thing to hand someone on a phone and search
+     * engines cannot read either, so the page is the destination and the file
+     * becomes a download offered on that page.
+     */
+    if ( gb_eco_product_has_guide( $product_id ) ) {
+        return (string) get_permalink( $product_id );
+    }
+
     $file_id = (int) get_post_meta( $product_id, '_gb_eco_file', true );
     if ( $file_id ) {
         $url = wp_get_attachment_url( $file_id );
@@ -334,18 +348,7 @@ function gb_get_eco_product_link( $product_id ) {
         }
     }
 
-    $link = trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
-    if ( $link !== '' ) {
-        return $link;
-    }
-
-    // No file and no link, but the guide has its own write-up: send readers to
-    // its page rather than showing the card as unavailable.
-    if ( gb_eco_product_has_guide( $product_id ) ) {
-        return (string) get_permalink( $product_id );
-    }
-
-    return '';
+    return trim( (string) get_post_meta( $product_id, '_gb_eco_link', true ) );
 }
 
 /**
@@ -715,6 +718,60 @@ function gb_migrate_eco_guides() {
     update_option( 'gb_eco_guides_seeded_v1', 1 );
 }
 add_action( 'init', 'gb_migrate_eco_guides', 30 );
+
+/**
+ * One-time migration: give the two client-written guides their real web pages.
+ *
+ * The first pass was skipped because the guides had already been edited by
+ * hand, so both ended up serving a downloadable document instead - a .docx and
+ * then a .zip. The client has since asked for them to be proper pages.
+ *
+ * Only fills a guide whose body is still a stub, so anything genuinely written
+ * in the dashboard is left alone. The uploaded file is kept and appears as a
+ * download on the page, so nothing the client uploaded is lost.
+ */
+function gb_migrate_eco_guides_to_pages() {
+    if ( get_option( 'gb_eco_guides_pages_v2' ) ) {
+        return;
+    }
+
+    $content = gb_eco_guide_seed_content();
+    $targets = array(
+        'a quick & easy way to get started' => $content['koh'],
+        'a quick & easy start'              => $content['koh'],
+        'eco cleaning products guide'       => $content['koh'],
+        'make your own'                     => $content['diy'],
+    );
+
+    $products = get_posts( array(
+        'post_type'      => 'gb_eco_product',
+        'post_status'    => array( 'publish', 'draft', 'pending' ),
+        'posts_per_page' => -1,
+    ) );
+
+    foreach ( $products as $product ) {
+        $key = strtolower( trim( html_entity_decode( $product->post_title, ENT_QUOTES, 'UTF-8' ) ) );
+        if ( ! isset( $targets[ $key ] ) ) {
+            continue;
+        }
+        // Never overwrite a real write-up someone has already produced.
+        if ( gb_eco_product_has_guide( $product->ID ) ) {
+            continue;
+        }
+
+        $new = $targets[ $key ];
+        wp_update_post( array(
+            'ID'           => $product->ID,
+            'post_content' => wp_kses_post( $new['body'] ),
+            'post_excerpt' => trim( (string) $product->post_excerpt ) !== '' ? $product->post_excerpt : $new['desc'],
+            'post_status'  => 'publish',
+        ) );
+    }
+
+    flush_rewrite_rules( false );
+    update_option( 'gb_eco_guides_pages_v2', 1 );
+}
+add_action( 'init', 'gb_migrate_eco_guides_to_pages', 31 );
 
 /**
  * An Eco Product only deserves its own page when it actually has a write-up.
