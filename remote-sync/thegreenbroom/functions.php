@@ -341,6 +341,103 @@ function gb_restore_terms_page_content() {
 }
 add_action( 'init', 'gb_restore_terms_page_content', 21 );
 
+/**
+ * Audit fixes, one pass, each guarded so it cannot run twice.
+ *
+ * Found by crawling the live site rather than reading the code, which is the
+ * only way these show up: in every case the template was already right and the
+ * saved value in the database was stale.
+ */
+function gb_apply_content_audit_fixes() {
+    if ( get_option( 'gb_content_audit_v1' ) ) {
+        return;
+    }
+
+    /*
+     * 1. "Standard Clean" on What We Do.
+     *
+     * The client renamed this to "Regular Clean". The template defaults were
+     * updated at the time but the stored meta was not, and stored meta wins -
+     * so the public page still advertised the old name in three places.
+     */
+    $services_page = get_page_by_path( 'what-we-do' );
+    if ( $services_page instanceof WP_Post ) {
+        $renames = array(
+            '_gb_svc_1_title' => array( 'Standard Clean' => 'Regular Clean' ),
+            '_gb_svc_1_btn'   => array( 'Find Standard Cleaners' => 'Find Regular Cleaners' ),
+            '_gb_svc_2_list'  => array( 'Includes everything in Standard' => 'Includes everything in Regular Clean' ),
+        );
+        foreach ( $renames as $key => $map ) {
+            $value = (string) get_post_meta( $services_page->ID, $key, true );
+            if ( $value === '' ) {
+                continue;
+            }
+            foreach ( $map as $from => $to ) {
+                if ( strpos( $value, $from ) !== false ) {
+                    update_post_meta( $services_page->ID, $key, str_replace( $from, $to, $value ) );
+                }
+            }
+        }
+    }
+
+    /*
+     * 2. Blog posts linking to the wrong domain.
+     *
+     * Two posts link to thegreenbroom.co.uk over plain http. That domain
+     * redirects to the home page, so a reader clicking "contact us" inside an
+     * article lands on the homepage instead of the contact page.
+     */
+    $posts = get_posts( array(
+        'post_type'      => 'post',
+        'post_status'    => array( 'publish', 'draft', 'pending' ),
+        'posts_per_page' => -1,
+    ) );
+    $contact_url = gb_get_contact_page_url();
+    foreach ( $posts as $post ) {
+        $body = (string) $post->post_content;
+        if ( stripos( $body, 'thegreenbroom.co.uk' ) === false ) {
+            continue;
+        }
+        $fixed = str_ireplace(
+            array(
+                'http://www.thegreenbroom.co.uk/contact/',
+                'https://www.thegreenbroom.co.uk/contact/',
+                'http://thegreenbroom.co.uk/contact/',
+            ),
+            $contact_url,
+            $body
+        );
+        $fixed = preg_replace(
+            '#https?://(www\.)?thegreenbroom\.co\.uk/?#i',
+            trailingslashit( home_url() ),
+            $fixed
+        );
+        if ( $fixed !== $body ) {
+            wp_update_post( array( 'ID' => $post->ID, 'post_content' => $fixed ) );
+        }
+    }
+
+    update_option( 'gb_content_audit_v1', 1 );
+}
+add_action( 'init', 'gb_apply_content_audit_fixes', 22 );
+
+/**
+ * Cleaner profiles are directory entries, not blog posts, but WordPress was
+ * still printing its own comment form on them - an open, unmoderated posting
+ * box on a public profile page. The platform has its own review system; this
+ * was only ever a spam target.
+ */
+function gb_close_comments_on_directory_types( $open, $post_id ) {
+    $type = get_post_type( $post_id );
+    if ( in_array( $type, array( 'gb_cleaner', 'gb_service', 'gb_eco_product', 'page' ), true ) ) {
+        return false;
+    }
+
+    return $open;
+}
+add_filter( 'comments_open', 'gb_close_comments_on_directory_types', 10, 2 );
+add_filter( 'pings_open', 'gb_close_comments_on_directory_types', 10, 2 );
+
 function gb_get_cookie_policy_seed_content() {
     $contact = function_exists( 'gb_get_contact_page_url' ) ? gb_get_contact_page_url() : home_url( '/contact/' );
     $privacy = function_exists( 'gb_get_privacy_page_url' ) ? gb_get_privacy_page_url() : home_url( '/privacy/' );
@@ -3378,9 +3475,12 @@ function gb_handle_public_route_fixes() {
     }
 
     $legacy_redirects = [
-        'contact-us'     => gb_get_contact_page_url(),
-        'privacy-policy' => gb_get_privacy_page_url(),
-        'legal'          => gb_get_terms_page_url(),
+        'contact-us'      => gb_get_contact_page_url(),
+        'privacy-policy'  => gb_get_privacy_page_url(),
+        'legal'           => gb_get_terms_page_url(),
+        // Templates removed; the WordPress pages remain and render empty.
+        'manage-listings' => home_url( '/cleaner-dashboard/' ),
+        'edit-listing'    => home_url( '/cleaner-dashboard/' ),
     ];
 
     $path_key = trim( gb_get_current_request_path(), '/' );

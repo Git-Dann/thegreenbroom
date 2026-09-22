@@ -58,12 +58,14 @@ $gb_service_catalogue = get_posts([
 // Older links and ad campaigns point at ?service=standard|deep|moving, so keep
 // those working by mapping them onto whatever the service is called now.
 $gb_service_aliases = [
-    'standard' => ['standard-clean', 'regular-clean', 'standard', 'regular'],
+    'standard' => ['standard-clean', 'regular-clean', 'standard', 'regular', 'weekly-cleaning', 'fortnightly-cleaning'],
+    'regular'  => ['regular-clean', 'standard-clean', 'weekly-cleaning', 'fortnightly-cleaning'],
     'deep'     => ['deep-clean', 'deep'],
-    'moving'   => ['end-of-tenancy', 'move-in-out', 'moving-clean', 'moving'],
+    'moving'   => ['house-move', 'end-of-tenancy', 'move-in-out', 'moving-clean', 'moving'],
 ];
 
 $gb_active_service = null;
+$gb_service_unmatched = false;
 if ( $service_filter !== '' ) {
     foreach ( $gb_service_catalogue as $gb_svc ) {
         if ( $gb_svc->post_name === $service_filter ) {
@@ -79,6 +81,13 @@ if ( $service_filter !== '' ) {
             }
         }
     }
+    /*
+     * A service we cannot resolve used to fall through to an unfiltered list,
+     * so a stale campaign link showed every cleaner as though they all offered
+     * it. Say so instead, and show the full list on purpose rather than by
+     * accident.
+     */
+    $gb_service_unmatched = ! $gb_active_service;
 }
 
 if ( $gb_active_service ) {
@@ -518,6 +527,12 @@ if ($verified_body === '') {
 
     <div class="gb-dir-container">
     
+    <?php if ( ! empty( $gb_service_unmatched ) ) : ?>
+        <p style="margin-bottom: 30px; color: #b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 14px;">
+            That service is no longer listed, so we are showing every cleaner. Use the menu above to pick a current service.
+        </p>
+    <?php endif; ?>
+
     <?php if ( $search_error ) : ?>
         <p style="margin-bottom: 30px; color: #b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px 14px;"><?php echo esc_html($search_error); ?></p>
     <?php elseif ( $search_term !== '' ) : ?>

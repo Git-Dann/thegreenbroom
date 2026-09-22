@@ -32,7 +32,7 @@ $s1_link    = get_post_meta(get_the_ID(), '_gb_svc_1_link', true)     ?: '/clean
 // Service 2 (Deep)
 $s2_title   = get_post_meta(get_the_ID(), '_gb_svc_2_title', true)    ?: 'Deep Clean';
 $s2_desc    = get_post_meta(get_the_ID(), '_gb_svc_2_desc', true)     ?: 'A thorough top-to-bottom refresh. Ideal for spring cleaning.';
-$s2_list    = get_post_meta(get_the_ID(), '_gb_svc_2_list', true)     ?: "Includes everything in Standard\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture";
+$s2_list    = get_post_meta(get_the_ID(), '_gb_svc_2_list', true)     ?: "Includes everything in Regular Clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture";
 $s2_btn     = get_post_meta(get_the_ID(), '_gb_svc_2_btn', true)      ?: 'Find Deep Cleaners';
 $s2_link    = get_post_meta(get_the_ID(), '_gb_svc_2_link', true)     ?: '/cleaner-listings?service=deep';
 
@@ -101,7 +101,7 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
     /* UPDATED FLOATING CTA STYLE */
     .gb-cta-banner { background: transparent; padding: 80px 20px; text-align: center; }
     .gb-cta-banner .gb-container { background: #1b5e20; color: white; padding: 80px 40px; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(27, 94, 32, 0.2); }
-    .gb-btn { padding: 12px 30px; border-radius: 50px; font-weight: 700; text-decoration: none; display: inline-block; transition: all 0.2s; font-size: 0.95rem; }
+    .gb-btn { box-sizing: border-box; padding: 12px 30px; border-radius: 50px; font-weight: 700; text-decoration: none; display: inline-block; transition: all 0.2s; font-size: 0.95rem; }
     .gb-btn-primary { background: #2e7d32; color: white !important; }
     .gb-btn-primary:hover { background: #1b5e20; transform: translateY(-2px); }
     .gb-btn-outline { border: 2px solid #2e7d32; color: #2e7d32 !important; background: transparent; }
