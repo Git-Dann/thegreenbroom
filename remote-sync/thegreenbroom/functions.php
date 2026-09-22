@@ -3454,6 +3454,21 @@ function gb_handle_public_route_fixes() {
         }
     }
 
+    /*
+     * My Listings and Edit Listing lost their templates and now fall back to
+     * page.php, rendering as an empty titled page that anyone can reach and a
+     * search engine can index. They are real published pages returning 200, so
+     * this has to run before the 404 gate below.
+     */
+    if ( is_page() ) {
+        $orphans = array( 'manage-listings', 'edit-listing' );
+        $slug    = get_post_field( 'post_name', get_queried_object_id() );
+        if ( in_array( $slug, $orphans, true ) ) {
+            wp_safe_redirect( home_url( '/cleaner-dashboard/' ), 301 );
+            exit;
+        }
+    }
+
     if ( ! is_404() ) {
         return;
     }
@@ -3475,12 +3490,9 @@ function gb_handle_public_route_fixes() {
     }
 
     $legacy_redirects = [
-        'contact-us'      => gb_get_contact_page_url(),
-        'privacy-policy'  => gb_get_privacy_page_url(),
-        'legal'           => gb_get_terms_page_url(),
-        // Templates removed; the WordPress pages remain and render empty.
-        'manage-listings' => home_url( '/cleaner-dashboard/' ),
-        'edit-listing'    => home_url( '/cleaner-dashboard/' ),
+        'contact-us'     => gb_get_contact_page_url(),
+        'privacy-policy' => gb_get_privacy_page_url(),
+        'legal'          => gb_get_terms_page_url(),
     ];
 
     $path_key = trim( gb_get_current_request_path(), '/' );
