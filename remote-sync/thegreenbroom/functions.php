@@ -656,6 +656,7 @@ function gb_migrate_what_cleaners_do() {
 add_action( 'init', 'gb_migrate_what_cleaners_do' );
 
 require_once get_template_directory() . '/inc/eco-guide-content.php';
+require_once get_template_directory() . '/inc/cookie-consent.php';
 
 /**
  * One-time migration: publish the two client-written Eco Product guides.

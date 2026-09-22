@@ -223,6 +223,13 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
                 <li><a href="<?php echo esc_url($gb_privacy_url); ?>">Privacy Policy</a></li>
                 <li><a href="<?php echo esc_url($gb_terms_url); ?>">Terms & Conditions</a></li>
                 <li><a href="<?php echo esc_url(home_url('/gdpr/')); ?>">GDPR</a></li>
+                <?php /* Withdrawing consent has to be as easy as giving it, so the bar
+                         is always one click away from every page. Only shown when
+                         the bar itself is switched on in the manager dashboard. */ ?>
+                <?php $gb_cookie_bar = function_exists('gb_cookie_consent_settings') ? gb_cookie_consent_settings() : array('enabled' => false); ?>
+                <?php if (!empty($gb_cookie_bar['enabled'])): ?>
+                    <li><a href="#" data-gb-cookie-settings>Cookie settings</a></li>
+                <?php endif; ?>
             </ul>
         </div>
 

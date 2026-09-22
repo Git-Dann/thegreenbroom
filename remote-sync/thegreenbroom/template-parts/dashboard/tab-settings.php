@@ -23,7 +23,7 @@ $support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '0797
 $from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
 $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
 $active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
-$settings_sections = ['env', 'safeguarding', 'email', 'social', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
+$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
 if (!in_array($active_settings_section, $settings_sections, true)) {
     $active_settings_section = 'env';
 }
@@ -100,6 +100,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#safeguarding" class="gb-settings-nav-link" data-settings-target="safeguarding"><span class="gb-settings-nav-icon">🛡</span><span>Safeguarding<small>Booking rules</small></span></a>
             <a href="#email" class="gb-settings-nav-link" data-settings-target="email"><span class="gb-settings-nav-icon">✉</span><span>Email &amp; delivery<small>Brevo and sender</small></span></a>
             <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
+            <a href="#cookies" class="gb-settings-nav-link" data-settings-target="cookies"><span class="gb-settings-nav-icon">🍪</span><span>Cookies &amp; consent<small>Banner wording</small></span></a>
             <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
             <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
@@ -273,6 +274,42 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <div class="gb-form-row" style="margin-bottom:0;">
                         <label class="gb-label">Google Reviews Shortcode / Embed</label>
                         <input type="text" name="_gb_reviews_embed" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_reviews_embed', true)); ?>" placeholder="[trustindex no-registration=google]">
+                    </div>
+                </div>
+            </div>
+
+            <div id="cookies" class="gb-editor-section gb-settings-panel">
+                <div class="gb-editor-header"><span class="dashicons dashicons-privacy"></span> Cookies &amp; Consent</div>
+                <div class="gb-editor-body">
+                    <div style="margin:0 0 20px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.6;">
+                        The banner appears once on a visitor's first page, remembers the answer for six months, and stays hidden after that.
+                        Sign-in and security cookies are always allowed &mdash; the law does not require consent for those, so the banner does not pretend to ask.
+                        The Analytics and Marketing switches are there so that the moment you add Google Analytics or a Meta pixel, the visitor's answer is already on file and honoured.
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Show the banner</label>
+                        <select name="_gb_cookie_bar_enabled" class="gb-input" style="height:45px;">
+                            <option value="1" <?php selected(get_post_meta($settings_id, '_gb_cookie_bar_enabled', true) !== '0'); ?>>Yes &mdash; show it to new visitors</option>
+                            <option value="0" <?php selected(get_post_meta($settings_id, '_gb_cookie_bar_enabled', true), '0'); ?>>No &mdash; hide it completely</option>
+                        </select>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Heading</label>
+                        <input type="text" name="_gb_cookie_bar_title" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_title', true)); ?>" placeholder="We use cookies">
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Leave blank to use &ldquo;We use cookies&rdquo;.</p>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Message</label>
+                        <textarea name="_gb_cookie_bar_body" class="gb-input" rows="3" placeholder="We use essential cookies to keep the site working and you signed in. With your permission we would also like to measure how the site is used so we can improve it."><?php echo esc_textarea(get_post_meta($settings_id, '_gb_cookie_bar_body', true)); ?></textarea>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Keep it to a sentence or two. Leave blank for the default wording.</p>
+                    </div>
+                    <div class="gb-link-row" style="margin-bottom:20px;">
+                        <div class="gb-form-row"><label class="gb-label">&ldquo;Accept&rdquo; button</label><input type="text" name="_gb_cookie_bar_accept" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_accept', true)); ?>" placeholder="Accept all"></div>
+                        <div class="gb-form-row"><label class="gb-label">&ldquo;Reject&rdquo; button</label><input type="text" name="_gb_cookie_bar_reject" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_reject', true)); ?>" placeholder="Essential only"></div>
+                    </div>
+                    <div class="gb-link-row" style="margin-bottom:0;">
+                        <div class="gb-form-row"><label class="gb-label">&ldquo;Choose&rdquo; link</label><input type="text" name="_gb_cookie_bar_choose" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_choose', true)); ?>" placeholder="Choose"></div>
+                        <div class="gb-form-row"><label class="gb-label">Cookie policy link</label><input type="url" name="_gb_cookie_policy_url" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_policy_url', true)); ?>" placeholder="<?php echo esc_attr(home_url('/privacy')); ?>"><p style="margin:8px 0 0; color:#64748b; font-size:12px;">Adds a &ldquo;Read more&rdquo; link. Defaults to your Privacy page.</p></div>
                     </div>
                 </div>
             </div>
