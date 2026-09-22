@@ -3665,6 +3665,8 @@ function gb_handle_public_route_fixes() {
         'contact-us'     => gb_get_contact_page_url(),
         'privacy-policy' => gb_get_privacy_page_url(),
         'legal'          => gb_get_terms_page_url(),
+        // The default category was renamed; its old archive URL was indexable.
+        'category/uncategorized' => home_url( '/category/eco-living/' ),
     ];
 
     $path_key = trim( gb_get_current_request_path(), '/' );
