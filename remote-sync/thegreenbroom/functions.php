@@ -349,7 +349,7 @@ add_action( 'init', 'gb_restore_terms_page_content', 21 );
  * saved value in the database was stale.
  */
 function gb_apply_content_audit_fixes() {
-    if ( get_option( 'gb_content_audit_v2' ) ) {
+    if ( get_option( 'gb_content_audit_v3' ) ) {
         return;
     }
 
@@ -441,7 +441,79 @@ function gb_apply_content_audit_fixes() {
         }
     }
 
-    update_option( 'gb_content_audit_v2', 1 );
+    /*
+     * 4. The four services the page advertises must be the four a customer can
+     *    actually filter by. The stored meta held the old three, and stored
+     *    meta beats a template default, so the defaults alone would not show.
+     */
+    $services_page = get_page_by_path( 'what-we-do' );
+    if ( $services_page instanceof WP_Post ) {
+        $cards = array(
+            1 => array(
+                'title' => 'Weekly Cleaning',
+                'desc'  => 'A regular visit to keep your home fresh week to week.',
+                'list'  => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+                'btn'   => 'Find Weekly Cleaners',
+                'link'  => '/cleaner-listings/?service=weekly-cleaning',
+            ),
+            2 => array(
+                'title' => 'Fortnightly Cleaning',
+                'desc'  => 'The same thorough clean, every other week.',
+                'list'  => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+                'btn'   => 'Find Fortnightly Cleaners',
+                'link'  => '/cleaner-listings/?service=fortnightly-cleaning',
+            ),
+            3 => array(
+                'title' => 'Deep Clean',
+                'desc'  => 'A thorough top-to-bottom refresh. Ideal for spring cleaning.',
+                'list'  => "Everything in a regular clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
+                'btn'   => 'Find Deep Cleaners',
+                'link'  => '/cleaner-listings/?service=deep-clean',
+            ),
+            4 => array(
+                'title' => 'House Move & End of Tenancy',
+                'desc'  => 'An intensive clean for an empty property, to help secure your deposit.',
+                'list'  => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
+                'btn'   => 'Find Move Cleaners',
+                'link'  => '/cleaner-listings/?service=house-move',
+            ),
+        );
+        foreach ( $cards as $n => $card ) {
+            foreach ( $card as $field => $value ) {
+                update_post_meta( $services_page->ID, "_gb_svc_{$n}_{$field}", $value );
+            }
+        }
+    }
+
+    /*
+     * 5. The blog category was still WordPress' default "Uncategorized", which
+     *    shows publicly on every post and in the archive URL.
+     */
+    $default_cat = get_term_by( 'slug', 'uncategorized', 'category' );
+    if ( $default_cat && ! is_wp_error( $default_cat ) ) {
+        wp_update_term( $default_cat->term_id, 'category', array(
+            'name' => 'Eco Living',
+            'slug' => 'eco-living',
+        ) );
+    }
+
+    /*
+     * 6. Search snippets. Most pages carry their text in template fields rather
+     *    than page content, so there was nothing for the fallback to pick up
+     *    and Google was left to invent a snippet. Written per page, and only
+     *    where a description has not already been set by hand.
+     */
+    foreach ( gb_get_default_meta_descriptions() as $slug => $description ) {
+        $page = get_page_by_path( $slug );
+        if ( ! $page instanceof WP_Post ) {
+            continue;
+        }
+        if ( trim( (string) get_post_meta( $page->ID, '_gb_seo_meta_desc', true ) ) === '' ) {
+            update_post_meta( $page->ID, '_gb_seo_meta_desc', $description );
+        }
+    }
+
+    update_option( 'gb_content_audit_v3', 1 );
 }
 add_action( 'init', 'gb_apply_content_audit_fixes', 22 );
 
@@ -1458,6 +1530,67 @@ add_action( 'wp_enqueue_scripts', 'gb_load_assets' );
 /**
  * Provide a useful search snippet when an editor has not supplied one.
  */
+/**
+ * Search snippets, written per page.
+ *
+ * The generic fallback below takes the first 155 characters of a page's
+ * content, which most of these pages do not have - their words live in
+ * template fields - so Google was left to invent a snippet from whatever it
+ * found. These are the starting point only: anything set by hand in the
+ * dashboard wins, and the migration never overwrites one.
+ */
+function gb_get_default_meta_descriptions() {
+    return array(
+        'what-we-do'       => 'Weekly, fortnightly, deep and end-of-tenancy cleaning across Merseyside, using plant-based, non-toxic products. Find a vetted local cleaner.',
+        'how-it-works'     => 'Search by postcode, compare vetted local cleaners, and book in a few minutes. Every cleaner is ID-checked and reference-checked before going live.',
+        'how-we-do-it'     => 'How The Green Broom vets its cleaners, why we insist on eco-friendly products, and what our verification badge actually means.',
+        'cleaner-listings' => 'Browse vetted eco-friendly cleaners near you. Compare rates, services and reviews, then book directly with the cleaner you choose.',
+        'eco-products'     => 'Free guides to eco-friendly cleaning: plant-based products worth buying, and how to make effective cleaners from four everyday ingredients.',
+        'join'             => 'Join The Green Broom as a self-employed cleaner. Set your own rates, choose your own hours, and reach customers across Merseyside.',
+        'contact'          => 'Get in touch with The Green Broom. Call, email or send us a message, and we will come back to you Monday to Friday, 9am to 5pm.',
+        'contact-support'  => 'Contact The Green Broom support team about a booking, a payment or your account.',
+        'book-now'         => 'Book an eco-friendly cleaner in Merseyside. Choose your cleaner, pick a time that suits you, and pay securely online.',
+        'blog'             => 'Practical advice on eco-friendly cleaning, recycling and greener living at home, from The Green Broom.',
+        'cookies'          => 'What cookies The Green Broom uses, what each one does, and how to change your choice at any time.',
+        'privacy'          => 'How The Green Broom collects, stores and uses your personal data, and the rights you have over it under UK GDPR.',
+        'terms'            => 'The terms that apply when you use The Green Broom to find, book or provide cleaning services.',
+        'gdpr'             => 'Your data protection rights under UK GDPR, and how to exercise them with The Green Broom.',
+        'subscribers-terms-of-association' => 'The terms of association for Green Broom members, covering membership, member benefits and the arrangement between members and cleaners.',
+    );
+}
+
+/**
+ * Sign-in, account and confirmation pages have no business in search results:
+ * they are either private, single-use, or a duplicate of the login screen.
+ * Without this they were all indexable, and several shared one title.
+ */
+function gb_noindex_utility_pages() {
+    if ( is_admin() || is_feed() ) {
+        return;
+    }
+
+    $noindex = false;
+
+    if ( is_page() ) {
+        $slug = get_post_field( 'post_name', get_queried_object_id() );
+        $noindex = in_array( $slug, array(
+            'login', 'register', 'lost-password', 'my-account', 'settings',
+            'inbox', 'schedule', 'booking-success', 'verify-profile',
+            'edit-profile', 'cleaner-dashboard', 'manager-dashboard',
+            'manage-listings', 'edit-listing',
+        ), true );
+    }
+
+    if ( is_search() || is_404() ) {
+        $noindex = true;
+    }
+
+    if ( $noindex ) {
+        echo '<meta name="robots" content="noindex, follow">' . "\n";
+    }
+}
+add_action( 'wp_head', 'gb_noindex_utility_pages', 1 );
+
 function gb_output_meta_description() {
     if ( is_admin() || is_feed() || is_robots() ) {
         return;
@@ -1474,6 +1607,15 @@ function gb_output_meta_description() {
         }
         if ( $description === '' ) {
             $description = get_post_field( 'post_content', $post_id );
+        }
+        // A cleaner who has not written a bio still deserves a snippet.
+        if ( $description === '' && get_post_type( $post_id ) === 'gb_cleaner' ) {
+            $location = trim( (string) get_post_meta( $post_id, 'cleaner_location', true ) );
+            $description = sprintf(
+                '%s is an eco-friendly cleaner%s on The Green Broom. View their services, rates and reviews, and book directly.',
+                get_the_title( $post_id ),
+                $location !== '' ? ' in ' . $location : ''
+            );
         }
     }
 

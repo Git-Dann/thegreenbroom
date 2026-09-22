@@ -203,21 +203,26 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_svc_hero_sub'   => 'Professional, reliable, and 100% eco-friendly services tailored to your lifestyle.',
             '_gb_svc_head'       => 'Our Cleaning Services',
             '_gb_svc_sub'        => 'Choose the level of clean that fits your needs. All services use plant-based, non-toxic products.',
-            '_gb_svc_1_title'    => 'Regular Clean',
-            '_gb_svc_1_desc'     => 'Perfect for keeping your home fresh on a weekly or fortnightly basis.',
+            '_gb_svc_1_title'    => 'Weekly Cleaning',
+            '_gb_svc_1_desc'     => 'A regular visit to keep your home fresh week to week.',
             '_gb_svc_1_list'     => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
-            '_gb_svc_1_btn'      => 'Find Regular Cleaners',
-            '_gb_svc_1_link'     => '/cleaner-listings?service=standard',
-            '_gb_svc_2_title'    => 'Deep Clean',
-            '_gb_svc_2_desc'     => 'A thorough top-to-bottom refresh. Ideal for spring cleaning.',
-            '_gb_svc_2_list'     => "Includes everything in Standard\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
-            '_gb_svc_2_btn'      => 'Find Deep Cleaners',
-            '_gb_svc_2_link'     => '/cleaner-listings?service=deep',
-            '_gb_svc_3_title'    => 'Move In / Out',
-            '_gb_svc_3_desc'     => 'Ensure you get your deposit back. An intensive clean for empty properties.',
-            '_gb_svc_3_list'     => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
-            '_gb_svc_3_btn'      => 'Find Move Cleaners',
-            '_gb_svc_3_link'     => '/cleaner-listings?service=moving',
+            '_gb_svc_1_btn'      => 'Find Weekly Cleaners',
+            '_gb_svc_1_link'     => '/cleaner-listings/?service=weekly-cleaning',
+            '_gb_svc_2_title'    => 'Fortnightly Cleaning',
+            '_gb_svc_2_desc'     => 'The same thorough clean, every other week.',
+            '_gb_svc_2_list'     => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+            '_gb_svc_2_btn'      => 'Find Fortnightly Cleaners',
+            '_gb_svc_2_link'     => '/cleaner-listings/?service=fortnightly-cleaning',
+            '_gb_svc_3_title'    => 'Deep Clean',
+            '_gb_svc_3_desc'     => 'A thorough top-to-bottom refresh. Ideal for spring cleaning.',
+            '_gb_svc_3_list'     => "Everything in a regular clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
+            '_gb_svc_3_btn'      => 'Find Deep Cleaners',
+            '_gb_svc_3_link'     => '/cleaner-listings/?service=deep-clean',
+            '_gb_svc_4_title'    => 'House Move & End of Tenancy',
+            '_gb_svc_4_desc'     => 'An intensive clean for an empty property, to help secure your deposit.',
+            '_gb_svc_4_list'     => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
+            '_gb_svc_4_btn'      => 'Find Move Cleaners',
+            '_gb_svc_4_link'     => '/cleaner-listings/?service=house-move',
             '_gb_svc_mis_img'    => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
             '_gb_svc_mis_title'  => 'A cleaner home, a greener choice',
             '_gb_svc_mis_sub'    => "We believe a clean home shouldn't come at the cost of the environment.",
@@ -865,6 +870,19 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                         <?php else: ?>
                             <?php wp_editor($p_obj->post_content, 'gb_main_content', ['textarea_rows' => 15, 'textarea_name' => 'gb_main_content']); ?>
                         <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php /* Every page needs a search snippet, including the ones whose words
+                         live in structured fields and so have no content to fall back on. */ ?>
+                <div class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-search"></span> Search Snippet</div>
+                    <div class="gb-editor-body">
+                        <div class="gb-form-row" style="margin-bottom:0;">
+                            <label class="gb-label">Google description</label>
+                            <textarea name="_gb_seo_meta_desc" class="gb-textarea" style="min-height:90px;" maxlength="160" placeholder="One or two sentences describing this page."><?php echo esc_textarea(get_post_meta($p_obj->ID, '_gb_seo_meta_desc', true)); ?></textarea>
+                            <p style="margin-top:8px; color:#94a3b8; font-size:12px;">The grey text under the page title in Google results. Aim for 120&ndash;155 characters. Leave blank and Google writes its own.</p>
+                        </div>
                     </div>
                 </div>
             </form>

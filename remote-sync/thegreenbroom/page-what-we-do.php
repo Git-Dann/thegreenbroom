@@ -23,27 +23,64 @@ $svc_head   = get_post_meta(get_the_ID(), '_gb_svc_head', true)       ?: 'Our Cl
 $svc_sub    = get_post_meta(get_the_ID(), '_gb_svc_sub', true)        ?: 'Choose the level of clean that fits your needs. All services use plant-based, non-toxic products.';
 
 // Service 1 (Standard)
-$s1_title   = get_post_meta(get_the_ID(), '_gb_svc_1_title', true)    ?: 'Regular Clean';
-$s1_desc    = get_post_meta(get_the_ID(), '_gb_svc_1_desc', true)     ?: 'Perfect for keeping your home fresh on a weekly or fortnightly basis.';
-$s1_list    = get_post_meta(get_the_ID(), '_gb_svc_1_list', true)     ?: "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins";
-$s1_btn     = get_post_meta(get_the_ID(), '_gb_svc_1_btn', true)      ?: 'Find Regular Cleaners';
-$s1_link    = get_post_meta(get_the_ID(), '_gb_svc_1_link', true)     ?: '/cleaner-listings?service=standard';
+/*
+ * The page advertised three services that did not match the four a customer
+ * can actually filter by, so two of the buttons pointed at nothing real.
+ * The cards are now one list, defaulting to the live catalogue, and each
+ * field stays individually editable from the dashboard as before.
+ */
+$gb_svc_defaults = [
+    1 => [
+        'icon'  => '🗓',
+        'title' => 'Weekly Cleaning',
+        'desc'  => 'A regular visit to keep your home fresh week to week.',
+        'list'  => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+        'btn'   => 'Find Weekly Cleaners',
+        'link'  => '/cleaner-listings/?service=weekly-cleaning',
+        'style' => 'gb-btn-outline',
+    ],
+    2 => [
+        'icon'  => '✨',
+        'title' => 'Fortnightly Cleaning',
+        'desc'  => 'The same thorough clean, every other week.',
+        'list'  => "Dusting & wiping surfaces\nVacuuming & mopping floors\nKitchen counters\nBathroom sanitation\nEmptying bins",
+        'btn'   => 'Find Fortnightly Cleaners',
+        'link'  => '/cleaner-listings/?service=fortnightly-cleaning',
+        'style' => 'gb-btn-outline',
+    ],
+    3 => [
+        'icon'  => '🧽',
+        'title' => 'Deep Clean',
+        'desc'  => 'A thorough top-to-bottom refresh. Ideal for spring cleaning.',
+        'list'  => "Everything in a regular clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
+        'btn'   => 'Find Deep Cleaners',
+        'link'  => '/cleaner-listings/?service=deep-clean',
+        'style' => 'gb-btn-primary',
+    ],
+    4 => [
+        'icon'  => '📦',
+        'title' => 'House Move & End of Tenancy',
+        'desc'  => 'An intensive clean for an empty property, to help secure your deposit.',
+        'list'  => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
+        'btn'   => 'Find Move Cleaners',
+        'link'  => '/cleaner-listings/?service=house-move',
+        'style' => 'gb-btn-outline',
+    ],
+];
 
-// Service 2 (Deep)
-$s2_title   = get_post_meta(get_the_ID(), '_gb_svc_2_title', true)    ?: 'Deep Clean';
-$s2_desc    = get_post_meta(get_the_ID(), '_gb_svc_2_desc', true)     ?: 'A thorough top-to-bottom refresh. Ideal for spring cleaning.';
-$s2_list    = get_post_meta(get_the_ID(), '_gb_svc_2_list', true)     ?: "Includes everything in Regular Clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture";
-$s2_btn     = get_post_meta(get_the_ID(), '_gb_svc_2_btn', true)      ?: 'Find Deep Cleaners';
-$s2_link    = get_post_meta(get_the_ID(), '_gb_svc_2_link', true)     ?: '/cleaner-listings?service=deep';
+$gb_svc_cards = [];
+foreach ($gb_svc_defaults as $n => $d) {
+    $gb_svc_cards[] = [
+        'icon'  => $d['icon'],
+        'style' => $d['style'],
+        'title' => get_post_meta(get_the_ID(), "_gb_svc_{$n}_title", true) ?: $d['title'],
+        'desc'  => get_post_meta(get_the_ID(), "_gb_svc_{$n}_desc",  true) ?: $d['desc'],
+        'list'  => get_post_meta(get_the_ID(), "_gb_svc_{$n}_list",  true) ?: $d['list'],
+        'btn'   => get_post_meta(get_the_ID(), "_gb_svc_{$n}_btn",   true) ?: $d['btn'],
+        'link'  => get_post_meta(get_the_ID(), "_gb_svc_{$n}_link",  true) ?: $d['link'],
+    ];
+}
 
-// Service 3 (Move)
-$s3_title   = get_post_meta(get_the_ID(), '_gb_svc_3_title', true)    ?: 'Move In / Out';
-$s3_desc    = get_post_meta(get_the_ID(), '_gb_svc_3_desc', true)     ?: 'Ensure you get your deposit back. An intensive clean for empty properties.';
-$s3_list    = get_post_meta(get_the_ID(), '_gb_svc_3_list', true)     ?: "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning";
-$s3_btn     = get_post_meta(get_the_ID(), '_gb_svc_3_btn', true)      ?: 'Find Move Cleaners';
-$s3_link    = get_post_meta(get_the_ID(), '_gb_svc_3_link', true)     ?: '/cleaner-listings?service=moving';
-
-// C. Mission Split
 $mis_img    = get_post_meta(get_the_ID(), '_gb_svc_mis_img', true)    ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png';
 $mis_title  = get_post_meta(get_the_ID(), '_gb_svc_mis_title', true)  ?: 'A cleaner home, a greener choice';
 $mis_sub    = get_post_meta(get_the_ID(), '_gb_svc_mis_sub', true)    ?: "We believe a clean home shouldn't come at the cost of the environment.";
@@ -81,7 +118,7 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
     .gb-trust-text { font-weight: 600; color: #2e7d32; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
 
     /* CARDS */
-    .gb-svc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 50px; }
+    .gb-svc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 50px; }
     .gb-svc-card { background: white; border: 1px solid #eee; border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
     .gb-svc-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); border-color: #2e7d32; }
     .gb-svc-header { background: #e8f5e9; padding: 40px 20px; text-align: center; }
@@ -130,40 +167,19 @@ $cta_link   = get_post_meta(get_the_ID(), '_gb_svc_cta_link', true)   ?: '/clean
         <div class="gb-container">
             <div class="gb-text-center"><h2 class="gb-heading-md"><?php echo esc_html($svc_head); ?></h2><p class="gb-text-lead"><?php echo esc_html($svc_sub); ?></p></div>
             <div class="gb-svc-grid">
-                <div class="gb-svc-card">
-                    <div class="gb-svc-header"><span class="gb-svc-icon">✨</span><h3 class="gb-svc-title"><?php echo esc_html($s1_title); ?></h3></div>
-                    <div class="gb-svc-body"><p class="gb-svc-desc"><?php echo esc_html($s1_desc); ?></p>
-                        <ul class="gb-check-list-sm">
-                            <?php foreach(explode("\n", $s1_list) as $item): if(trim($item)): ?>
-                                <li><?php echo esc_html(trim($item)); ?></li>
-                            <?php endif; endforeach; ?>
-                        </ul>
+                <?php foreach ($gb_svc_cards as $gb_card): ?>
+                    <div class="gb-svc-card">
+                        <div class="gb-svc-header"><span class="gb-svc-icon"><?php echo esc_html($gb_card['icon']); ?></span><h3 class="gb-svc-title"><?php echo esc_html($gb_card['title']); ?></h3></div>
+                        <div class="gb-svc-body"><p class="gb-svc-desc"><?php echo esc_html($gb_card['desc']); ?></p>
+                            <ul class="gb-check-list-sm">
+                                <?php foreach (explode("\n", $gb_card['list']) as $item): if (trim($item)): ?>
+                                    <li><?php echo esc_html(trim($item)); ?></li>
+                                <?php endif; endforeach; ?>
+                            </ul>
+                        </div>
+                        <div class="gb-svc-footer"><a href="<?php echo esc_url($gb_card['link']); ?>" class="gb-btn <?php echo esc_attr($gb_card['style']); ?>" style="width:100%;"><?php echo esc_html($gb_card['btn']); ?></a></div>
                     </div>
-                    <div class="gb-svc-footer"><a href="<?php echo esc_url($s1_link); ?>" class="gb-btn gb-btn-outline" style="width:100%;"><?php echo esc_html($s1_btn); ?></a></div>
-                </div>
-                <div class="gb-svc-card">
-                    <div class="gb-svc-header"><span class="gb-svc-icon">🧽</span><h3 class="gb-svc-title"><?php echo esc_html($s2_title); ?></h3></div>
-                    <div class="gb-svc-body"><p class="gb-svc-desc"><?php echo esc_html($s2_desc); ?></p>
-                        <ul class="gb-check-list-sm">
-                            <?php foreach(explode("\n", $s2_list) as $item): if(trim($item)): ?>
-                                <li><?php echo esc_html(trim($item)); ?></li>
-                            <?php endif; endforeach; ?>
-                        </ul>
-                    </div>
-                    <div class="gb-svc-footer"><a href="<?php echo esc_url($s2_link); ?>" class="gb-btn gb-btn-primary" style="width:100%;"><?php echo esc_html($s2_btn); ?></a></div>
-                </div>
-                <div class="gb-svc-card">
-                    <div class="gb-svc-header"><span class="gb-svc-icon">📦</span><h3 class="gb-svc-title"><?php echo esc_html($s3_title); ?></h3></div>
-                    <div class="gb-svc-body"><p class="gb-svc-desc"><?php echo esc_html($s3_desc); ?></p>
-                        <ul class="gb-check-list-sm">
-                            <?php foreach(explode("\n", $s3_list) as $item): if(trim($item)): ?>
-                                <li><?php echo esc_html(trim($item)); ?></li>
-                            <?php endif; endforeach; ?>
-                        </ul>
-                    </div>
-                    <div class="gb-svc-footer"><a href="<?php echo esc_url($s3_link); ?>" class="gb-btn gb-btn-outline" style="width:100%;"><?php echo esc_html($s3_btn); ?></a></div>
-                </div>
-            </div>
+                <?php endforeach; ?>
         </div>
     </section>
 
