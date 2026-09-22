@@ -192,6 +192,16 @@ foreach ($why_defaults as $i => $d) {
     );
 }
 
+/*
+ * Social proof from real reviews only. gb_get_recent_reviews() returns
+ * genuine approved comments carrying a star rating; if there are none the
+ * whole section is skipped. Nothing here is ever invented - a fabricated
+ * testimonial on a cleaning marketplace is both a lie and a legal risk.
+ */
+$reviews_head    = $gb_l('_gb_listings_reviews_head', 'What customers say');
+$reviews         = function_exists('gb_get_recent_reviews') ? gb_get_recent_reviews(3, 4) : array();
+$platform_rating = function_exists('gb_get_platform_rating') ? gb_get_platform_rating() : array('average' => 0, 'count' => 0);
+
 $lcta_title = $gb_l('_gb_listings_cta_title', 'Ready for a cleaner home?');
 $lcta_sub   = $gb_l('_gb_listings_cta_sub', 'Find a verified, eco-friendly cleaner covering your postcode today.');
 $lcta_btn   = $gb_l('_gb_listings_cta_btn', 'Search cleaners near you');
@@ -275,6 +285,21 @@ if ($verified_body === '') {
     .gb-step-num { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; margin-bottom:18px; border-radius:50%; background:#1b5e20; color:#fff; font-size:1.25rem; font-weight:800; }
     .gb-step h3 { margin:0 0 10px; color:#0f172a; font-size:1.18rem; font-weight:800; }
     .gb-step p { margin:0; color:#64748b; line-height:1.65; font-size:.98rem; }
+
+    .gb-sell-reviews { background:#fff; }
+    .gb-reviews-summary { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:9px; margin:-28px 0 40px; color:#475569; font-size:1rem; }
+    .gb-reviews-summary strong { color:#0f172a; font-size:1.15rem; }
+    .gb-reviews-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:22px; }
+    .gb-review { display:flex; flex-direction:column; margin:0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:26px; }
+    .gb-review-stars { margin-bottom:12px; }
+    .gb-review blockquote { margin:0 0 18px; padding:0; border:0; color:#334155; font-size:.98rem; line-height:1.65; }
+    .gb-review blockquote::before { content:"\201C"; }
+    .gb-review blockquote::after { content:"\201D"; }
+    .gb-review figcaption { margin-top:auto; font-size:.86rem; }
+    .gb-review-author { display:block; font-weight:800; color:#1b5e20; }
+    .gb-review-meta { display:block; margin-top:2px; color:#94a3b8; }
+    .gb-review-meta a { color:#64748b; text-decoration:underline; text-underline-offset:2px; }
+    .gb-review-meta a:hover { color:#2e7d32; }
 
     .gb-sell-why { background:#f0f7f1; }
     .gb-why-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:22px; }
@@ -572,6 +597,33 @@ if ($verified_body === '') {
         <?php echo paginate_links(array('total' => $cleaners->max_num_pages, 'current' => $paged, 'prev_text' => '←', 'next_text' => '→')); ?>
     </div>
     </div>
+
+    <?php if ($reviews_head !== '' && !empty($reviews)): ?>
+    <section class="gb-sell gb-sell-reviews">
+        <div class="gb-sell-inner">
+            <h2 class="gb-sell-head"><?php echo esc_html($reviews_head); ?></h2>
+            <?php if ($platform_rating['count'] > 0): ?>
+                <p class="gb-reviews-summary">
+                    <?php echo function_exists('gb_render_stars') ? gb_render_stars($platform_rating['average'], 18) : ''; ?>
+                    <strong><?php echo esc_html(number_format((float) $platform_rating['average'], 1)); ?></strong>
+                    from <?php echo (int) $platform_rating['count']; ?> customer <?php echo $platform_rating['count'] === 1 ? 'review' : 'reviews'; ?>
+                </p>
+            <?php endif; ?>
+            <div class="gb-reviews-grid">
+                <?php foreach ($reviews as $review): ?>
+                    <figure class="gb-review">
+                        <div class="gb-review-stars"><?php echo function_exists('gb_render_stars') ? gb_render_stars($review['stars'], 15) : ''; ?></div>
+                        <blockquote><?php echo esc_html(wp_trim_words($review['body'], 34)); ?></blockquote>
+                        <figcaption>
+                            <span class="gb-review-author"><?php echo esc_html($review['author']); ?></span>
+                            <span class="gb-review-meta">on <a href="<?php echo esc_url($review['link']); ?>"><?php echo esc_html($review['cleaner']); ?></a></span>
+                        </figcaption>
+                    </figure>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
 
     <?php if ($hiw_head !== ''): ?>
     <section class="gb-sell gb-sell-steps">

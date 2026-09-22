@@ -252,6 +252,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_link_2' => '/how-it-works',
             '_gb_listings_hiw_head'     => 'Booking a cleaner takes two minutes',
             '_gb_listings_why_head'     => 'Why book through The Green Broom',
+            '_gb_listings_reviews_head' => 'What customers say',
             '_gb_listings_cta_title'    => 'Ready for a cleaner home?',
             '_gb_listings_cta_sub'      => 'Find a verified, eco-friendly cleaner covering your postcode today.',
             '_gb_listings_cta_btn'      => 'Search cleaners near you',
@@ -790,6 +791,17 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                             </div>
 
                             <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
+                                <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Customer reviews strip</h4>
+                                <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">
+                                    Shows your three most recent genuine 4 and 5 star reviews, with the overall rating.
+                                    It pulls straight from real customer reviews &mdash; there is nothing to write here and
+                                    nothing is invented. The whole section stays hidden until you have reviews that qualify.
+                                    Clear the heading to hide it permanently.
+                                </p>
+                                <div class="gb-form-row" style="margin-bottom:0;"><label class="gb-label">Section heading</label><input type="text" name="_gb_listings_reviews_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_reviews_head')); ?>"></div>
+                            </div>
+
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">&ldquo;How it works&rdquo; steps</h4>
                                 <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">Three steps shown below the results. Clear the heading to hide the whole section.</p>

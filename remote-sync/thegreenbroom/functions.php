@@ -1593,6 +1593,93 @@ add_action( 'wp_set_comment_status', function ( $comment_id, $status ) {
 /**
  * Star markup for a 0-5 value.
  */
+/**
+ * Real customer reviews across every published cleaner, newest first.
+ *
+ * Deliberately returns only genuine approved comments carrying a 1-5 rating.
+ * If a site has no reviews yet this returns an empty array and the caller must
+ * render nothing - social proof that is invented is worse than none.
+ *
+ * @param int $limit    How many reviews to return.
+ * @param int $min_stars Ignore anything below this, so a landing page is not
+ *                       led by a one-star review. Set to 1 to include all.
+ */
+function gb_get_recent_reviews( $limit = 3, $min_stars = 4 ) {
+    $cleaner_ids = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( empty( $cleaner_ids ) ) {
+        return array();
+    }
+
+    $comments = get_comments( array(
+        'post__in' => $cleaner_ids,
+        'status'   => 'approve',
+        'type'     => 'comment',
+        'orderby'  => 'comment_date_gmt',
+        'order'    => 'DESC',
+        'number'   => 60, // Scan a window, then filter by rating below.
+    ) );
+
+    $out = array();
+    foreach ( $comments as $comment ) {
+        $stars = (int) get_comment_meta( $comment->comment_ID, 'gb_rating', true );
+        if ( $stars < max( 1, (int) $min_stars ) || $stars > 5 ) {
+            continue;
+        }
+        $body = trim( wp_strip_all_tags( $comment->comment_content ) );
+        if ( $body === '' ) {
+            continue; // A bare star rating is not a testimonial.
+        }
+
+        $out[] = array(
+            'stars'   => $stars,
+            'body'    => $body,
+            'author'  => trim( $comment->comment_author ) !== '' ? $comment->comment_author : 'Verified customer',
+            'cleaner' => get_the_title( $comment->comment_post_ID ),
+            'link'    => get_permalink( $comment->comment_post_ID ),
+            'date'    => $comment->comment_date,
+        );
+
+        if ( count( $out ) >= (int) $limit ) {
+            break;
+        }
+    }
+
+    return $out;
+}
+
+/**
+ * Platform-wide rating across every published cleaner, for a headline figure.
+ */
+function gb_get_platform_rating() {
+    $cleaner_ids = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    ) );
+
+    $sum = 0;
+    $rated = 0;
+    foreach ( $cleaner_ids as $cleaner_id ) {
+        $r = gb_get_cleaner_rating( $cleaner_id );
+        if ( $r['rated'] > 0 ) {
+            $sum += $r['average'] * $r['rated'];
+            $rated += $r['rated'];
+        }
+    }
+
+    return array(
+        'average' => $rated ? round( $sum / $rated, 1 ) : 0.0,
+        'count'   => $rated,
+    );
+}
+
 function gb_render_stars( $value, $size = 14 ) {
     $value = (float) $value;
     $out = '<span class="gb-stars" style="font-size:' . (int) $size . 'px; letter-spacing:1px; white-space:nowrap;">';
