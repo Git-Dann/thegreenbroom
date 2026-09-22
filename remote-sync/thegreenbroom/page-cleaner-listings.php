@@ -563,7 +563,9 @@ if ($verified_body === '') {
                 <div class="gb-card-img-wrap">
                     <a href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr(sprintf('View profile for %s', get_the_title())); ?>">
                         <?php if(has_post_thumbnail()): ?>
-                            <?php the_post_thumbnail('medium', ['class' => 'gb-card-img', 'alt' => '']); ?>
+                            <?php /* The uploaded avatars carry no alt text in the media library, and an
+                                     empty alt on a link's only content leaves the link unnamed. */ ?>
+                            <?php the_post_thumbnail('medium', ['class' => 'gb-card-img', 'alt' => esc_attr(get_the_title()) . ' profile photo']); ?>
                         <?php else: ?>
                             <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#f1f5f9; color:#cbd5e1; font-size:48px;">
                                 <span class="dashicons dashicons-id"></span>

@@ -349,7 +349,7 @@ add_action( 'init', 'gb_restore_terms_page_content', 21 );
  * saved value in the database was stale.
  */
 function gb_apply_content_audit_fixes() {
-    if ( get_option( 'gb_content_audit_v1' ) ) {
+    if ( get_option( 'gb_content_audit_v2' ) ) {
         return;
     }
 
@@ -417,7 +417,31 @@ function gb_apply_content_audit_fixes() {
         }
     }
 
-    update_option( 'gb_content_audit_v1', 1 );
+    /*
+     * 3. Multiple H1s on Privacy and GDPR.
+     *
+     * The pasted legal documents use <h1> for their own section headings, so
+     * each page ships three or four competing top-level headings. The template
+     * already prints the page title as the H1. Demote the ones inside the
+     * content to H2 - structure only, not a single word changes.
+     */
+    foreach ( array( 'privacy', 'gdpr' ) as $legal_slug ) {
+        $page = get_page_by_path( $legal_slug );
+        if ( ! $page instanceof WP_Post ) {
+            continue;
+        }
+        $body = (string) $page->post_content;
+        if ( stripos( $body, '<h1' ) === false ) {
+            continue;
+        }
+        $fixed = preg_replace( '#<h1(\s[^>]*)?>#i', '<h2$1>', $body );
+        $fixed = preg_replace( '#</h1>#i', '</h2>', $fixed );
+        if ( $fixed !== null && $fixed !== $body ) {
+            wp_update_post( array( 'ID' => $page->ID, 'post_content' => $fixed ) );
+        }
+    }
+
+    update_option( 'gb_content_audit_v2', 1 );
 }
 add_action( 'init', 'gb_apply_content_audit_fixes', 22 );
 

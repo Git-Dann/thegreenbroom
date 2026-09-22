@@ -194,7 +194,7 @@ if ( ! empty( $gb_selected_services ) ) {
 
 <div class="gb-profile-header">
     <?php if (has_post_thumbnail()): ?>
-        <?php the_post_thumbnail('medium', ['class' => 'gb-profile-avatar']); ?>
+        <?php the_post_thumbnail('medium', ['class' => 'gb-profile-avatar', 'alt' => esc_attr(get_the_title()) . ' profile photo']); ?>
     <?php else: ?>
         <img src="https://www.gravatar.com/avatar/?d=mp&s=150" class="gb-profile-avatar" alt="">
     <?php endif; ?>
