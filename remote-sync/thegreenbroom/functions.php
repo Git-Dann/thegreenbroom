@@ -3052,8 +3052,6 @@ function gb_get_account_gated_templates() {
         // copy would be replayed to the next visitor.
         'page-contact-support.php',
         'page-edit-profile.php',
-        'page-edit-listing.php',
-        'page-manage-listings.php',
         'page-schedule.php',
         'page-inbox.php',
         'page-my-account.php',
