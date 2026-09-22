@@ -1597,8 +1597,14 @@ function gb_output_meta_description() {
     }
 
     $description = '';
+    $descriptions = gb_get_default_meta_descriptions();
+
     if ( is_front_page() ) {
         $description = 'Find trusted eco-friendly cleaners across Merseyside and West Lancashire with The Green Broom.';
+    } elseif ( is_home() || is_post_type_archive( 'post' ) || is_category() || gb_is_virtual_blog_request() ) {
+        // The blog is a virtual route rather than a real page, so it never
+        // reached the is_singular() branch and carried no snippet at all.
+        $description = $descriptions['blog'];
     } elseif ( is_singular() ) {
         $post_id     = (int) get_queried_object_id();
         $description = (string) get_post_meta( $post_id, '_gb_seo_meta_desc', true );
