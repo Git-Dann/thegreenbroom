@@ -1026,6 +1026,29 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-row-btn-danger { border-color: #fecaca; color: #ef4444; }
             .gb-row-btn-danger:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
 
+            /* EVERY DASHBOARD TABLE, not just Manage Cleaners.
+               gb-btn-small-os is defined without nowrap in Services, Helpdesk,
+               Support, Bookings and Blog, so their action buttons could break
+               mid-label the same way "Edit Profile" did. A label should wrap
+               between buttons, never inside one. */
+            .gb-main .gb-btn-small-os,
+            .gb-main .gb-row-btn,
+            .gb-main .gb-btn-primary-os,
+            .gb-main .gb-eco-btn,
+            .gb-main table .button,
+            .gb-main table a[class*="btn"] { white-space: nowrap !important; }
+
+            /* Keep the action column's buttons on one row where there is space,
+               and let them wrap as a group rather than tearing labels apart. */
+            .gb-main table td:last-child > div,
+            .gb-main table td:last-child > .gb-row-actions {
+                display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+            }
+
+            /* Status pills across all tabs should never break either. */
+            .gb-main .gb-pill-ok, .gb-main .gb-pill-muted, .gb-main .gb-pill-warn,
+            .gb-main .gb-eco-chip, .gb-main .gb-vetting-chip { white-space: nowrap; }
+
             /* Short cells should never wrap - a rate or an action button broken
                over two lines is what made those rows so tall. */
             .gb-main .pill-verified, .gb-main .pill-trial, .gb-main .pill-active { white-space: nowrap; }
