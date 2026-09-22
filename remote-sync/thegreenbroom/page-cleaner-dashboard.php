@@ -34,7 +34,15 @@ if ( $cleaner_query->have_posts() ) {
     $cleaner_id = $post->ID;
     $profile_link = get_permalink( $cleaner_id );
     $hourly_rate = get_post_meta($cleaner_id, 'hourly_rate', true) ?: 15;
-    $is_verified = ($post->post_status === 'publish');
+    /*
+ * Same rule the customer sees. Deriving this from post status alone meant the
+ * dashboard said "Verified" while the public badge was withheld, with nothing
+ * telling the cleaner which check was outstanding.
+ */
+$is_live      = ($post->post_status === 'publish');
+$is_verified  = function_exists('gb_cleaner_is_fully_verified')
+    ? gb_cleaner_is_fully_verified($post->ID)
+    : $is_live;
     
     // Get Subscription Status from profile meta
     $sub_status = get_post_meta($cleaner_id, '_gb_subscription_status', true) ?: 'trial'; 
@@ -100,7 +108,8 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                 </div>
                 <p>Here is what's happening with your business today.</p>
             </div>
-            <?php if($is_verified): ?>
+            <?php if($is_live): ?>
+                <?php // Live means the profile exists and is bookable; the badge is separate. ?>
                 <a href="<?php echo esc_url($profile_link); ?>" target="_blank" class="gb-btn gb-btn-secondary">View Public Profile ↗</a>
             <?php else: ?>
                 <span class="gb-badge gb-badge-warning">Profile Pending</span>
@@ -154,6 +163,8 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                     <div style="font-size:2rem; margin-bottom:15px;">🛡️</div>
                     <?php if($is_verified): ?>
                         <span class="gb-badge gb-badge-success">Verified</span>
+                    <?php elseif($is_live): ?>
+                        <span class="gb-badge" style="background:#fffbeb; color:#92400e; border:1px solid #fde68a;">Checks due</span>
                     <?php else: ?>
                         <span class="gb-badge gb-badge-danger">Action Required</span>
                     <?php endif; ?>

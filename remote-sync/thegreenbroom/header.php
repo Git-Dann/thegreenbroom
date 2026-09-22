@@ -102,7 +102,19 @@
             .menu-parent-toggle[aria-expanded="true"] + .sub-menu { display: block !important; }
             
             .header-actions { display: flex; flex-shrink: 0; gap: 10px; }
-            .nav-login { display: none; }
+            /*
+             * .nav-login is the signed-in user's Dashboard / My Account link.
+             * Hiding it below 900px left a logged-in cleaner with no route to
+             * their dashboard from any public page, and the burger menu only
+             * carries the public pages. Keep it, just compact.
+             */
+            .nav-login {
+                display: inline-flex; align-items: center;
+                padding: 8px 12px; font-size: 13px; font-weight: 700;
+                border: 1px solid #e2e8f0; border-radius: 8px;
+                background: #f0fdf4; color: #1b5e20 !important;
+                text-decoration: none; white-space: nowrap;
+            }
             .menu-toggle { display: block; }
         }
     </style>

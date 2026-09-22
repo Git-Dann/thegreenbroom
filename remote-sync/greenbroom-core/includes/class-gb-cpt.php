@@ -84,7 +84,27 @@ class GB_CPT {
         $experience = get_post_meta( $post->ID, 'gb_experience', true );
         $services   = get_post_meta( $post->ID, 'gb_services', true ) ?: array();
 
-        $available_services = ['Standard Clean', 'Deep Clean', 'End of Tenancy', 'Ironing', 'Oven Cleaning'];
+        /*
+         * Read the real Services catalogue rather than a list kept here.
+         *
+         * This was hard-coded and had gone stale: it offered "Standard Clean",
+         * which no longer exists (the site calls it Regular Clean), and omitted
+         * every service actually published. Since the listings filter matches
+         * these strings against gb_service post titles, a cleaner ticked here
+         * could never be found by that filter. Falls back to the old list only
+         * if no services are published, so the box is never empty.
+         */
+        $gb_service_posts = get_posts( array(
+            'post_type'      => 'gb_service',
+            'post_status'    => 'publish',
+            'numberposts'    => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        ) );
+        $available_services = wp_list_pluck( $gb_service_posts, 'post_title' );
+        if ( empty( $available_services ) ) {
+            $available_services = ['Regular Clean', 'Deep Clean', 'End of Tenancy', 'Ironing', 'Oven Cleaning'];
+        }
 
         wp_nonce_field( 'gb_save_cleaner_details', 'gb_cleaner_nonce' );
         ?>

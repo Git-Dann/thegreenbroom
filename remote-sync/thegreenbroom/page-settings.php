@@ -2,7 +2,25 @@
 /* Template Name: Account Settings */
 
 if ( ! is_user_logged_in() ) { wp_redirect( home_url('/login') ); exit; }
-get_header(); 
+get_header();
+?>
+<style>
+    .gb-settings-head { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .gb-settings-back { align-self: flex-start; color: #fff; text-decoration: none; font-size: 13px; font-weight: 700; opacity: .9; }
+    .gb-settings-back:hover { opacity: 1; color: #fff; }
+    .gb-settings-head h1 { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -1.2px; text-align: center; color: #fff; }
+
+    /* Four cells at 1fr 1fr never collapsed; one of them prints the Stripe
+       account id, which is long enough to break out of the card. */
+    .gb-stripe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 12px; overflow-wrap: anywhere; }
+
+    @media (max-width: 640px) {
+        .gb-settings-head h1 { font-size: 24px; letter-spacing: -.6px; }
+        .gb-stripe-grid { grid-template-columns: 1fr; }
+    }
+</style>
+<?php
+ 
 
 $current_user = wp_get_current_user();
 
@@ -116,16 +134,11 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
 <div class="gb-page-wrapper" style="background: #f8fafc; min-height: 100vh; padding-top: 0; padding-bottom: 60px;">
     
     <div style="background: #1b5e20; padding: 40px 0 90px; color: #fff;">
-        <div class="gb-container" style="position: relative;">
-            
-            <a href="<?php echo home_url('/cleaner-dashboard'); ?>" 
-               style="position: absolute; left: 15px; top: 0; color: #fff; text-decoration: none; font-size: 13px; font-weight: 700; opacity: 0.9;">
-               ← Back to Dashboard
-            </a>
-            
-            <h1 style="font-size: 32px; font-weight: 800; margin: 0 auto; letter-spacing: -1.2px; text-align: center; color: #ffffff;">
-                Account Settings
-            </h1>
+        <?php /* The back link was absolutely positioned across a centred 32px
+                 title, so on a phone the two overlapped. Stacked instead. */ ?>
+        <div class="gb-container gb-settings-head">
+            <a class="gb-settings-back" href="<?php echo home_url('/cleaner-dashboard'); ?>">&larr; Back to Dashboard</a>
+            <h1>Account Settings</h1>
         </div>
     </div>
 
@@ -181,7 +194,7 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
                 </div>
             <?php endif; ?>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:12px;">
+            <div class="gb-stripe-grid">
                 <div>Charges: <strong><?php echo $stripe_charges_enabled ? 'Enabled' : 'Disabled'; ?></strong></div>
                 <div>Payouts: <strong><?php echo $stripe_payouts_enabled ? 'Enabled' : 'Disabled'; ?></strong></div>
                 <div>Payout schedule: <strong><?php echo esc_html(ucfirst($stripe_payout_interval)); ?></strong></div>

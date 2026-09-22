@@ -153,12 +153,51 @@ get_header();
         <?php echo $msg; ?>
 
         <div class="gb-card">
-            <?php if($status === 'publish'): ?>
+            <?php
+            /*
+             * "Verified" here has to mean the same thing it means to a customer.
+             * This page used to declare it from post status alone, so a cleaner
+             * whose profile was live but still had a check outstanding was told
+             * "You are Verified! No further action is needed" while the public
+             * badge was correctly withheld - and no screen told them why.
+             */
+            $gb_fully  = function_exists('gb_cleaner_is_fully_verified') && gb_cleaner_is_fully_verified($cleaner_id);
+            $gb_checks = function_exists('gb_get_cleaner_checks') ? gb_get_cleaner_checks($cleaner_id) : array();
+            $gb_pending_checks = array();
+            foreach (array('id' => 'Photo ID', 'dbs' => 'Basic DBS certificate', 'refs' => 'Two references') as $gb_k => $gb_lbl) {
+                if (isset($gb_checks[$gb_k]) && ! $gb_checks[$gb_k]) {
+                    $gb_pending_checks[] = $gb_lbl;
+                }
+            }
+            $gb_verified_on = function_exists('gb_get_cleaner_verified_date') ? gb_get_cleaner_verified_date($cleaner_id) : '';
+            ?>
+            <?php if($status === 'publish' && $gb_fully): ?>
                 <div style="text-align:center; padding:40px 0;">
                     <span class="dashicons dashicons-yes-alt" style="font-size:64px; color:#10b981; margin-bottom:20px; display:block; width:auto; height:auto;"></span>
                     <h2 style="margin:0; color:#10b981;">You are Verified!</h2>
-                    <p style="color:#64748b;">No further action is needed.</p>
+                    <p style="color:#64748b;">No further action is needed.<?php echo $gb_verified_on !== '' ? '<br>Green Broom Verified &mdash; ' . esc_html($gb_verified_on) : ''; ?></p>
                     <a href="/cleaner-dashboard" style="display:inline-block; margin-top:20px; background:#0f172a; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">Go to Dashboard</a>
+                </div>
+            <?php elseif($status === 'publish'): ?>
+                <div style="text-align:center; padding:34px 0 10px;">
+                    <span class="dashicons dashicons-clock" style="font-size:60px; color:#f59e0b; margin-bottom:18px; display:block; width:auto; height:auto;"></span>
+                    <h2 style="margin:0; color:#b45309;">Your profile is live, with checks outstanding</h2>
+                    <p style="color:#64748b; max-width:520px; margin:12px auto 0;">
+                        Customers can find and book you. The Green Broom Verified badge stays hidden on your
+                        profile until our team has confirmed every check below.
+                    </p>
+                    <?php if (!empty($gb_pending_checks)): ?>
+                        <div style="display:inline-block; text-align:left; margin-top:18px; padding:14px 18px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px;">
+                            <strong style="display:block; font-size:13px; color:#92400e; margin-bottom:6px;">Still to confirm</strong>
+                            <ul style="margin:0; padding-left:18px; color:#92400e; font-size:14px;">
+                                <?php foreach ($gb_pending_checks as $gb_pc): ?><li><?php echo esc_html($gb_pc); ?></li><?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+                    <p style="color:#94a3b8; font-size:13px; margin-top:16px;">
+                        Already sent these? Our team confirms them manually &mdash; nothing more is needed from you.
+                        You can update your details below if anything has changed.
+                    </p>
                 </div>
             <?php elseif($status === 'pending'): ?>
                 <div style="text-align:center; padding:30px 0 20px;">
@@ -170,7 +209,7 @@ get_header();
                 </div>
             <?php endif; ?>
 
-            <?php if($status !== 'publish'): ?>
+            <?php if($status !== 'publish' || !$gb_fully): ?>
                 <form method="post" enctype="multipart/form-data">
                     <?php wp_nonce_field('gb_verify_action', 'verify_nonce'); ?>
                     <input type="hidden" name="gb_upload_docs" value="1">

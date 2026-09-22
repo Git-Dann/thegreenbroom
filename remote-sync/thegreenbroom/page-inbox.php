@@ -69,7 +69,11 @@ get_header();
                         <span style="font-size:11px; font-weight:700; color:#9a3412; background:#fff7ed; padding:2px 8px; border-radius:10px; margin-left:8px;">Awaiting reply</span>
                     <?php endif; ?>
                 </div>
-                <a href="mailto:<?php echo esc_attr($email); ?>" class="gb-email">Reply to: <?php echo esc_html($email); ?></a>
+                <?php /* Was a mailto link. Replying outside the platform records
+                         nothing, so the thread sat on "Awaiting reply" forever and
+                         the customer's reply never came back here. Show the address
+                         as plain text; the form below is the way to answer. */ ?>
+                <span class="gb-email">From: <?php echo esc_html($email); ?></span>
                 <div class="gb-body"><?php echo nl2br(esc_html(get_the_content())); ?></div>
                 <?php if (is_email($email)): ?>
                 <form method="post" action="<?php echo esc_url(home_url('/inbox')); ?>" style="margin-top:12px;">
@@ -80,6 +84,10 @@ get_header();
                     <textarea name="gb_reply_body" required placeholder="Type your reply&hellip;" style="width:100%; min-height:90px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;"></textarea>
                     <button type="submit" style="margin-top:8px; background:#2e7d32; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer;">Send Reply</button>
                 </form>
+                <?php else: ?>
+                    <p style="margin:12px 0 0; padding:10px 12px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; color:#92400e; font-size:13px;">
+                        No valid reply address was supplied with this enquiry, so it cannot be answered from here.
+                    </p>
                 <?php endif; ?>
             </div>
         <?php endwhile; wp_reset_postdata();

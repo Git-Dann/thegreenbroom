@@ -3048,6 +3048,9 @@ function gb_get_account_gated_templates() {
     return array(
         'page-manager-dashboard.php',
         'page-cleaner-dashboard.php',
+        // Prints the logged-in user's name and e-mail into the form, so a cached
+        // copy would be replayed to the next visitor.
+        'page-contact-support.php',
         'page-edit-profile.php',
         'page-edit-listing.php',
         'page-manage-listings.php',
