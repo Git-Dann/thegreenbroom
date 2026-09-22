@@ -222,6 +222,7 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
             <ul class="gb-footer-links">
                 <li><a href="<?php echo esc_url($gb_privacy_url); ?>">Privacy Policy</a></li>
                 <li><a href="<?php echo esc_url($gb_terms_url); ?>">Terms & Conditions</a></li>
+                <li><a href="<?php echo esc_url(function_exists('gb_get_cookie_policy_page_url') ? gb_get_cookie_policy_page_url() : home_url('/cookies/')); ?>">Cookie Policy</a></li>
                 <li><a href="<?php echo esc_url(home_url('/gdpr/')); ?>">GDPR</a></li>
                 <?php /* Withdrawing consent has to be as easy as giving it, so the bar
                          is always one click away from every page. Only shown when

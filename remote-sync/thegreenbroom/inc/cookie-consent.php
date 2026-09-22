@@ -57,9 +57,8 @@ function gb_cookie_consent_settings() {
     };
 
     $policy = $get( '_gb_cookie_policy_url', '' );
-    if ( $policy === '' ) {
-        $privacy = get_page_by_path( 'privacy' );
-        $policy  = $privacy ? get_permalink( $privacy ) : '';
+    if ( $policy === '' && function_exists( 'gb_get_cookie_policy_page_url' ) ) {
+        $policy = gb_get_cookie_policy_page_url();
     }
 
     return array(

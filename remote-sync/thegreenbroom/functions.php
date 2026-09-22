@@ -199,6 +199,98 @@ function gb_ensure_subscriber_terms_page() {
 add_action( 'init', 'gb_ensure_subscriber_terms_page' );
 
 /**
+ * Cookie Policy page.
+ *
+ * Seeded once as an ordinary page on the Legal template, so the manager can
+ * edit every word of it from Content -> Pages afterwards. The wording below is
+ * only the starting point, and is deliberately specific: it names the cookies
+ * the site actually sets rather than reciting the generic list most policies
+ * copy from each other. If the platform later gains analytics or advertising
+ * tags, this page needs updating to match.
+ */
+function gb_ensure_cookie_policy_page() {
+    if ( get_option( 'gb_cookie_policy_page_created' ) ) {
+        return;
+    }
+
+    $existing = get_posts( array(
+        'post_type'      => 'page',
+        'name'           => 'cookies',
+        'post_status'    => array( 'publish', 'draft', 'private' ),
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( empty( $existing ) ) {
+        $page_id = wp_insert_post( array(
+            'post_title'   => 'Cookie Policy',
+            'post_name'    => 'cookies',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_content' => gb_get_cookie_policy_seed_content(),
+        ) );
+
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_post_meta( $page_id, '_wp_page_template', 'page-legal.php' );
+        }
+    }
+
+    update_option( 'gb_cookie_policy_page_created', 1 );
+}
+add_action( 'init', 'gb_ensure_cookie_policy_page' );
+
+function gb_get_cookie_policy_seed_content() {
+    $contact = function_exists( 'gb_get_contact_page_url' ) ? gb_get_contact_page_url() : home_url( '/contact/' );
+    $privacy = function_exists( 'gb_get_privacy_page_url' ) ? gb_get_privacy_page_url() : home_url( '/privacy/' );
+
+    $html  = '<p><strong>Cookies, and how The Green Broom uses them.</strong></p>';
+
+    $html .= '<h2>The short version</h2>';
+    $html .= '<p>Browsing The Green Broom sets no cookies at all. We only store anything once you sign in, or once you answer the cookie banner. We do not use advertising or analytics cookies, and we do not sell or share your browsing data.</p>';
+
+    $html .= '<h2>What a cookie is</h2>';
+    $html .= '<p>A cookie is a small text file a website asks your browser to keep. It lets the site recognise the same browser on a later page or a later visit, which is how you stay signed in without typing your password on every screen. Similar technologies, such as your browser\'s local storage, work the same way and are covered by this policy too.</p>';
+
+    $html .= '<h2>The cookies we set</h2>';
+
+    $html .= '<h3>Strictly necessary</h3>';
+    $html .= '<p>These keep the site working and keep your account secure. They do not require your consent, because the site cannot function without them, and they are not used to track you.</p>';
+    $html .= '<ul>';
+    $html .= '<li><strong>WordPress sign-in cookies</strong> (names beginning <em>wordpress_logged_in_</em> and <em>wordpress_sec_</em>) &mdash; set when you log in, so you stay signed in as you move around your dashboard. They are removed when you log out, and otherwise expire within about two weeks.</li>';
+    $html .= '<li><strong>Your cookie choice</strong> (<em>gb_cookie_consent</em>) &mdash; records the answer you gave the cookie banner so we do not ask again. Kept for six months. Without it, the banner would reappear on every page.</li>';
+    $html .= '<li><strong>Caching and security cookies</strong> &mdash; our hosting serves pages from a cache to keep the site fast, and uses short-lived cookies to make sure a signed-in visitor is never served someone else\'s cached page.</li>';
+    $html .= '</ul>';
+
+    $html .= '<h3>Analytics</h3>';
+    $html .= '<p>None at present. We do not run Google Analytics, Tag Manager, or any similar measurement tool. The banner asks about analytics so that, if we add one, your answer is already recorded and honoured from the outset rather than applied after the fact.</p>';
+
+    $html .= '<h3>Advertising and marketing</h3>';
+    $html .= '<p>None at present. There is no Meta pixel, no TikTok pixel, and no advertising tag of any kind on this site. As with analytics, the banner asks in advance so that nothing is ever set before you have agreed to it.</p>';
+
+    $html .= '<h2>Cookies set by other companies</h2>';
+    $html .= '<p>When you pay for a booking, the payment itself is handled by <strong>Stripe</strong>. Stripe sets its own cookies on its own pages to process the payment and detect fraud. We do not control those cookies; Stripe describes them in its own privacy policy.</p>';
+    $html .= '<p>Our footer links to our social media profiles. These are ordinary links &mdash; nothing is loaded from those companies while you are on our site, and they cannot see your visit unless you click through.</p>';
+
+    $html .= '<h2>Changing your mind</h2>';
+    $html .= '<p>Select <strong>Cookie settings</strong> at the bottom of any page to reopen the banner and change your answer at any time. Withdrawing consent is as easy as giving it.</p>';
+    $html .= '<p>You can also clear or block cookies in your browser settings. Blocking the strictly necessary ones will sign you out and may stop parts of the site working.</p>';
+
+    $html .= '<h2>Questions</h2>';
+    $html .= '<p>Our <a href="' . esc_url( $privacy ) . '">Privacy Notice</a> explains how we handle personal data more broadly, including your rights under UK GDPR. If anything here is unclear, please <a href="' . esc_url( $contact ) . '">get in touch</a>.</p>';
+
+    return $html;
+}
+
+function gb_get_cookie_policy_page_url() {
+    $page = get_page_by_path( 'cookies' );
+    if ( $page instanceof WP_Post && $page->post_status === 'publish' ) {
+        return get_permalink( $page );
+    }
+
+    return function_exists( 'gb_get_privacy_page_url' ) ? gb_get_privacy_page_url() : home_url( '/privacy/' );
+}
+
+/**
  * Add the supplied Recycling image to the legacy article once. New articles
  * already save their selected featured image through the manager editor.
  */
@@ -3241,7 +3333,6 @@ function gb_handle_public_route_fixes() {
         'contact-us'     => gb_get_contact_page_url(),
         'privacy-policy' => gb_get_privacy_page_url(),
         'legal'          => gb_get_terms_page_url(),
-        'cookies'        => gb_get_privacy_page_url(),
     ];
 
     $path_key = trim( gb_get_current_request_path(), '/' );

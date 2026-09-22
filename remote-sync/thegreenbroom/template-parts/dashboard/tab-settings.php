@@ -309,7 +309,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     </div>
                     <div class="gb-link-row" style="margin-bottom:0;">
                         <div class="gb-form-row"><label class="gb-label">&ldquo;Choose&rdquo; link</label><input type="text" name="_gb_cookie_bar_choose" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_choose', true)); ?>" placeholder="Choose"></div>
-                        <div class="gb-form-row"><label class="gb-label">Cookie policy link</label><input type="url" name="_gb_cookie_policy_url" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_policy_url', true)); ?>" placeholder="<?php echo esc_attr(home_url('/privacy')); ?>"><p style="margin:8px 0 0; color:#64748b; font-size:12px;">Adds a &ldquo;Read more&rdquo; link. Defaults to your Privacy page.</p></div>
+                        <div class="gb-form-row"><label class="gb-label">Cookie policy link</label><input type="url" name="_gb_cookie_policy_url" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_policy_url', true)); ?>" placeholder="<?php echo esc_attr(home_url('/cookies/')); ?>"><p style="margin:8px 0 0; color:#64748b; font-size:12px;">Adds a &ldquo;Read more&rdquo; link. Defaults to your Cookie Policy page.</p></div>
                     </div>
                 </div>
             </div>
