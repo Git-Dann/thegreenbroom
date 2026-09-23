@@ -1561,6 +1561,38 @@ function gb_load_assets() {
 add_action( 'wp_enqueue_scripts', 'gb_load_assets' );
 
 /**
+ * Drop WordPress' block editor CSS on the front end.
+ *
+ * Every page carried about 14KB of it inline - the block library, the classic
+ * theme shim, and the generated global-styles custom properties. The theme
+ * renders no blocks at all: the manager dashboard edits with the classic
+ * editor, and a crawl of the live site found not one wp-block-* class on any
+ * page. It is dropped per request rather than unconditionally, so the moment
+ * a post does contain blocks the CSS comes back with it.
+ */
+function gb_dequeue_unused_block_styles() {
+    if ( is_admin() ) {
+        return;
+    }
+
+    $post = get_queried_object();
+    if ( $post instanceof WP_Post && function_exists( 'has_blocks' ) && has_blocks( $post ) ) {
+        return;
+    }
+
+    foreach ( array( 'wp-block-library', 'wp-block-library-theme', 'classic-theme-styles' ) as $handle ) {
+        wp_dequeue_style( $handle );
+        wp_deregister_style( $handle );
+    }
+
+    // The generated :root custom properties, the largest of the four.
+    remove_action( 'wp_enqueue_scripts', 'wp_enqueue_global_styles' );
+    remove_action( 'wp_footer', 'wp_enqueue_global_styles', 1 );
+    remove_action( 'wp_body_open', 'wp_global_styles_render_svg_filters' );
+}
+add_action( 'wp_enqueue_scripts', 'gb_dequeue_unused_block_styles', 100 );
+
+/**
  * Provide a useful search snippet when an editor has not supplied one.
  */
 /**

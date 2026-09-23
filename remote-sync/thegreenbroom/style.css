@@ -417,3 +417,321 @@ a.gb-card:hover {
 }
 .hamburger-inner::before { top: -8px; }
 .hamburger-inner::after { bottom: -8px; }
+
+
+/* ==========================================================================
+   Shared chrome, moved out of the templates.
+
+   These three blocks used to be printed inline into every page: about 14KB of
+   CSS re-sent on every request and never cached, even though it is identical
+   everywhere. Living here they are fetched once and then served from the
+   browser cache, and style.css is already loaded before any page template's
+   own styles so the cascade order is unchanged.
+   ========================================================================== */
+
+/* --- Header (was inline in header.php) --- */
+/* CRITICAL HEADER CSS (Self-contained) */
+        .site-header { background: white; border-bottom: 1px solid #eee; position: relative; z-index: 1000; }
+        .header-inner { max-width: 1200px; margin: 0 auto; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; }
+        
+        /* Logos */
+        .logo-mobile { display: none !important; }
+        .logo-desktop { display: block; height: 45px; width: auto; max-width: calc(100vw - 120px); }
+        
+        /* Desktop Menu */
+        .main-navigation ul.nav-menu { 
+            list-style: none; margin: 0; padding: 0; 
+            display: flex; gap: 30px; align-items: center; 
+        }
+        .main-navigation a { 
+            text-decoration: none; color: #333; font-weight: 600; font-size: 15px; 
+            display: block; padding: 10px 0; 
+        }
+        .main-navigation a:hover { color: #10b981; }
+        .main-navigation .menu-parent-toggle {
+            color: #333; font-weight: 600; font-size: 15px;
+            display: block; padding: 10px 0; cursor: pointer; user-select: none;
+            background: transparent; border: 0; font-family: inherit;
+        }
+
+        /* --- DROPDOWN LOGIC (FORCED) --- */
+        .menu-item-has-children { position: relative !important; }
+        
+        .sub-menu {
+            display: none !important; 
+            position: absolute !important;
+            top: 100% !important;
+            left: -15px !important;
+            min-width: 200px !important;
+            background: white !important;
+            border: 1px solid #eee !important;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            border-radius: 8px !important;
+            padding: 10px 0 !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+            z-index: 99999 !important;
+        }
+        
+        .menu-item-has-children:hover .sub-menu,
+        .menu-parent-toggle[aria-expanded="true"] + .sub-menu { display: flex !important; }
+        
+        .sub-menu li { width: 100% !important; display: block !important; }
+        .sub-menu a { 
+            padding: 10px 20px !important; font-size: 14px !important; 
+            white-space: nowrap !important; border-bottom: 1px solid #f9f9f9 !important;
+            width: 100% !important;
+        }
+        .sub-menu a:hover { background: #f9f9f9 !important; color: #2e7d32 !important; }
+        .dropdown-arrow { font-size: 10px; margin-left: 5px; color: #999; }
+
+        /* Buttons */
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .nav-login { text-decoration: none; color: #333; font-weight: 600; font-size: 15px; }
+        .nav-cta { background: #10b981; color: white !important; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 15px; transition: 0.2s; }
+        
+        /* Mobile Toggle */
+        .menu-toggle { display: none; background: none; border: none; cursor: pointer; padding: 5px; }
+        .hamburger-box { width: 24px; height: 20px; display: inline-block; position: relative; }
+        .hamburger-inner { display: block; top: 50%; margin-top: -1px; width: 100%; height: 2px; background-color: #333; position: absolute; }
+        .hamburger-inner::before, .hamburger-inner::after { content: ""; display: block; width: 100%; height: 2px; background-color: #333; position: absolute; }
+        .hamburger-inner::before { top: -8px; }
+        .hamburger-inner::after { bottom: -8px; }
+
+        /* MOBILE RESPONSIVE */
+        @media (max-width: 900px) {
+            .header-inner { padding: 12px 16px; }
+            .site-branding { min-width: 0; }
+            .logo-desktop { display: block; height: 32px; max-width: calc(100vw - 132px); }
+            .logo-mobile { display: none !important; }
+            
+            .main-navigation { position: absolute; top: 100%; left: 0; right: 0; background: white; padding: 20px; border-bottom: 1px solid #eee; display: none; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+            .main-navigation.toggled { display: flex; }
+            
+            .main-navigation ul.nav-menu { flex-direction: column; gap: 0; align-items: flex-start; }
+            .main-navigation li { width: 100%; border-bottom: 1px solid #f9f9f9; }
+            
+            .sub-menu {
+                display: none !important; position: relative !important; top: 0 !important; left: 0 !important;
+                box-shadow: none !important; border: none !important; padding-left: 20px !important; 
+                width: 100% !important; background: none !important;
+            }
+            .menu-item-has-children:hover .sub-menu,
+            .menu-parent-toggle[aria-expanded="true"] + .sub-menu { display: block !important; }
+            
+            .header-actions { display: flex; flex-shrink: 0; gap: 10px; }
+            /*
+             * .nav-login is the signed-in user's Dashboard / My Account link.
+             * Hiding it below 900px left a logged-in cleaner with no route to
+             * their dashboard from any public page, and the burger menu only
+             * carries the public pages. Keep it, just compact.
+             */
+            .nav-login {
+                display: inline-flex; align-items: center;
+                padding: 8px 12px; font-size: 13px; font-weight: 700;
+                border: 1px solid #e2e8f0; border-radius: 8px;
+                background: #f0fdf4; color: #1b5e20 !important;
+                text-decoration: none; white-space: nowrap;
+            }
+            .menu-toggle { display: block; }
+        }
+
+/* --- Footer (was inline in footer.php) --- */
+/* Sticky footer.
+       #gb-site-footer already had margin-top:auto, but that does nothing unless
+       its parent is a flex column — so on short pages (e.g. Eco Products) the
+       footer sat mid-screen with dead space beneath it. These rules live here,
+       in footer.php, rather than in style.css on purpose: the manager dashboard
+       renders its own <body> and never loads this file, so it cannot be
+       affected by making the body a flex column. */
+    html { height: 100%; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    /* The footer is nested inside #page (not a direct child of body), so #page
+       has to be the flex column as well — otherwise it stretches to full height
+       while its children stop short, leaving the gap under the footer. */
+    body > #page, body > .site { flex: 1 0 auto; display: flex; flex-direction: column; min-width: 0; }
+    #page > #content, #page > .site-content, .site > .site-content { flex: 1 0 auto; }
+
+    #gb-site-footer {
+        background-color: #1b5e20; /* Dark Eco Green */
+        color: white;
+        padding: 60px 0 0;
+        font-family: sans-serif;
+        margin-top: auto;
+        flex-shrink: 0;
+    }
+
+    .gb-footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; /* 5 Columns for Brand, Company, Support, Legal, CTA */
+        gap: 30px;
+    }
+
+    /* Column 1: Brand */
+    .gb-logo-box {
+        background: white; 
+        padding: 12px 20px;
+        border-radius: 8px;
+        display: inline-block;
+        margin-bottom: 20px;
+    }
+    .gb-footer-logo {
+        height: 40px;
+        width: auto;
+        display: block;
+    }
+    .gb-footer-brand p {
+        color: rgba(255,255,255,0.92);
+        line-height: 1.6;
+        font-size: 0.95rem;
+        max-width: 280px;
+        margin-top: 0;
+    }
+
+    /* Column Headings */
+    .gb-footer-col h2 {
+        color: #a5d6a7; /* Light Green Accent */
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0 0 20px;
+        font-weight: 700;
+    }
+    .gb-footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .gb-footer-links li { margin-bottom: 12px; }
+    .gb-footer-links a {
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+    .gb-footer-links a:hover { color: #fff; text-decoration: underline; }
+
+    /* Column 5: CTA */
+    .gb-footer-btn {
+        background: #2e7d32;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    .gb-footer-btn:hover { background: #fff; color: #1b5e20; }
+
+    /* Bottom Bar */
+    /* Social icons */
+    .gb-social-row { display: flex; gap: 12px; margin-top: 20px; }
+    .gb-social-row a { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.12); transition: background 0.2s; }
+    .gb-social-row a:hover { background: rgba(255,255,255,0.28); }
+    .gb-social-row svg { width: 18px; height: 18px; fill: #fff; }
+
+    .gb-copyright-bar {
+        border-top: 1px solid rgba(255,255,255,0.1);
+        margin-top: 50px;
+        padding: 25px 0;
+        text-align: center;
+        color: rgba(255,255,255,0.88);
+        font-size: 0.8rem;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 1000px) {
+        .gb-footer-container { grid-template-columns: 1fr 1fr; gap: 40px; }
+    }
+    @media (max-width: 600px) {
+        .gb-footer-container { grid-template-columns: 1fr; }
+    }
+
+    /*
+     * SITE-WIDE MOBILE GUARDS
+     * Scoped here deliberately: footer.php loads on every public page and
+     * never on the manager dashboard, which renders its own <body>.
+     */
+
+    /* The logo is a 974x139 image shown at 40px high, so it renders 280px
+       wide. With the white plate's padding that pushed past a 320px phone
+       and gave every single page a sideways scroll. */
+    .gb-footer-logo { max-width: 100%; }
+    .gb-footer-brand, .gb-footer-brand > div { max-width: 100%; box-sizing: border-box; }
+
+    @media (max-width: 480px) {
+        .gb-footer-logo { height: 32px; }
+    }
+
+    /* Safety net: nothing should be able to scroll the page sideways. */
+    @media (max-width: 900px) {
+        html, body { overflow-x: hidden; }
+        img, video, iframe, table { max-width: 100%; }
+    }
+
+    /* iOS zooms the whole page in when a focused field is under 16px.
+       Public forms (login, register, contact, the message modal) were all
+       below that. */
+    @media (max-width: 768px) {
+        input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; }
+    }
+
+/* --- Cookie consent bar (was inline in inc/cookie-consent.php) --- */
+.gb-cookie-bar[hidden] { display: none; }
+        .gb-cookie-bar {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 9998;
+            background: #0f172a; color: #e2e8f0;
+            border-top: 3px solid #2e7d32;
+            box-shadow: 0 -10px 30px rgba(15, 23, 42, .25);
+            font-size: 14px; line-height: 1.55;
+        }
+        .gb-cookie-inner {
+            max-width: 1160px; margin: 0 auto; padding: 16px 20px;
+            display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+        }
+        .gb-cookie-copy { flex: 1 1 380px; min-width: 0; }
+        .gb-cookie-title { margin: 0 0 3px; font-weight: 800; color: #fff; font-size: 14px; }
+        .gb-cookie-text { margin: 0; color: #cbd5e1; font-size: 13.5px; }
+        .gb-cookie-text a { color: #86efac; text-decoration: underline; text-underline-offset: 2px; }
+        .gb-cookie-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .gb-cookie-btn {
+            font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+            padding: 11px 18px; border-radius: 8px; white-space: nowrap;
+            background: rgba(255,255,255,.08); color: #fff;
+            border: 1px solid rgba(255,255,255,.22);
+        }
+        .gb-cookie-btn:hover { background: rgba(255,255,255,.16); }
+        .gb-cookie-btn:focus-visible { outline: 2px solid #86efac; outline-offset: 2px; }
+        /* Accept carries no more visual weight than reject beyond brand colour:
+           both are one click, same size, same row. */
+        .gb-cookie-primary { background: #2e7d32; border-color: #2e7d32; }
+        .gb-cookie-primary:hover { background: #256b2a; }
+        .gb-cookie-link { background: none; border-color: transparent; text-decoration: underline; padding-left: 6px; padding-right: 6px; }
+        .gb-cookie-link:hover { background: rgba(255,255,255,.08); }
+
+        .gb-cookie-panel { border-top: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); }
+        .gb-cookie-panel[hidden] { display: none; }
+        .gb-cookie-row {
+            display: flex; gap: 12px; align-items: flex-start;
+            max-width: 1160px; margin: 0 auto; padding: 13px 20px;
+            border-bottom: 1px solid rgba(255,255,255,.07); cursor: pointer;
+        }
+        .gb-cookie-row-locked { cursor: default; opacity: .8; }
+        .gb-cookie-row input { width: 18px; height: 18px; margin: 2px 0 0; flex: 0 0 auto; accent-color: #2e7d32; }
+        .gb-cookie-row strong { display: block; color: #fff; font-size: 13.5px; }
+        .gb-cookie-row small { display: block; color: #94a3b8; font-size: 12.5px; margin-top: 2px; }
+        .gb-cookie-panel-actions { max-width: 1160px; margin: 0 auto; padding: 14px 20px; text-align: right; }
+
+        @media (max-width: 720px) {
+            .gb-cookie-inner { padding: 14px 16px; gap: 14px; }
+            .gb-cookie-actions { width: 100%; }
+            .gb-cookie-actions .gb-cookie-btn { flex: 1 1 auto; text-align: center; }
+            .gb-cookie-link { order: 3; flex-basis: 100%; }
+            .gb-cookie-row, .gb-cookie-panel-actions { padding-left: 16px; padding-right: 16px; }
+        }

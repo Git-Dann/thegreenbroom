@@ -140,60 +140,6 @@ function gb_render_cookie_consent_bar() {
         </div>
     </div>
 
-    <style>
-        .gb-cookie-bar[hidden] { display: none; }
-        .gb-cookie-bar {
-            position: fixed; left: 0; right: 0; bottom: 0; z-index: 9998;
-            background: #0f172a; color: #e2e8f0;
-            border-top: 3px solid #2e7d32;
-            box-shadow: 0 -10px 30px rgba(15, 23, 42, .25);
-            font-size: 14px; line-height: 1.55;
-        }
-        .gb-cookie-inner {
-            max-width: 1160px; margin: 0 auto; padding: 16px 20px;
-            display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
-        }
-        .gb-cookie-copy { flex: 1 1 380px; min-width: 0; }
-        .gb-cookie-title { margin: 0 0 3px; font-weight: 800; color: #fff; font-size: 14px; }
-        .gb-cookie-text { margin: 0; color: #cbd5e1; font-size: 13.5px; }
-        .gb-cookie-text a { color: #86efac; text-decoration: underline; text-underline-offset: 2px; }
-        .gb-cookie-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .gb-cookie-btn {
-            font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
-            padding: 11px 18px; border-radius: 8px; white-space: nowrap;
-            background: rgba(255,255,255,.08); color: #fff;
-            border: 1px solid rgba(255,255,255,.22);
-        }
-        .gb-cookie-btn:hover { background: rgba(255,255,255,.16); }
-        .gb-cookie-btn:focus-visible { outline: 2px solid #86efac; outline-offset: 2px; }
-        /* Accept carries no more visual weight than reject beyond brand colour:
-           both are one click, same size, same row. */
-        .gb-cookie-primary { background: #2e7d32; border-color: #2e7d32; }
-        .gb-cookie-primary:hover { background: #256b2a; }
-        .gb-cookie-link { background: none; border-color: transparent; text-decoration: underline; padding-left: 6px; padding-right: 6px; }
-        .gb-cookie-link:hover { background: rgba(255,255,255,.08); }
-
-        .gb-cookie-panel { border-top: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); }
-        .gb-cookie-panel[hidden] { display: none; }
-        .gb-cookie-row {
-            display: flex; gap: 12px; align-items: flex-start;
-            max-width: 1160px; margin: 0 auto; padding: 13px 20px;
-            border-bottom: 1px solid rgba(255,255,255,.07); cursor: pointer;
-        }
-        .gb-cookie-row-locked { cursor: default; opacity: .8; }
-        .gb-cookie-row input { width: 18px; height: 18px; margin: 2px 0 0; flex: 0 0 auto; accent-color: #2e7d32; }
-        .gb-cookie-row strong { display: block; color: #fff; font-size: 13.5px; }
-        .gb-cookie-row small { display: block; color: #94a3b8; font-size: 12.5px; margin-top: 2px; }
-        .gb-cookie-panel-actions { max-width: 1160px; margin: 0 auto; padding: 14px 20px; text-align: right; }
-
-        @media (max-width: 720px) {
-            .gb-cookie-inner { padding: 14px 16px; gap: 14px; }
-            .gb-cookie-actions { width: 100%; }
-            .gb-cookie-actions .gb-cookie-btn { flex: 1 1 auto; text-align: center; }
-            .gb-cookie-link { order: 3; flex-basis: 100%; }
-            .gb-cookie-row, .gb-cookie-panel-actions { padding-left: 16px; padding-right: 16px; }
-        }
-    </style>
 
     <script>
     (function () {
