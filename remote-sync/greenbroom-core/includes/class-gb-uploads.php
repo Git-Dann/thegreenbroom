@@ -15,6 +15,24 @@ class GB_Uploads {
         add_action( 'init', array( $this, 'handle_upload_submission' ) );
         add_action( 'init', array( $this, 'handle_file_proxy' ) );
         add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
+        add_action( 'init', array( __CLASS__, 'maybe_refresh_secure_dir' ) );
+    }
+
+    /**
+     * The directory's protection rules were only ever written on plugin
+     * activation, so a site activated before they were corrected kept the old
+     * ones forever. Re-checked once per rules version, guarded by an option so
+     * this is a single autoloaded read on a normal request.
+     */
+    const SECURE_RULES_VERSION = 2;
+
+    public static function maybe_refresh_secure_dir() {
+        if ( (int) get_option( 'gb_secure_dir_rules', 0 ) >= self::SECURE_RULES_VERSION ) {
+            return;
+        }
+
+        self::ensure_secure_dir();
+        update_option( 'gb_secure_dir_rules', self::SECURE_RULES_VERSION );
     }
 
     public static function activate() {
