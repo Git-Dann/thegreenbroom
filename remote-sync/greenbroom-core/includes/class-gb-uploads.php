@@ -17,6 +17,7 @@ class GB_Uploads {
         add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
         add_action( 'init', array( __CLASS__, 'maybe_refresh_secure_dir' ) );
         add_action( 'init', array( __CLASS__, 'maybe_migrate_documents' ) );
+        add_action( 'init', array( __CLASS__, 'maybe_cleanup_legacy_documents' ) );
     }
 
     /**
@@ -88,21 +89,74 @@ class GB_Uploads {
             'at'     => current_time( 'mysql' ),
         ) );
 
-        /*
-         * TEMPORARY. There is no way to read this back without logging in, and
-         * the move must be verified before the originals are deleted. Written
-         * under a name chosen at deploy time, holds counts only - no paths, no
-         * filenames, nothing about any cleaner - and is removed in the step
-         * that deletes the originals.
-         */
-        @file_put_contents( $legacy . 'gb-status-xoU4PGXVBpGKeOSIABjI.json', wp_json_encode( array(
-            'private_store' => $private !== '',
-            'copied'        => $copied,
-            'failed'        => $failed,
-        ) ) );
 
         if ( $failed === 0 ) {
             update_option( 'gb_secure_docs_copied', self::MIGRATION_VERSION );
+        }
+    }
+
+    /**
+     * Remove the originals from the web-root store.
+     *
+     * Runs only after the private store has been confirmed to sit above the
+     * document root and unreachable over HTTP. Each file is hash-checked
+     * against its private copy at the moment of deletion, so a legacy file is
+     * only ever removed when a verified twin exists; anything that does not
+     * verify is left exactly where it is.
+     */
+    const CLEANUP_VERSION = 1;
+
+    public static function maybe_cleanup_legacy_documents() {
+        if ( (int) get_option( 'gb_secure_docs_cleaned', 0 ) >= self::CLEANUP_VERSION ) {
+            return;
+        }
+
+        // Never delete before the copy pass has completed cleanly.
+        if ( (int) get_option( 'gb_secure_docs_copied', 0 ) < self::MIGRATION_VERSION ) {
+            return;
+        }
+
+        $private = self::get_private_dir();
+        $legacy  = self::get_legacy_dir();
+        if ( $private === '' || ! is_dir( $legacy ) ) {
+            return;
+        }
+
+        $removed = 0;
+        $kept    = 0;
+
+        foreach ( (array) glob( $legacy . 'cleaner-*' ) as $source ) {
+            if ( ! is_file( $source ) ) {
+                continue;
+            }
+
+            $target = $private . basename( $source );
+            if ( ! file_exists( $target ) || md5_file( $target ) !== md5_file( $source ) ) {
+                $kept++;
+                continue;
+            }
+
+            if ( @unlink( $source ) ) {
+                $removed++;
+            } else {
+                $kept++;
+            }
+        }
+
+        // The temporary status file from the copy pass.
+        $probe = $legacy . 'gb-status-xoU4PGXVBpGKeOSIABjI.json';
+        if ( file_exists( $probe ) ) {
+            @unlink( $probe );
+        }
+
+        update_option( 'gb_secure_docs_cleanup_report', array(
+            'removed' => $removed,
+            'kept'    => $kept,
+            'at'      => current_time( 'mysql' ),
+        ) );
+
+        if ( $kept === 0 ) {
+            update_option( 'gb_secure_docs_cleaned', self::CLEANUP_VERSION );
         }
     }
 
