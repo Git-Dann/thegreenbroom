@@ -25,13 +25,41 @@ if ( $search_term !== '' && ! preg_match('/^[A-Z0-9 ]{2,10}$/', $search_term) ) 
 
 $meta_filters = [];
 if ( $search_term !== '' ) {
-    $meta_filters[] = [
-        'relation' => 'OR',
-        ['key' => 'gb_postcode', 'value' => $search_term, 'compare' => 'LIKE'],
-        ['key' => '_gb_location', 'value' => $search_term, 'compare' => 'LIKE'],
-        ['key' => 'location', 'value' => $search_term, 'compare' => 'LIKE'],
-        ['key' => 'cleaner_location', 'value' => $search_term, 'compare' => 'LIKE'],
-    ];
+    /*
+     * Search the postcode DISTRICT as well as whatever was typed.
+     *
+     * The box asks for a postcode, but cleaners record a service area -
+     * "Mossley Hill, Liverpool, L18". Matching only the whole string meant a
+     * customer entering their actual postcode, "L18 3HQ", matched nothing:
+     * that exact text appears in no cleaner's location and never would, so
+     * somebody in the cleaner's own street was told nobody served them.
+     *
+     * A UK postcode splits into an outward code identifying the district
+     * (L18) and an inward code identifying the street (3HQ). The district is
+     * what corresponds to a service area, so it is searched too.
+     */
+    $gb_terms = [ $search_term ];
+
+    if ( strpos( $search_term, ' ' ) !== false ) {
+        $gb_outward = trim( substr( $search_term, 0, strpos( $search_term, ' ' ) ) );
+        if ( $gb_outward !== '' ) {
+            $gb_terms[] = $gb_outward;
+        }
+    } elseif ( preg_match( '/^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/', $search_term ) ) {
+        // Typed without a space: the inward code is always the last three.
+        $gb_terms[] = substr( $search_term, 0, -3 );
+    }
+
+    $gb_terms = array_values( array_unique( array_filter( $gb_terms ) ) );
+
+    $gb_location_group = [ 'relation' => 'OR' ];
+    foreach ( $gb_terms as $gb_term ) {
+        foreach ( [ 'gb_postcode', '_gb_location', 'location', 'cleaner_location' ] as $gb_key ) {
+            $gb_location_group[] = [ 'key' => $gb_key, 'value' => $gb_term, 'compare' => 'LIKE' ];
+        }
+    }
+
+    $meta_filters[] = $gb_location_group;
 }
 
 $service_filter = isset($_GET['service']) ? sanitize_key(wp_unslash($_GET['service'])) : '';
