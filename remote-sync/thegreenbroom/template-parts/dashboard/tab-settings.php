@@ -23,7 +23,7 @@ $support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '0797
 $from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
 $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
 $active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
-$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'retention', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
+$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'retention', 'membership', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
 if (!in_array($active_settings_section, $settings_sections, true)) {
     $active_settings_section = 'env';
 }
@@ -102,6 +102,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
             <a href="#cookies" class="gb-settings-nav-link" data-settings-target="cookies"><span class="gb-settings-nav-icon">🍪</span><span>Cookies &amp; consent<small>Banner wording</small></span></a>
             <a href="#retention" class="gb-settings-nav-link" data-settings-target="retention"><span class="gb-settings-nav-icon">🗄</span><span>Data retention<small>How long records are kept</small></span></a>
+            <a href="#membership" class="gb-settings-nav-link" data-settings-target="membership"><span class="gb-settings-nav-icon">🔑</span><span>Membership<small>Customer access</small></span></a>
             <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
             <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
@@ -346,6 +347,33 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <strong>When the clock starts.</strong> Not when each entry is written, but when the cleaner leaves &mdash; measured from their last recorded activity once their profile is taken down.
                         While someone is still listed, the record of why they were verified is still doing its job, and there is no obligation to delete something you currently need.
                         When a trail is erased, a dated note is left in its place recording that it happened and what period it covered, so an erasure is never mistaken for a gap.
+                    </div>
+                </div>
+            </div>
+
+            <div id="membership" class="gb-editor-section gb-settings-panel">
+                <div class="gb-editor-header"><span class="dashicons dashicons-privacy"></span> Customer Membership</div>
+                <div class="gb-editor-body">
+                    <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
+                        Your Subscribers&rsquo; Terms say access to the cleaner database is for paying members. The machinery for that is in place &mdash;
+                        memberships can be recorded and managed under <a href="?tab=members" style="color:#1d4ed8; font-weight:700;">Members</a> &mdash;
+                        but <strong>nothing is restricted while this is switched off</strong>, and it should stay off until you can actually take payment.
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Require a membership to browse cleaners</label>
+                        <select name="_gb_membership_gate" class="gb-input" style="height:45px;">
+                            <option value="0" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true) !== '1'); ?>>No &mdash; the database is open to everyone (current)</option>
+                            <option value="1" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true), '1'); ?>>Yes &mdash; members only</option>
+                        </select>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
+                            Do not switch this on before Stripe is connected. With no way to buy a membership, turning it on would lock out every customer
+                            and leave them no route back in.
+                        </p>
+                    </div>
+                    <div style="padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:12.5px; line-height:1.6;">
+                        <strong>What happens when Stripe arrives.</strong> Billing writes to the same membership record the Members screen already uses,
+                        so the only remaining step is turning this switch on. Managers and administrators always keep access, and anyone whose membership
+                        has lapsed is treated as expired the moment the date passes, not overnight.
                     </div>
                 </div>
             </div>

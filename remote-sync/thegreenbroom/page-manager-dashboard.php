@@ -163,6 +163,29 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
                 wp_die('Invalid eco product target.');
             }
             break;
+        case 'save_membership':
+            /*
+             * Customer memberships are user meta, so this handler returns
+             * before the post-target validation below - there is no post to
+             * validate, and $pid is meaningless here.
+             */
+            if ( ! function_exists('gb_set_membership') ) {
+                wp_die('Membership handling unavailable.');
+            }
+            $gb_member_user = isset($_POST['gb_member_user']) ? (int) $_POST['gb_member_user'] : 0;
+            if ( $gb_member_user < 1 || ! get_userdata($gb_member_user) ) {
+                wp_die('Invalid customer.');
+            }
+            gb_set_membership(
+                $gb_member_user,
+                isset($_POST['gb_member_status']) ? sanitize_key(wp_unslash($_POST['gb_member_status'])) : 'none',
+                isset($_POST['gb_member_plan']) ? sanitize_key(wp_unslash($_POST['gb_member_plan'])) : '',
+                isset($_POST['gb_member_expires']) ? sanitize_text_field(wp_unslash($_POST['gb_member_expires'])) : '',
+                'manual',
+                'Set by hand from the manager dashboard'
+            );
+            wp_redirect(home_url('/manager-dashboard?tab=members&msg=saved'));
+            exit;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -795,6 +818,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         <a href="?tab=overview" class="gb-nav-item <?php echo $tab=='overview'||$tab=='dashboard'?'active':''; ?>"><span class="dashicons dashicons-dashboard"></span> Dashboard</a>
         <a href="?tab=bookings" class="gb-nav-item <?php echo $tab=='bookings'?'active':''; ?>"><span class="dashicons dashicons-calendar-alt"></span> Bookings</a>
         <a href="?tab=cleaners" class="gb-nav-item <?php echo $tab=='cleaners'?'active':''; ?>"><span class="dashicons dashicons-id"></span> Manage Cleaners</a>
+        <a href="?tab=members" class="gb-nav-item <?php echo $tab=='members'?'active':''; ?>"><span class="dashicons dashicons-groups"></span> Members</a>
         <a href="?tab=pages" class="gb-nav-item <?php echo $tab=='pages'?'active':''; ?>"><span class="dashicons dashicons-welcome-write-blog"></span> Content</a>
         <a href="?tab=eco-products" class="gb-nav-item <?php echo $tab=='eco-products'?'active':''; ?>"><span class="dashicons dashicons-carrot"></span> Eco Products</a>
         <a href="?tab=blog" class="gb-nav-item <?php echo $tab=='blog'?'active':''; ?>"><span class="dashicons dashicons-edit"></span> Blog & SEO</a>
