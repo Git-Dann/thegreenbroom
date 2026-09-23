@@ -36,7 +36,10 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         
         <div class="gb-footer-brand">
             <div class="gb-logo-box">
+                <picture>
+                    <?php gb_picture_sources( 'https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png' ); ?>
                 <img src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" width="974" height="139" alt="The Green Broom" class="gb-footer-logo" loading="lazy" decoding="async">
+                </picture>
             </div>
             <p>Connecting homeowners with trusted, eco-friendly cleaning professionals. Simple, safe, and sustainable.</p>
             <?php if (!empty($gb_social_links)): ?>

@@ -23,7 +23,10 @@
 
             <div class="site-branding">
                 <a href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
+                    <picture>
+                        <?php gb_picture_sources( 'https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png' ); ?>
                     <img class="logo-desktop" src="https://thegreenbroom.uk/wp-content/uploads/2025/12/tgb-main-logo.png" width="974" height="139" alt="The Green Broom">
+                    </picture>
                 </a>
             </div>
 
