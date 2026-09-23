@@ -105,6 +105,7 @@ class GB_Verification_Log {
             'unverified'         => 'Verified status removed',
             'listing_published'  => 'Profile published',
             'listing_withdrawn'  => 'Profile withdrawn',
+            'retention_erased'   => 'Trail erased under retention policy',
         );
 
         return isset( $labels[ $event ] ) ? $labels[ $event ] : ucfirst( str_replace( '_', ' ', $event ) );

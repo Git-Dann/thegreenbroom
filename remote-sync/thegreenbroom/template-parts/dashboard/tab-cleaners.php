@@ -254,6 +254,10 @@
                             Each document is fingerprinted on arrival &mdash; if this cleaner ever produces the certificate again,
                             it can be matched against the one actually seen. No identity data is stored here.
                         </p>
+                        <p style="margin:-6px 0 14px; font-size:11.5px; color:#94a3b8;">
+                            Kept for <?php echo esc_html(function_exists('gb_get_audit_retention_years') ? gb_get_audit_retention_years() : 6); ?> years after a cleaner&rsquo;s profile is taken down, then erased automatically.
+                            Change this under Settings &rarr; Data retention.
+                        </p>
                         <?php if (empty($gb_audit)): ?>
                             <p style="margin:0; font-size:12.5px; color:#64748b;">Nothing recorded yet. Entries appear as documents are received and checks are ticked.</p>
                         <?php else: ?>

@@ -23,7 +23,7 @@ $support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '0797
 $from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
 $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
 $active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
-$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
+$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'retention', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
 if (!in_array($active_settings_section, $settings_sections, true)) {
     $active_settings_section = 'env';
 }
@@ -101,6 +101,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#email" class="gb-settings-nav-link" data-settings-target="email"><span class="gb-settings-nav-icon">✉</span><span>Email &amp; delivery<small>Brevo and sender</small></span></a>
             <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
             <a href="#cookies" class="gb-settings-nav-link" data-settings-target="cookies"><span class="gb-settings-nav-icon">🍪</span><span>Cookies &amp; consent<small>Banner wording</small></span></a>
+            <a href="#retention" class="gb-settings-nav-link" data-settings-target="retention"><span class="gb-settings-nav-icon">🗄</span><span>Data retention<small>How long records are kept</small></span></a>
             <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
             <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
@@ -316,6 +317,35 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <div class="gb-link-row" style="margin-bottom:0;">
                         <div class="gb-form-row"><label class="gb-label">&ldquo;Choose&rdquo; link</label><input type="text" name="_gb_cookie_bar_choose" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_bar_choose', true)); ?>" placeholder="Choose"></div>
                         <div class="gb-form-row"><label class="gb-label">Cookie policy link</label><input type="url" name="_gb_cookie_policy_url" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cookie_policy_url', true)); ?>" placeholder="<?php echo esc_attr(home_url('/cookies/')); ?>"><p style="margin:8px 0 0; color:#64748b; font-size:12px;">Adds a &ldquo;Read more&rdquo; link. Defaults to your Cookie Policy page.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="retention" class="gb-editor-section gb-settings-panel">
+                <div class="gb-editor-header"><span class="dashicons dashicons-backup"></span> Data Retention</div>
+                <div class="gb-editor-body">
+                    <div style="margin:0 0 20px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.6;">
+                        A cleaner&rsquo;s ID, proof of address and DBS certificate are destroyed the moment they are approved &mdash; those files are never kept.
+                        What remains is the audit trail: what was checked, by whom, when, and a fingerprint of each document seen. This setting governs how long that trail is kept.
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Keep the verification audit trail for</label>
+                        <select name="_gb_audit_retention_years" class="gb-input" style="height:45px;">
+                            <?php $gb_ret = function_exists('gb_get_audit_retention_years') ? gb_get_audit_retention_years() : 6; ?>
+                            <?php foreach ([3, 5, 6, 7, 10] as $gb_y): ?>
+                                <option value="<?php echo esc_attr($gb_y); ?>" <?php selected($gb_ret, $gb_y); ?>>
+                                    <?php echo esc_html($gb_y); ?> years<?php echo $gb_y === 6 ? ' (recommended)' : ''; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
+                            Six years matches the limitation period for a contract claim in England and Wales &mdash; the outside window in which you could still be asked to account for a verification decision.
+                        </p>
+                    </div>
+                    <div style="padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:12.5px; line-height:1.6;">
+                        <strong>When the clock starts.</strong> Not when each entry is written, but when the cleaner leaves &mdash; measured from their last recorded activity once their profile is taken down.
+                        While someone is still listed, the record of why they were verified is still doing its job, and there is no obligation to delete something you currently need.
+                        When a trail is erased, a dated note is left in its place recording that it happened and what period it covered, so an erasure is never mistaken for a gap.
                     </div>
                 </div>
             </div>

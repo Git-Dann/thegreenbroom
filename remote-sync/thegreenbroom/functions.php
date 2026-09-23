@@ -1784,6 +1784,111 @@ function gb_attachment_image_modern_formats( $html, $attachment_id = 0, $size = 
 add_filter( 'wp_get_attachment_image', 'gb_attachment_image_modern_formats', 10, 5 );
 
 /**
+ * How long the verification audit trail is kept.
+ *
+ * Six years by default, matching the limitation period for a contract claim
+ * in England and Wales - the outside window in which this record could still
+ * be needed to answer for a verification decision.
+ */
+function gb_get_audit_retention_years() {
+    $settings_id = function_exists( 'gb_get_site_settings_id' ) ? gb_get_site_settings_id() : (int) get_option( 'page_on_front' );
+    $years = $settings_id ? (int) get_post_meta( $settings_id, '_gb_audit_retention_years', true ) : 0;
+
+    if ( $years < 1 || $years > 25 ) {
+        $years = 6;
+    }
+
+    return $years;
+}
+
+/**
+ * Erase audit trails that have outlived the retention period.
+ *
+ * The clock runs from the END OF THE RELATIONSHIP, not from each entry: while
+ * a cleaner is live on the platform the record of why they were verified is
+ * still doing its job, and storage limitation does not require deleting
+ * something you currently need. Only once a profile has been taken down does
+ * the countdown begin, measured from that cleaner's last recorded event.
+ *
+ * A tombstone is left behind. Deleting a record and leaving nothing looks
+ * identical to never having kept one, or to losing it - the tombstone shows
+ * the erasure was deliberate, policy-driven and dated.
+ */
+function gb_prune_verification_logs() {
+    if ( ! class_exists( 'GB_Verification_Log' ) ) {
+        return;
+    }
+
+    $years  = gb_get_audit_retention_years();
+    $cutoff = strtotime( '-' . $years . ' years' );
+    if ( ! $cutoff ) {
+        return;
+    }
+
+    $cleaners = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        // Live profiles are excluded entirely: the relationship is ongoing.
+        'post_status'    => array( 'draft', 'trash' ),
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    ) );
+
+    foreach ( $cleaners as $cleaner_id ) {
+        $log = GB_Verification_Log::get( $cleaner_id );
+        if ( empty( $log ) ) {
+            continue;
+        }
+
+        // Already a tombstone: nothing left to erase.
+        if ( count( $log ) === 1 && isset( $log[0]['event'] ) && $log[0]['event'] === 'retention_erased' ) {
+            continue;
+        }
+
+        $last = 0;
+        $first = '';
+        foreach ( $log as $entry ) {
+            $stamp = isset( $entry['at_gmt'] ) ? strtotime( $entry['at_gmt'] ) : 0;
+            if ( $stamp && $stamp > $last ) {
+                $last = $stamp;
+            }
+            if ( $first === '' && ! empty( $entry['at'] ) ) {
+                $first = (string) $entry['at'];
+            }
+        }
+
+        if ( ! $last || $last > $cutoff ) {
+            continue;
+        }
+
+        $tombstone = array(
+            array(
+                'event'    => 'retention_erased',
+                'at'       => current_time( 'mysql' ),
+                'at_gmt'   => current_time( 'mysql', true ),
+                'actor_id' => 0,
+                'actor'    => 'System (retention policy)',
+                'detail'   => array(
+                    'policy'         => $years . ' years after the profile was taken down',
+                    'entries_erased' => (string) count( $log ),
+                    'covered_from'   => $first,
+                    'covered_to'     => gmdate( 'Y-m-d H:i:s', $last ),
+                ),
+            ),
+        );
+
+        update_post_meta( $cleaner_id, '_gb_verification_log', $tombstone );
+    }
+}
+add_action( 'gb_prune_verification_logs', 'gb_prune_verification_logs' );
+
+function gb_schedule_verification_log_pruning() {
+    if ( ! wp_next_scheduled( 'gb_prune_verification_logs' ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'gb_prune_verification_logs' );
+    }
+}
+add_action( 'init', 'gb_schedule_verification_log_pruning', 30 );
+
+/**
  * Seed a baseline entry for cleaners verified before the log existed.
  *
  * Without this the trail starts today and says nothing about anyone already
