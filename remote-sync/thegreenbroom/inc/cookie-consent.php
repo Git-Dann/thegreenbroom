@@ -101,7 +101,7 @@ function gb_render_cookie_consent_bar() {
                 <p id="gb-cookie-body" class="gb-cookie-text">
                     <?php echo esc_html( $s['body'] ); ?>
                     <?php if ( $s['policy'] !== '' ) : ?>
-                        <a href="<?php echo esc_url( $s['policy'] ); ?>">Read more</a>
+                        <a href="<?php echo esc_url( $s['policy'] ); ?>">Read our cookie policy</a>
                     <?php endif; ?>
                 </p>
             </div>
