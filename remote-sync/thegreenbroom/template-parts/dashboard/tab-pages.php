@@ -11,7 +11,7 @@ if ($action === 'edit' && $selected_page_id) {
 }
 
 $invalid_edit_target = ($action === 'edit' && $selected_page_id && !$edit_page);
-$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join'];
+$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'booking-success'];
 ?>
 
 <style>
@@ -307,6 +307,43 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         // records, so only the page-level intro is edited here.
         $gb_page_defaults = [
             '_gb_eco_hero_sub' => 'Practical guidance for choosing and using effective, lower-impact cleaning products at home and on every job.',
+        ];
+    } elseif ($slug === 'contact') {
+        $gb_page_defaults = [
+            '_gb_contact_title'         => 'Contact Support',
+            '_gb_contact_sub'           => 'Send a message directly to our management team.',
+            '_gb_contact_phone_label'   => 'Phone support:',
+            '_gb_contact_hours'         => 'Monday to Friday, 9 am to 5 pm',
+            '_gb_contact_label_name'    => 'Your Name',
+            '_gb_contact_label_email'   => 'Email Address',
+            '_gb_contact_label_subject' => 'Subject',
+            '_gb_contact_ph_subject'    => 'How can we help?',
+            '_gb_contact_label_message' => 'Message',
+            '_gb_contact_btn'           => 'Send Message',
+            '_gb_contact_success'       => 'Success! Your message has been sent to our team.',
+            '_gb_contact_error'         => 'Please complete all fields with a valid email address.',
+        ];
+    } elseif ($slug === 'contact-support') {
+        $gb_page_defaults = [
+            '_gb_csup_back'          => 'Back to Dashboard',
+            '_gb_csup_title'         => 'Contact Support',
+            '_gb_csup_sub'           => 'Having trouble? Our team in Liverpool is here to help.',
+            '_gb_csup_phone_label'   => 'Phone support:',
+            '_gb_csup_hours'         => 'Monday to Friday, 9 am to 5 pm',
+            '_gb_csup_btn'           => 'Send Message',
+            '_gb_csup_success_title' => 'Message sent!',
+            '_gb_csup_success_body'  => "We'll be in touch shortly.",
+            '_gb_csup_error_title'   => 'Please check your details.',
+            '_gb_csup_error_body'    => 'All fields are required, including a valid email.',
+        ];
+    } elseif ($slug === 'booking-success') {
+        $gb_page_defaults = [
+            '_gb_bs_paid_title'    => 'Booking Confirmed!',
+            '_gb_bs_pending_title' => 'Payment Pending',
+            '_gb_bs_thanks'        => 'Thanks, {name}.',
+            '_gb_bs_account_sub'   => 'Create a password to manage this appointment, reschedule, or cancel anytime.',
+            '_gb_bs_account_btn'   => 'Create Account & View Dashboard',
+            '_gb_bs_not_found'     => 'No Booking Found',
         ];
     }
 
@@ -750,6 +787,71 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                             <a href="?tab=eco-products" style="color:#166534; font-weight:700;">Eco Products</a>
                             &mdash; add, edit and upload as many guides as you need there.
                         </p>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php
+                /*
+                 * Contact, Contact Support and the booking confirmation were the
+                 * last pages whose wording lived in the template. Every string on
+                 * them is now a field here.
+                 */
+                $gb_wording_fields = [];
+                if ($slug === 'contact') {
+                    $gb_wording_fields = [
+                        ['_gb_contact_title', 'Heading', 'input'],
+                        ['_gb_contact_sub', 'Line under the heading', 'input'],
+                        ['_gb_contact_phone_label', 'Label before the phone number', 'input'],
+                        ['_gb_contact_hours', 'Opening hours', 'input'],
+                        ['_gb_contact_label_name', 'Form label: name', 'input'],
+                        ['_gb_contact_label_email', 'Form label: email', 'input'],
+                        ['_gb_contact_label_subject', 'Form label: subject', 'input'],
+                        ['_gb_contact_ph_subject', 'Subject box placeholder', 'input'],
+                        ['_gb_contact_label_message', 'Form label: message', 'input'],
+                        ['_gb_contact_btn', 'Submit button', 'input'],
+                        ['_gb_contact_success', 'Message after sending', 'textarea'],
+                        ['_gb_contact_error', 'Message when the form is incomplete', 'textarea'],
+                    ];
+                } elseif ($slug === 'contact-support') {
+                    $gb_wording_fields = [
+                        ['_gb_csup_back', 'Back link', 'input'],
+                        ['_gb_csup_title', 'Heading', 'input'],
+                        ['_gb_csup_sub', 'Line under the heading', 'input'],
+                        ['_gb_csup_phone_label', 'Label before the phone number', 'input'],
+                        ['_gb_csup_hours', 'Opening hours', 'input'],
+                        ['_gb_csup_btn', 'Submit button', 'input'],
+                        ['_gb_csup_success_title', 'After sending: heading', 'input'],
+                        ['_gb_csup_success_body', 'After sending: message', 'textarea'],
+                        ['_gb_csup_error_title', 'On error: heading', 'input'],
+                        ['_gb_csup_error_body', 'On error: message', 'textarea'],
+                    ];
+                } elseif ($slug === 'booking-success') {
+                    $gb_wording_fields = [
+                        ['_gb_bs_paid_title', 'Heading once payment has gone through', 'input'],
+                        ['_gb_bs_pending_title', 'Heading while payment is pending', 'input'],
+                        ['_gb_bs_thanks', 'Thank you line — {name} is replaced with the customer\'s name', 'input'],
+                        ['_gb_bs_account_sub', 'Text above the create-account button', 'textarea'],
+                        ['_gb_bs_account_btn', 'Create-account button', 'input'],
+                        ['_gb_bs_not_found', 'Heading when no booking is found', 'input'],
+                    ];
+                }
+                ?>
+                <?php if (!empty($gb_wording_fields)): ?>
+                <div class="gb-editor-section">
+                    <div class="gb-editor-header"><span class="dashicons dashicons-edit"></span> Page Wording</div>
+                    <div class="gb-editor-body">
+                        <p style="margin:0 0 18px; color:#64748b; font-size:13px;">Every word visitors see on this page. Leave a box empty to use the standard wording.</p>
+                        <?php foreach ($gb_wording_fields as $i => $gb_wf): list($gb_key, $gb_label, $gb_type) = $gb_wf; ?>
+                            <div class="gb-form-row"<?php echo $i === count($gb_wording_fields) - 1 ? ' style="margin-bottom:0;"' : ''; ?>>
+                                <label class="gb-label"><?php echo esc_html($gb_label); ?></label>
+                                <?php if ($gb_type === 'textarea'): ?>
+                                    <textarea name="<?php echo esc_attr($gb_key); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($gb_key)); ?></textarea>
+                                <?php else: ?>
+                                    <input type="text" name="<?php echo esc_attr($gb_key); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($gb_key)); ?>">
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <?php endif; ?>

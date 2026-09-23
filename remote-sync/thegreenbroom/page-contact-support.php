@@ -20,25 +20,46 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
     .gb-back-link:hover { color: #2e7d32; }
 </style>
 
+<?php
+/*
+ * Same as the public contact page: the wording lived in the template and so
+ * could not be changed from the dashboard. Defaults are the previous text.
+ */
+$gb_t = function ($key, $default) {
+    $value = trim((string) get_post_meta(get_the_ID(), $key, true));
+    return $value === '' ? $default : $value;
+};
+$s_back    = $gb_t('_gb_csup_back',    'Back to Dashboard');
+$s_title   = $gb_t('_gb_csup_title',   'Contact Support');
+$s_sub     = $gb_t('_gb_csup_sub',     'Having trouble? Our team in Liverpool is here to help.');
+$s_phone_l = $gb_t('_gb_csup_phone_label', 'Phone support:');
+$s_hours   = $gb_t('_gb_csup_hours',   'Monday to Friday, 9 am to 5 pm');
+$s_ok_t    = $gb_t('_gb_csup_success_title', 'Message sent!');
+$s_ok_b    = $gb_t('_gb_csup_success_body',  "We'll be in touch shortly.");
+$s_err_t   = $gb_t('_gb_csup_error_title',   'Please check your details.');
+$s_err_b   = $gb_t('_gb_csup_error_body',    'All fields are required, including a valid email.');
+$s_btn     = $gb_t('_gb_csup_btn',     'Send Message');
+?>
+
 <div id="gb-page-wrapper">
     
     <a href="/cleaner-dashboard" class="gb-back-link">
-        <span style="margin-right:8px;">←</span> Back to Dashboard
+        <span style="margin-right:8px;">←</span> <?php echo esc_html($s_back); ?>
     </a>
 
     <div class="gb-support-card">
-        <h1 style="margin-top:0; color:#1b5e20;">Contact Support</h1>
-        <p style="color:#666; margin-bottom:12px;">Having trouble? Our team in Liverpool is here to help.</p>
-        <p style="color:#2e7d32; font-weight:700; margin:0 0 4px;">Phone support: <?php echo $support_phone ? '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $support_phone)) . '">' . esc_html($support_phone) . '</a>' : '07974 903568'; ?></p>
-        <p style="color:#64748b; font-size:13px; margin:0 0 30px;">Monday to Friday, 9 am to 5 pm</p>
+        <h1 style="margin-top:0; color:#1b5e20;"><?php echo esc_html($s_title); ?></h1>
+        <p style="color:#666; margin-bottom:12px;"><?php echo esc_html($s_sub); ?></p>
+        <p style="color:#2e7d32; font-weight:700; margin:0 0 4px;"><?php echo esc_html($s_phone_l); ?> <?php echo $support_phone ? '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $support_phone)) . '">' . esc_html($support_phone) . '</a>' : '07974 903568'; ?></p>
+        <p style="color:#64748b; font-size:13px; margin:0 0 30px;"><?php echo esc_html($s_hours); ?></p>
 
         <?php if($sent): ?>
             <div style="background:#e8f5e9; color:#2e7d32; padding:15px; border-radius:6px; text-align:center;">
-                <strong>Message sent!</strong><br>We'll be in touch shortly.
+                <strong><?php echo esc_html($s_ok_t); ?></strong><br><?php echo esc_html($s_ok_b); ?>
             </div>
         <?php elseif($error): ?>
             <div style="background:#fee2e2; color:#991b1b; padding:15px; border-radius:6px; text-align:center;">
-                <strong>Please check your details.</strong><br>All fields are required, including a valid email.
+                <strong><?php echo esc_html($s_err_t); ?></strong><br><?php echo esc_html($s_err_b); ?>
             </div>
         <?php else: ?>
             <form method="post">
@@ -59,7 +80,7 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
                 <label style="display:block; font-weight:700; margin-bottom:5px;">Message</label>
                 <textarea name="c_message" rows="5" required style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; margin-bottom:20px; box-sizing:border-box;"></textarea>
                 
-                <button type="submit" style="background:#2e7d32; color:white; padding:15px; width:100%; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Send Message</button>
+                <button type="submit" style="background:#2e7d32; color:white; padding:15px; width:100%; border:none; border-radius:6px; font-weight:bold; cursor:pointer;"><?php echo esc_html($s_btn); ?></button>
             </form>
         <?php endif; ?>
     </div>

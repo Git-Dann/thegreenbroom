@@ -156,14 +156,36 @@ get_header();
     .gb-btn-create:hover { background: #047857; }
 </style>
 
+<?php
+/*
+ * The confirmation wording is the last thing a customer reads after paying,
+ * and it was fixed in the template. It now reads from the page's meta, with
+ * the previous text as the default.
+ */
+$gb_bs_page = get_page_by_path('booking-success');
+$gb_t = function ($key, $default) use ($gb_bs_page) {
+    if ( ! $gb_bs_page instanceof WP_Post ) {
+        return $default;
+    }
+    $value = trim((string) get_post_meta($gb_bs_page->ID, $key, true));
+    return $value === '' ? $default : $value;
+};
+$b_paid_title = $gb_t('_gb_bs_paid_title',    'Booking Confirmed!');
+$b_pend_title = $gb_t('_gb_bs_pending_title', 'Payment Pending');
+$b_thanks     = $gb_t('_gb_bs_thanks',        'Thanks, {name}.');
+$b_acct_sub   = $gb_t('_gb_bs_account_sub',   'Create a password to manage this appointment, reschedule, or cancel anytime.');
+$b_acct_btn   = $gb_t('_gb_bs_account_btn',   'Create Account & View Dashboard');
+$b_none       = $gb_t('_gb_bs_not_found',     'No Booking Found');
+?>
+
 <div class="gb-success-page">
     <div class="gb-success-card">
         
         <?php if($valid): ?>
             <div class="gb-success-header" style="background:<?php echo $is_paid ? '#10b981' : '#f59e0b'; ?>;">
                 <div class="gb-icon-circle">✓</div>
-                <h1 style="margin:0; font-size:24px; font-weight:800;"><?php echo $is_paid ? 'Booking Confirmed!' : 'Payment Pending'; ?></h1>
-                <p style="margin:10px 0 0; opacity:0.9;">Thanks, <?php echo esc_html($name); ?>.</p>
+                <h1 style="margin:0; font-size:24px; font-weight:800;"><?php echo esc_html($is_paid ? $b_paid_title : $b_pend_title); ?></h1>
+                <p style="margin:10px 0 0; opacity:0.9;"><?php echo esc_html(str_replace('{name}', $name, $b_thanks)); ?></p>
             </div>
             
             <div class="gb-success-body">
@@ -199,18 +221,18 @@ get_header();
                         <input type="hidden" name="gb_create_account" value="1">
                         <?php wp_nonce_field('gb_create_account_' . $booking_id, 'gb_create_account_nonce'); ?>
                         <span class="gb-account-title">Don't lose this booking!</span>
-                        <p style="margin:0; font-size:13px; color:#064e3b;">Create a password to manage this appointment, reschedule, or cancel anytime.</p>
+                        <p style="margin:0; font-size:13px; color:#064e3b;"><?php echo esc_html($b_acct_sub); ?></p>
                         <?php echo $msg; ?>
                         <input type="password" name="new_password" class="gb-input-pwd" placeholder="Create a password..." required>
                         <p style="margin:10px 0 0; font-size:12px; color:#065f46;">Use at least 10 characters with upper and lower case letters plus a number.</p>
-                        <button type="submit" class="gb-btn-create">Create Account & View Dashboard</button>
+                        <button type="submit" class="gb-btn-create"><?php echo esc_html($b_acct_btn); ?></button>
                     </form>
                 <?php endif; ?>
             </div>
 
         <?php else: ?>
             <div class="gb-success-body">
-                <h2 style="color:#ef4444;">No Booking Found</h2>
+                <h2 style="color:#ef4444;"><?php echo esc_html($b_none); ?></h2>
                 <a href="<?php echo home_url(); ?>" class="gb-btn-cal">Return Home</a>
             </div>
         <?php endif; ?>
