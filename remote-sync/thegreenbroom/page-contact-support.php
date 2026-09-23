@@ -25,20 +25,16 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
  * Same as the public contact page: the wording lived in the template and so
  * could not be changed from the dashboard. Defaults are the previous text.
  */
-$gb_t = function ($key, $default) {
-    $value = trim((string) get_post_meta(get_the_ID(), $key, true));
-    return $value === '' ? $default : $value;
-};
-$s_back    = $gb_t('_gb_csup_back',    'Back to Dashboard');
-$s_title   = $gb_t('_gb_csup_title',   'Contact Support');
-$s_sub     = $gb_t('_gb_csup_sub',     'Having trouble? Our team in Liverpool is here to help.');
-$s_phone_l = $gb_t('_gb_csup_phone_label', 'Phone support:');
-$s_hours   = $gb_t('_gb_csup_hours',   'Monday to Friday, 9 am to 5 pm');
-$s_ok_t    = $gb_t('_gb_csup_success_title', 'Message sent!');
-$s_ok_b    = $gb_t('_gb_csup_success_body',  "We'll be in touch shortly.");
-$s_err_t   = $gb_t('_gb_csup_error_title',   'Please check your details.');
-$s_err_b   = $gb_t('_gb_csup_error_body',    'All fields are required, including a valid email.');
-$s_btn     = $gb_t('_gb_csup_btn',     'Send Message');
+$s_back    = gb_page_text('_gb_csup_back',    'Back to Dashboard');
+$s_title   = gb_page_text('_gb_csup_title',   'Contact Support');
+$s_sub     = gb_page_text('_gb_csup_sub',     'Having trouble? Our team in Liverpool is here to help.');
+$s_phone_l = gb_page_text('_gb_csup_phone_label', 'Phone support:');
+$s_hours   = gb_page_text('_gb_csup_hours',   'Monday to Friday, 9 am to 5 pm');
+$s_ok_t    = gb_page_text('_gb_csup_success_title', 'Message sent!');
+$s_ok_b    = gb_page_text('_gb_csup_success_body',  "We'll be in touch shortly.");
+$s_err_t   = gb_page_text('_gb_csup_error_title',   'Please check your details.');
+$s_err_b   = gb_page_text('_gb_csup_error_body',    'All fields are required, including a valid email.');
+$s_btn     = gb_page_text('_gb_csup_btn',     'Send Message');
 ?>
 
 <div id="gb-page-wrapper">

@@ -16,22 +16,18 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
  * from page meta and falls back to exactly what was here before, so nothing
  * moves until somebody edits it.
  */
-$gb_t = function ($key, $default) {
-    $value = trim((string) get_post_meta(get_the_ID(), $key, true));
-    return $value === '' ? $default : $value;
-};
-$c_title   = $gb_t('_gb_contact_title',   'Contact Support');
-$c_sub     = $gb_t('_gb_contact_sub',     'Send a message directly to our management team.');
-$c_phone_l = $gb_t('_gb_contact_phone_label', 'Phone support:');
-$c_hours   = $gb_t('_gb_contact_hours',   'Monday to Friday, 9 am to 5 pm');
-$c_ok      = $gb_t('_gb_contact_success', 'Success! Your message has been sent to our team.');
-$c_err     = $gb_t('_gb_contact_error',   'Please complete all fields with a valid email address.');
-$c_l_name  = $gb_t('_gb_contact_label_name',    'Your Name');
-$c_l_email = $gb_t('_gb_contact_label_email',   'Email Address');
-$c_l_subj  = $gb_t('_gb_contact_label_subject', 'Subject');
-$c_ph_subj = $gb_t('_gb_contact_ph_subject',    'How can we help?');
-$c_l_msg   = $gb_t('_gb_contact_label_message', 'Message');
-$c_btn     = $gb_t('_gb_contact_btn',     'Send Message');
+$c_title   = gb_page_text('_gb_contact_title',   'Contact Support');
+$c_sub     = gb_page_text('_gb_contact_sub',     'Send a message directly to our management team.');
+$c_phone_l = gb_page_text('_gb_contact_phone_label', 'Phone support:');
+$c_hours   = gb_page_text('_gb_contact_hours',   'Monday to Friday, 9 am to 5 pm');
+$c_ok      = gb_page_text('_gb_contact_success', 'Success! Your message has been sent to our team.');
+$c_err     = gb_page_text('_gb_contact_error',   'Please complete all fields with a valid email address.');
+$c_l_name  = gb_page_text('_gb_contact_label_name',    'Your Name');
+$c_l_email = gb_page_text('_gb_contact_label_email',   'Email Address');
+$c_l_subj  = gb_page_text('_gb_contact_label_subject', 'Subject');
+$c_ph_subj = gb_page_text('_gb_contact_ph_subject',    'How can we help?');
+$c_l_msg   = gb_page_text('_gb_contact_label_message', 'Message');
+$c_btn     = gb_page_text('_gb_contact_btn',     'Send Message');
 ?>
 
 <style>

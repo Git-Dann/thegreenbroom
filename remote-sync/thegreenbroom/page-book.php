@@ -387,24 +387,18 @@ get_header();
  * the template. Defaults are exactly what was here before, so nothing moves
  * until somebody edits it in the dashboard.
  */
-$gb_bk_page = get_page_by_path('book-now');
-$gb_t = function ($key, $default) use ($gb_bk_page) {
-    if ( ! $gb_bk_page instanceof WP_Post ) { return $default; }
-    $v = trim((string) get_post_meta($gb_bk_page->ID, $key, true));
-    return $v === '' ? $default : $v;
-};
-$bk_title   = $gb_t('_gb_bk_title',   'Complete your Booking');
-$bk_l_svc   = $gb_t('_gb_bk_label_service',  'Service Type');
-$bk_l_dur   = $gb_t('_gb_bk_label_duration', 'Duration');
-$bk_l_date  = $gb_t('_gb_bk_label_date',     'Date');
-$bk_l_time  = $gb_t('_gb_bk_label_time',     'Start Time');
-$bk_help    = $gb_t('_gb_bk_time_help',      'Choose a start time that suits you.');
-$bk_l_name  = $gb_t('_gb_bk_label_name',     'Full Name');
-$bk_l_phone = $gb_t('_gb_bk_label_phone',    'Phone Number');
-$bk_l_email = $gb_t('_gb_bk_label_email',    'Email Address');
-$bk_l_addr  = $gb_t('_gb_bk_label_address',  'Property Address');
-$bk_submit  = $gb_t('_gb_bk_submit',         'Continue to Secure Payment');
-$bk_note    = $gb_t('_gb_bk_note',           'You will be redirected to Stripe to pay securely and confirm your booking.');
+$bk_title   = gb_page_text( '_gb_bk_title', 'Complete your Booking', 'book-now' );
+$bk_l_svc   = gb_page_text( '_gb_bk_label_service', 'Service Type', 'book-now' );
+$bk_l_dur   = gb_page_text( '_gb_bk_label_duration', 'Duration', 'book-now' );
+$bk_l_date  = gb_page_text( '_gb_bk_label_date', 'Date', 'book-now' );
+$bk_l_time  = gb_page_text( '_gb_bk_label_time', 'Start Time', 'book-now' );
+$bk_help    = gb_page_text( '_gb_bk_time_help', 'Choose a start time that suits you.', 'book-now' );
+$bk_l_name  = gb_page_text( '_gb_bk_label_name', 'Full Name', 'book-now' );
+$bk_l_phone = gb_page_text( '_gb_bk_label_phone', 'Phone Number', 'book-now' );
+$bk_l_email = gb_page_text( '_gb_bk_label_email', 'Email Address', 'book-now' );
+$bk_l_addr  = gb_page_text( '_gb_bk_label_address', 'Property Address', 'book-now' );
+$bk_submit  = gb_page_text( '_gb_bk_submit', 'Continue to Secure Payment', 'book-now' );
+$bk_note    = gb_page_text( '_gb_bk_note', 'You will be redirected to Stripe to pay securely and confirm your booking.', 'book-now' );
 ?>
             <h1><?php echo esc_html($bk_title); ?></h1>
             <?php if (!is_user_logged_in()) : ?>

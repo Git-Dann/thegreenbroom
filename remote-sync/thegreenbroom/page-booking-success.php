@@ -162,20 +162,12 @@ get_header();
  * and it was fixed in the template. It now reads from the page's meta, with
  * the previous text as the default.
  */
-$gb_bs_page = get_page_by_path('booking-success');
-$gb_t = function ($key, $default) use ($gb_bs_page) {
-    if ( ! $gb_bs_page instanceof WP_Post ) {
-        return $default;
-    }
-    $value = trim((string) get_post_meta($gb_bs_page->ID, $key, true));
-    return $value === '' ? $default : $value;
-};
-$b_paid_title = $gb_t('_gb_bs_paid_title',    'Booking Confirmed!');
-$b_pend_title = $gb_t('_gb_bs_pending_title', 'Payment Pending');
-$b_thanks     = $gb_t('_gb_bs_thanks',        'Thanks, {name}.');
-$b_acct_sub   = $gb_t('_gb_bs_account_sub',   'Create a password to manage this appointment, reschedule, or cancel anytime.');
-$b_acct_btn   = $gb_t('_gb_bs_account_btn',   'Create Account & View Dashboard');
-$b_none       = $gb_t('_gb_bs_not_found',     'No Booking Found');
+$b_paid_title = gb_page_text( '_gb_bs_paid_title', 'Booking Confirmed!', 'booking-success' );
+$b_pend_title = gb_page_text( '_gb_bs_pending_title', 'Payment Pending', 'booking-success' );
+$b_thanks     = gb_page_text( '_gb_bs_thanks', 'Thanks, {name}.', 'booking-success' );
+$b_acct_sub   = gb_page_text( '_gb_bs_account_sub', 'Create a password to manage this appointment, reschedule, or cancel anytime.', 'booking-success' );
+$b_acct_btn   = gb_page_text( '_gb_bs_account_btn', 'Create Account & View Dashboard', 'booking-success' );
+$b_none       = gb_page_text( '_gb_bs_not_found', 'No Booking Found', 'booking-success' );
 ?>
 
 <div class="gb-success-page">
