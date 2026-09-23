@@ -91,6 +91,25 @@ function gb_user_is_member( $user_id ) {
  * is the point: the call sites can be added and tested long before the gate is
  * ever switched on.
  */
+/**
+ * Administrators and platform managers. Mirrors the check the verification
+ * document viewer uses, so the two cannot disagree about who is staff.
+ */
+function gb_user_is_staff( $user_id = null ) {
+    $user_id = $user_id === null ? get_current_user_id() : (int) $user_id;
+    if ( $user_id < 1 ) {
+        return false;
+    }
+
+    if ( user_can( $user_id, 'manage_options' ) ) {
+        return true;
+    }
+
+    $user = get_userdata( $user_id );
+
+    return $user && in_array( 'gb_manager', (array) $user->roles, true );
+}
+
 function gb_can_access_directory( $user_id = null ) {
     if ( ! gb_membership_gate_enabled() ) {
         return true;
@@ -98,10 +117,14 @@ function gb_can_access_directory( $user_id = null ) {
 
     $user_id = $user_id === null ? get_current_user_id() : (int) $user_id;
 
-    if ( function_exists( 'gb_user_is_manager' ) && gb_user_is_manager( $user_id ) ) {
-        return true;
-    }
-    if ( user_can( $user_id, 'manage_options' ) ) {
+    /*
+     * Managers must never be gated out of their own directory. This checked a
+     * gb_user_is_manager() that does not exist, so function_exists() swallowed
+     * it and the test fell through to manage_options - which the gb_manager
+     * role does NOT have. Every manager would have lost access the moment the
+     * gate was switched on, and only then.
+     */
+    if ( gb_user_is_staff( $user_id ) ) {
         return true;
     }
 
