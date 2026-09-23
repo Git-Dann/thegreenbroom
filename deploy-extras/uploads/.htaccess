@@ -1,0 +1,25 @@
+# Cache headers for the media library.
+#
+# Uploads were served with a 30-minute expiry, so a returning visitor re-fetched
+# every photograph on the site several times a day. Media files are immutable in
+# practice - WordPress writes a new filename rather than overwriting - so they
+# can be cached hard.
+#
+# Deployed as wp-content/uploads/.htaccess by the deploy workflow, which copies
+# this one file and never deletes anything in that directory.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png  "access plus 1 year"
+    ExpiresByType image/gif  "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/avif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType application/pdf "access plus 1 month"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpe?g|png|gif|webp|avif|svg)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

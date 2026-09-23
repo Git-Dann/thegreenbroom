@@ -174,7 +174,9 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
 <div id="gb-front-page">
     <section class="gb-hero">
         <picture class="gb-hero-media" aria-hidden="true">
+            <?php gb_picture_sources( $hero_image_mobile['url'], '(max-width: 700px)' ); ?>
             <source media="(max-width: 700px)" srcset="<?php echo esc_url( $hero_image_mobile['url'] ); ?>">
+            <?php gb_picture_sources( $hero_image_desktop['url'] ); ?>
             <img src="<?php echo esc_url( $hero_image_desktop['url'] ); ?>" width="<?php echo esc_attr( $hero_image_desktop['width'] ); ?>" height="<?php echo esc_attr( $hero_image_desktop['height'] ); ?>" alt="" fetchpriority="high" decoding="async">
         </picture>
         <div class="gb-hero-overlay" aria-hidden="true"></div>
@@ -204,7 +206,10 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
                     </ul>
                     <a href="/cleaner-listings" class="gb-btn gb-btn-outline" style="margin-top:30px;">Browse Cleaners &rarr;</a>
                 </div>
+                <picture>
+                    <?php gb_picture_sources( $split_image['url'] ); ?>
                 <img src="<?php echo esc_url( $split_image['url'] ); ?>" width="<?php echo esc_attr( $split_image['width'] ); ?>" height="<?php echo esc_attr( $split_image['height'] ); ?>" alt="Eco Cleaning" class="gb-split-img" loading="lazy" decoding="async">
+                </picture>
             </div>
         </div>
     </section>
@@ -236,7 +241,10 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
 
     <section class="gb-section" style="padding:0;">
         <div class="gb-container" style="max-width:1200px; padding:0;">
+             <picture>
+                 <?php gb_picture_sources( $mid_image['url'] ); ?>
              <img src="<?php echo esc_url( $mid_image['url'] ); ?>" width="<?php echo esc_attr( $mid_image['width'] ); ?>" height="<?php echo esc_attr( $mid_image['height'] ); ?>" alt="Cleaner" style="width:100%; height:auto; display:block;" loading="lazy" decoding="async">
+             </picture>
         </div>
     </section>
 

@@ -88,6 +88,26 @@ jobs:
               "$SSH_LOGIN@$HOST:themes/thegreenbroom/"
           fi
 
+      - name: Deploy uploads extras (cache rule + image variants)
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+          HOST: ${{ steps.conn.outputs.host }}
+          SSH_LOGIN: ${{ steps.conn.outputs.user }}
+        run: |
+          # Additive only. Deliberately NOT rsync --delete: nothing in the media
+          # library may ever be removed by a deploy.
+          if [ "${{ steps.conn.outputs.use_password }}" = "true" ]; then
+            sshpass -e rsync -az \
+              -e "ssh -p 22 -o StrictHostKeyChecking=no" \
+              deploy-extras/uploads/ \
+              "$SSH_LOGIN@$HOST:uploads/"
+          else
+            rsync -az \
+              -e "ssh -i ~/.ssh/greenbroom -p 22" \
+              deploy-extras/uploads/ \
+              "$SSH_LOGIN@$HOST:uploads/"
+          fi
+
       - name: Deploy plugin
         env:
           SSHPASS: ${{ inputs.ssh_password }}

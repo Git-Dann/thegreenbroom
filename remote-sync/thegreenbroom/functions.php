@@ -1657,6 +1657,133 @@ function gb_noindex_utility_pages() {
 add_action( 'wp_head', 'gb_noindex_utility_pages', 1 );
 
 /**
+ * Modern-format variants for an uploaded image.
+ *
+ * Returns the AVIF/WebP siblings that actually exist on disk next to the
+ * original, so a <picture> can offer them and browsers that cannot use them
+ * still get the JPEG. Nothing is generated at request time: if a variant has
+ * not been produced for an image, this returns nothing and the original is
+ * served exactly as before. That is what makes it safe when the manager
+ * uploads a new photograph.
+ */
+function gb_modern_image_variants( $url ) {
+    $variants = array();
+    $url = strtok( (string) $url, '?' );
+    if ( $url === '' ) {
+        return $variants;
+    }
+
+    $uploads = wp_get_upload_dir();
+    if ( empty( $uploads['baseurl'] ) || strpos( $url, $uploads['baseurl'] ) !== 0 ) {
+        return $variants;
+    }
+
+    $relative = substr( $url, strlen( $uploads['baseurl'] ) );
+    $base     = preg_replace( '/\.(jpe?g|png)$/i', '', $relative );
+    if ( $base === null || $base === $relative ) {
+        return $variants;
+    }
+
+    // AVIF first: where both exist it has been chosen as the smaller of the two.
+    foreach ( array( 'image/avif' => 'avif', 'image/webp' => 'webp' ) as $mime => $ext ) {
+        if ( file_exists( $uploads['basedir'] . $base . '.' . $ext ) ) {
+            $variants[ $mime ] = $uploads['baseurl'] . $base . '.' . $ext;
+        }
+    }
+
+    return $variants;
+}
+
+/**
+ * <source> elements for an image, optionally scoped to a media query.
+ * Prints nothing when no variant exists.
+ */
+function gb_picture_sources( $url, $media = '' ) {
+    foreach ( gb_modern_image_variants( $url ) as $mime => $variant_url ) {
+        printf(
+            '<source%s type="%s" srcset="%s">',
+            $media !== '' ? ' media="' . esc_attr( $media ) . '"' : '',
+            esc_attr( $mime ),
+            esc_url( $variant_url )
+        );
+    }
+}
+
+/**
+ * Offer AVIF/WebP for attachment images across the site.
+ *
+ * Wraps the <img> WordPress produces in a <picture> and adds a source per
+ * available format. The whole srcset is translated, not just the default src:
+ * a <picture> source wins outright for a matching browser, so offering a single
+ * small URL would hand a large screen a smaller image than the srcset would
+ * have. A format is only offered when EVERY candidate in the srcset has a
+ * variant on disk, which keeps the responsive behaviour identical.
+ */
+function gb_attachment_image_modern_formats( $html, $attachment_id = 0, $size = '', $icon = false, $attr = array() ) {
+    if ( is_admin() || $html === '' || strpos( $html, '<img' ) === false ) {
+        return $html;
+    }
+
+    // Already inside a <picture> from a template that handled it itself.
+    if ( strpos( $html, '<picture' ) !== false ) {
+        return $html;
+    }
+
+    if ( ! preg_match( '/\ssrcset="([^"]+)"/i', $html, $m ) ) {
+        if ( ! preg_match( '/\ssrc="([^"]+)"/i', $html, $m ) ) {
+            return $html;
+        }
+        $candidates = array( array( $m[1], '' ) );
+    } else {
+        $candidates = array();
+        foreach ( explode( ',', $m[1] ) as $part ) {
+            $part = trim( $part );
+            if ( $part === '' ) {
+                continue;
+            }
+            $bits = preg_split( '/\s+/', $part, 2 );
+            $candidates[] = array( $bits[0], isset( $bits[1] ) ? $bits[1] : '' );
+        }
+    }
+
+    if ( empty( $candidates ) ) {
+        return $html;
+    }
+
+    $by_mime = array();
+    foreach ( $candidates as $candidate ) {
+        $variants = gb_modern_image_variants( $candidate[0] );
+        foreach ( array( 'image/avif', 'image/webp' ) as $mime ) {
+            if ( isset( $variants[ $mime ] ) ) {
+                $by_mime[ $mime ][] = trim( $variants[ $mime ] . ' ' . $candidate[1] );
+            }
+        }
+    }
+
+    $sources = '';
+    $sizes   = preg_match( '/\ssizes="([^"]+)"/i', $html, $sm ) ? $sm[1] : '';
+    foreach ( array( 'image/avif', 'image/webp' ) as $mime ) {
+        // Every candidate must have converted, or the responsive set is lossy.
+        if ( ! isset( $by_mime[ $mime ] ) || count( $by_mime[ $mime ] ) !== count( $candidates ) ) {
+            continue;
+        }
+        $sources .= sprintf(
+            '<source type="%s" srcset="%s"%s>',
+            esc_attr( $mime ),
+            esc_attr( implode( ', ', $by_mime[ $mime ] ) ),
+            $sizes !== '' ? ' sizes="' . esc_attr( $sizes ) . '"' : ''
+        );
+    }
+
+    if ( $sources === '' ) {
+        return $html;
+    }
+
+    return '<picture>' . $sources . $html . '</picture>';
+}
+add_filter( 'wp_get_attachment_image', 'gb_attachment_image_modern_formats', 10, 5 );
+
+/**
  * Open Graph and Twitter Card tags.
  *
  * Without these, a link shared on Facebook, WhatsApp, LinkedIn or a group chat
