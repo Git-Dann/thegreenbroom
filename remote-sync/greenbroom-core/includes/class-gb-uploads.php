@@ -88,9 +88,31 @@ class GB_Uploads {
             wp_mkdir_p( $target );
         }
 
+        /*
+         * "Order Deny,Allow" is Apache 2.2 syntax and is silently ignored where
+         * AllowOverride does not grant Limit - which is the case on this host,
+         * proven by the fact that this .htaccess was itself downloadable over
+         * HTTP. Write all three forms: the 2.4 directive, the 2.2 one for old
+         * servers, and a rewrite, which falls in the FileInfo class that hosts
+         * are far more likely to allow.
+         */
+        $rules = "<IfModule mod_authz_core.c>\n"
+            . "    Require all denied\n"
+            . "</IfModule>\n"
+            . "<IfModule !mod_authz_core.c>\n"
+            . "    Order Deny,Allow\n"
+            . "    Deny from all\n"
+            . "</IfModule>\n"
+            . "<IfModule mod_rewrite.c>\n"
+            . "    RewriteEngine On\n"
+            . "    RewriteRule ^ - [F,L]\n"
+            . "</IfModule>\n";
+
         $htaccess = $target . '.htaccess';
-        if ( ! file_exists( $htaccess ) ) {
-            file_put_contents( $htaccess, "Order Deny,Allow\nDeny from all" );
+        $current  = file_exists( $htaccess ) ? (string) file_get_contents( $htaccess ) : '';
+        // Also replaces the old 2.2-only file left by earlier versions.
+        if ( strpos( $current, 'mod_rewrite.c' ) === false ) {
+            file_put_contents( $htaccess, $rules );
         }
 
         $index = $target . 'index.php';

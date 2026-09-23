@@ -1,3 +1,26 @@
+# Seal the private document store.
+#
+# Cleaner ID, proof of address and Basic DBS certificates are written to
+# uploads/gb-secure/. That directory ships its own "Order Deny,Allow / Deny
+# from all", which this host does NOT enforce - proven by the fact that the
+# .htaccess file itself was downloadable over HTTP. The directives that ARE
+# honoured here are the FileInfo class (mod_expires below works), so the deny
+# is expressed as a rewrite instead, which falls into that class.
+#
+# Legitimate access is unaffected: documents are served by a PHP proxy that
+# checks capability and nonce and then readfile()s from disk, never over HTTP.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^gb-secure/ - [F,L]
+</IfModule>
+
+# Belt and braces for servers that do honour access control.
+<IfModule mod_authz_core.c>
+    <FilesMatch "^cleaner-[0-9]+-doc_">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
 # Cache headers for the media library.
 #
 # Uploads were served with a 30-minute expiry, so a returning visitor re-fetched
