@@ -20,7 +20,6 @@ define( 'GB_VERSION', '1.0.0' );
 require_once GB_PATH . 'includes/class-gb-roles.php';
 require_once GB_PATH . 'includes/class-gb-cpt.php';
 require_once GB_PATH . 'includes/class-gb-verification-log.php';
-require_once GB_PATH . 'includes/class-gb-db-probe.php';
 require_once GB_PATH . 'includes/class-gb-uploads.php';
 
 class Green_Broom_Core {
