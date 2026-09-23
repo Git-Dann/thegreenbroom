@@ -1,3 +1,28 @@
-<FilesMatch "^\\._">
-    Require all denied
-</FilesMatch>
+# Theme assets are versioned by a query string that changes whenever the file
+# changes, so they can be cached hard. Without this they carried no
+# Cache-Control header at all and were revalidated on every page view.
+#
+# NOTE: this only covers the theme folder. The uploads directory - where the
+# photographs live, and where most of the weight is - sits outside this
+# deployment and needs the same treatment at the web root.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css              "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/png             "access plus 1 year"
+    ExpiresByType image/jpeg            "access plus 1 year"
+    ExpiresByType image/webp            "access plus 1 year"
+    ExpiresByType image/avif            "access plus 1 year"
+    ExpiresByType image/svg+xml         "access plus 1 year"
+    ExpiresByType font/woff2            "access plus 1 year"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|png|jpe?g|webp|avif|svg|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # PHP is never a static asset; make sure nothing above leaks onto it.
+    <FilesMatch "\.php$">
+        Header unset Cache-Control
+    </FilesMatch>
+</IfModule>

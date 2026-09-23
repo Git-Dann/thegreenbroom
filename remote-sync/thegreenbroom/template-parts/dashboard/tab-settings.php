@@ -269,6 +269,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <div class="gb-form-row"><label class="gb-label">TikTok URL</label><input type="url" name="_gb_social_tiktok" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_tiktok', true)); ?>" placeholder="https://tiktok.com/@yourhandle"></div>
                         <div class="gb-form-row"><label class="gb-label">YouTube URL</label><input type="url" name="_gb_social_youtube" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_youtube', true)); ?>" placeholder="https://youtube.com/@yourchannel"></div>
                     </div>
+                    <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Sharing Preview</div>
+                    <p style="margin:0 0 12px; color:#64748b; font-size:12px;">The picture shown when someone shares a link to the site on Facebook, WhatsApp, LinkedIn or in a message. Use a wide photo, around 1200&times;630. Leave blank and the home page hero image is used.</p>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Default share image URL</label>
+                        <input type="url" name="_gb_social_share_image" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_share_image', true)); ?>" placeholder="https://thegreenbroom.uk/wp-content/uploads/...">
+                    </div>
                     <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Google Reviews</div>
                     <p style="margin:0 0 12px; color:#64748b; font-size:12px;">Install a reviews plugin (e.g. "Widgets for Google Reviews" by Trustindex), connect your Google Business profile, then paste its shortcode here to show reviews on the homepage. Leave blank to hide.</p>
                     <div class="gb-form-row" style="margin-bottom:0;">

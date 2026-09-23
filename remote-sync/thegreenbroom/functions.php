@@ -1549,6 +1549,8 @@ function gb_load_assets() {
 
     // 3. Load Navigation Logic
     wp_enqueue_script( 'gb-nav-js', get_template_directory_uri() . '/nav.js', array(), $nav_version, true );
+    // Nothing on the page waits for it, so let the parser carry on.
+    wp_script_add_data( 'gb-nav-js', 'strategy', 'defer' );
 
     // 4. Pass Data to JS (Useful for AJAX)
     wp_localize_script( 'gb-nav-js', 'gbData', array(
@@ -1622,12 +1624,72 @@ function gb_noindex_utility_pages() {
 }
 add_action( 'wp_head', 'gb_noindex_utility_pages', 1 );
 
-function gb_output_meta_description() {
+/**
+ * Open Graph and Twitter Card tags.
+ *
+ * Without these, a link shared on Facebook, WhatsApp, LinkedIn or a group chat
+ * renders as a bare URL with no title, no description and no picture. That
+ * matters more here than on most sites, because the cleaner listings page is
+ * built as a landing page for paid social - the exact traffic that arrives via
+ * a shared link.
+ *
+ * The description reuses whatever the search snippet resolves to, so there is
+ * one thing to edit rather than two.
+ */
+function gb_output_social_tags() {
     if ( is_admin() || is_feed() || is_robots() ) {
         return;
     }
 
-    $description = '';
+    $title = wp_get_document_title();
+    $url   = home_url( add_query_arg( array() ) );
+    $url   = strtok( $url, '?' );
+    $type  = is_singular( 'post' ) ? 'article' : 'website';
+
+    $description = gb_resolve_meta_description();
+
+    $image = '';
+    if ( is_singular() && has_post_thumbnail() ) {
+        $image = (string) get_the_post_thumbnail_url( get_queried_object_id(), 'large' );
+    }
+    if ( $image === '' ) {
+        $settings_id = function_exists( 'gb_get_site_settings_id' ) ? gb_get_site_settings_id() : (int) get_option( 'page_on_front' );
+        $image = $settings_id ? trim( (string) get_post_meta( $settings_id, '_gb_social_share_image', true ) ) : '';
+        if ( $image === '' && $settings_id ) {
+            // The home page hero is the one image guaranteed to exist and to
+            // look like the business rather than a logo on white.
+            $image = trim( (string) get_post_meta( $settings_id, '_gb_hero_bg', true ) );
+        }
+    }
+
+    printf( '<meta property="og:site_name" content="%s">' . "\n", esc_attr( get_bloginfo( 'name' ) ) );
+    printf( '<meta property="og:type" content="%s">' . "\n", esc_attr( $type ) );
+    printf( '<meta property="og:title" content="%s">' . "\n", esc_attr( $title ) );
+    printf( '<meta property="og:url" content="%s">' . "\n", esc_url( $url ) );
+    printf( '<meta property="og:locale" content="%s">' . "\n", esc_attr( get_locale() ) );
+
+    if ( $description !== '' ) {
+        printf( '<meta property="og:description" content="%s">' . "\n", esc_attr( $description ) );
+    }
+    if ( $image !== '' ) {
+        printf( '<meta property="og:image" content="%s">' . "\n", esc_url( $image ) );
+        printf( '<meta name="twitter:image" content="%s">' . "\n", esc_url( $image ) );
+    }
+
+    printf( '<meta name="twitter:card" content="%s">' . "\n", $image !== '' ? 'summary_large_image' : 'summary' );
+    printf( '<meta name="twitter:title" content="%s">' . "\n", esc_attr( $title ) );
+    if ( $description !== '' ) {
+        printf( '<meta name="twitter:description" content="%s">' . "\n", esc_attr( $description ) );
+    }
+}
+add_action( 'wp_head', 'gb_output_social_tags', 2 );
+
+/**
+ * Work out this page's description once, so the search snippet and the social
+ * tags cannot drift apart.
+ */
+function gb_resolve_meta_description() {
+    $description  = '';
     $descriptions = gb_get_default_meta_descriptions();
 
     if ( is_front_page() ) {
@@ -1658,10 +1720,25 @@ function gb_output_meta_description() {
 
     $description = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $description ) ) );
     if ( $description === '' ) {
+        return '';
+    }
+
+    return function_exists( 'mb_substr' ) ? mb_substr( $description, 0, 155 ) : substr( $description, 0, 155 );
+}
+
+/**
+ * Provide a useful search snippet when an editor has not supplied one.
+ */
+function gb_output_meta_description() {
+    if ( is_admin() || is_feed() || is_robots() ) {
         return;
     }
 
-    $description = function_exists( 'mb_substr' ) ? mb_substr( $description, 0, 155 ) : substr( $description, 0, 155 );
+    $description = gb_resolve_meta_description();
+    if ( $description === '' ) {
+        return;
+    }
+
     echo '<meta name="description" content="' . esc_attr( $description ) . '">' . "\n";
 }
 add_action( 'wp_head', 'gb_output_meta_description', 1 );
