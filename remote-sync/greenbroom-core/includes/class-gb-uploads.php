@@ -490,6 +490,17 @@ class GB_Uploads {
         update_post_meta( $cleaner_id, self::get_document_meta_key( $field ), $record );
         update_post_meta( $cleaner_id, 'is_verified', '0' );
 
+        // Fingerprint it now, while the file still exists. This is what makes
+        // the check evidenceable after the document itself is destroyed.
+        if ( class_exists( 'GB_Verification_Log' ) ) {
+            GB_Verification_Log::record( $cleaner_id, 'document_received', array(
+                'document'    => $document_fields[ $field ],
+                'format'      => strtoupper( (string) $checked_filetype['ext'] ),
+                'size_bytes'  => (int) $file['size'],
+                'sha256'      => GB_Verification_Log::fingerprint( $destination ),
+            ) );
+        }
+
         $author_id = (int) get_post_field( 'post_author', $cleaner_id );
         if ( $author_id > 0 ) {
             update_user_meta( $author_id, 'gb_is_verified', '0' );
@@ -586,6 +597,13 @@ class GB_Uploads {
             $meta = get_post_meta( $cleaner_id, $meta_key, true );
 
             if ( is_array( $meta ) && ! empty( $meta['file'] ) ) {
+                if ( class_exists( 'GB_Verification_Log' ) ) {
+                    GB_Verification_Log::record( $cleaner_id, 'document_destroyed', array(
+                        'document' => self::get_document_label( $field ),
+                        'format'   => isset( $meta['mime'] ) ? (string) $meta['mime'] : '',
+                        'received' => isset( $meta['uploaded_at'] ) ? (string) $meta['uploaded_at'] : '',
+                    ) );
+                }
                 foreach ( array( self::get_private_dir(), self::get_legacy_dir() ) as $gb_dir ) {
                     if ( $gb_dir === '' ) {
                         continue;

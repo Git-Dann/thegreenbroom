@@ -1784,6 +1784,120 @@ function gb_attachment_image_modern_formats( $html, $attachment_id = 0, $size = 
 add_filter( 'wp_get_attachment_image', 'gb_attachment_image_modern_formats', 10, 5 );
 
 /**
+ * Seed a baseline entry for cleaners verified before the log existed.
+ *
+ * Without this the trail starts today and says nothing about anyone already
+ * approved, which is precisely the gap the log is meant to close. The entry is
+ * explicitly labelled as reconstructed from the records that exist - it does
+ * not claim to be a contemporaneous account of a check nobody logged.
+ */
+function gb_seed_verification_log_baseline() {
+    if ( get_option( 'gb_verification_log_baseline' ) || ! class_exists( 'GB_Verification_Log' ) ) {
+        return;
+    }
+
+    $cleaners = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => array( 'publish', 'pending', 'draft' ),
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    ) );
+
+    foreach ( $cleaners as $cleaner_id ) {
+        if ( GB_Verification_Log::get( $cleaner_id ) ) {
+            continue;
+        }
+
+        $checks = function_exists( 'gb_get_cleaner_checks' ) ? gb_get_cleaner_checks( $cleaner_id ) : array();
+        $passed = array();
+        foreach ( array( 'id' => 'Identity', 'dbs' => 'Basic DBS certificate', 'refs' => 'Two references' ) as $key => $label ) {
+            if ( ! empty( $checks[ $key ] ) ) {
+                $passed[] = $label;
+            }
+        }
+
+        $verified_date = function_exists( 'gb_get_cleaner_verified_date' ) ? gb_get_cleaner_verified_date( $cleaner_id ) : '';
+
+        GB_Verification_Log::record( $cleaner_id, 'baseline', array(
+            'note'           => 'Position as at the date this log was introduced, reconstructed from existing records. Not a contemporaneous account of the checks themselves.',
+            'checks_passed'  => $passed ? implode( ', ', $passed ) : 'None recorded',
+            'profile_status' => get_post_status( $cleaner_id ),
+            'verified_date'  => $verified_date ? $verified_date : 'Not recorded',
+        ) );
+    }
+
+    update_option( 'gb_verification_log_baseline', 1 );
+}
+add_action( 'init', 'gb_seed_verification_log_baseline', 25 );
+
+/**
+ * Export a cleaner's verification audit trail as CSV.
+ *
+ * The point of the log is to be producible on request - to an insurer, a
+ * customer's solicitor, or the ICO. Reading it off a screen is not that, so it
+ * comes out as a file. Manager-only, nonce-signed, and it contains no identity
+ * data: what was checked, when, by whom, and each document's fingerprint.
+ */
+function gb_export_verification_log() {
+    if ( ! isset( $_GET['gb_action'] ) || $_GET['gb_action'] !== 'export_verification_log' ) {
+        return;
+    }
+
+    $cleaner_id = isset( $_GET['cleaner'] ) ? (int) $_GET['cleaner'] : 0;
+
+    if (
+        $cleaner_id < 1
+        || get_post_type( $cleaner_id ) !== 'gb_cleaner'
+        || ! class_exists( 'GB_Verification_Log' )
+        || ! class_exists( 'GB_Uploads' )
+        || ! GB_Uploads::user_can_manage_verification_documents()
+        || ! isset( $_GET['_wpnonce'] )
+        || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'gb_export_verification_log_' . $cleaner_id )
+    ) {
+        wp_die( 'Unauthorized' );
+    }
+
+    $cleaner  = get_the_title( $cleaner_id );
+    $filename = 'verification-log-' . sanitize_title( $cleaner ) . '-' . gmdate( 'Y-m-d' ) . '.csv';
+
+    nocache_headers();
+    header( 'Content-Type: text/csv; charset=utf-8' );
+    header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+
+    $out = fopen( 'php://output', 'w' );
+
+    fputcsv( $out, array( 'The Green Broom - verification audit trail' ) );
+    fputcsv( $out, array( 'Cleaner', $cleaner ) );
+    fputcsv( $out, array( 'Profile ID', $cleaner_id ) );
+    fputcsv( $out, array( 'Exported', current_time( 'mysql' ) ) );
+    fputcsv( $out, array( 'Exported by', wp_get_current_user()->user_email ) );
+    fputcsv( $out, array() );
+    fputcsv( $out, array( 'Date (local)', 'Date (UTC)', 'Event', 'Details', 'Carried out by' ) );
+
+    foreach ( GB_Verification_Log::get( $cleaner_id ) as $entry ) {
+        $details = array();
+        foreach ( (array) $entry['detail'] as $key => $value ) {
+            if ( $value === '' ) {
+                continue;
+            }
+            $details[] = ucfirst( str_replace( '_', ' ', $key ) ) . ': ' . $value;
+        }
+
+        fputcsv( $out, array(
+            isset( $entry['at'] ) ? $entry['at'] : '',
+            isset( $entry['at_gmt'] ) ? $entry['at_gmt'] : '',
+            GB_Verification_Log::describe( $entry['event'] ),
+            implode( ' | ', $details ),
+            isset( $entry['actor'] ) ? $entry['actor'] : '',
+        ) );
+    }
+
+    fclose( $out );
+    exit;
+}
+add_action( 'template_redirect', 'gb_export_verification_log', 1 );
+
+/**
  * Open Graph and Twitter Card tags.
  *
  * Without these, a link shared on Facebook, WhatsApp, LinkedIn or a group chat

@@ -19,6 +19,7 @@ define( 'GB_VERSION', '1.0.0' );
 // Autoload Classes
 require_once GB_PATH . 'includes/class-gb-roles.php';
 require_once GB_PATH . 'includes/class-gb-cpt.php';
+require_once GB_PATH . 'includes/class-gb-verification-log.php';
 require_once GB_PATH . 'includes/class-gb-uploads.php';
 
 class Green_Broom_Core {

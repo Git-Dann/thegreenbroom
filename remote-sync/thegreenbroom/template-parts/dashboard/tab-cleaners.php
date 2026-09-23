@@ -229,12 +229,71 @@
                     </div>
                 </div>
 
+                <?php
+                /*
+                 * The documents are destroyed on approval, which is correct -
+                 * but it left nothing to answer "on what basis was this person
+                 * verified?". This is that record: what was checked, by whom,
+                 * when, and the fingerprint of each document seen. No ID data.
+                 */
+                $gb_audit = class_exists('GB_Verification_Log') ? GB_Verification_Log::get($post->ID) : [];
+                ?>
+                <div class="gb-os-card">
+                    <div class="gb-os-head">
+                        <div class="gb-os-head-content"><div class="gb-os-title">Verification Audit Trail</div></div>
+                        <?php if (!empty($gb_audit)): ?>
+                            <a class="gb-btn-small-os" href="<?php echo esc_url(wp_nonce_url(add_query_arg([
+                                'gb_action' => 'export_verification_log',
+                                'cleaner'   => $post->ID,
+                            ], home_url('/')), 'gb_export_verification_log_' . $post->ID)); ?>">Download CSV</a>
+                        <?php endif; ?>
+                    </div>
+                    <div class="gb-os-body">
+                        <p style="margin:0 0 14px; font-size:12.5px; color:#64748b;">
+                            Evidence of the checks carried out, kept after the documents themselves are destroyed.
+                            Each document is fingerprinted on arrival &mdash; if this cleaner ever produces the certificate again,
+                            it can be matched against the one actually seen. No identity data is stored here.
+                        </p>
+                        <?php if (empty($gb_audit)): ?>
+                            <p style="margin:0; font-size:12.5px; color:#64748b;">Nothing recorded yet. Entries appear as documents are received and checks are ticked.</p>
+                        <?php else: ?>
+                            <div class="gb-table-scroll">
+                                <table class="gb-booking-table">
+                                    <thead><tr><th>When</th><th>Event</th><th>Details</th><th>By</th></tr></thead>
+                                    <tbody>
+                                    <?php foreach (array_reverse($gb_audit) as $gb_row): ?>
+                                        <tr>
+                                            <td style="white-space:nowrap; font-size:12px;"><?php echo esc_html(date_i18n('j M Y, H:i', strtotime($gb_row['at']))); ?></td>
+                                            <td style="font-size:12px; font-weight:700; color:#0f172a;"><?php echo esc_html(GB_Verification_Log::describe($gb_row['event'])); ?></td>
+                                            <td style="font-size:11.5px; color:#64748b;">
+                                                <?php foreach ((array) $gb_row['detail'] as $gb_dk => $gb_dv):
+                                                    if ($gb_dv === '') { continue; } ?>
+                                                    <div>
+                                                        <?php echo esc_html(ucfirst(str_replace('_', ' ', $gb_dk))); ?>:
+                                                        <?php if ($gb_dk === 'sha256'): ?>
+                                                            <code style="font-size:10.5px; word-break:break-all;"><?php echo esc_html($gb_dv); ?></code>
+                                                        <?php else: ?>
+                                                            <?php echo esc_html($gb_dv); ?>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </td>
+                                            <td style="font-size:11.5px; color:#64748b;"><?php echo esc_html($gb_row['actor']); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="gb-os-card">
                     <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Verification Documents</div></div></div>
                     <div class="gb-os-body">
                         <?php if ($post->post_status === 'publish'): ?>
                             <div style="font-size:12px; color:#166534; background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; padding:12px;">
-                                This cleaner is verified. For data protection, the ID, proof-of-address and DBS documents they uploaded for review are automatically and permanently deleted once approval is granted, so sensitive files are never kept on the platform longer than needed.
+                                This cleaner is verified. For data protection, the ID, proof-of-address and DBS documents they uploaded for review are automatically and permanently deleted once approval is granted, so sensitive files are never kept on the platform longer than needed. The audit trail above records what was checked and when, so the decision can still be evidenced.
                             </div>
                         <?php else: ?>
                             <?php foreach (['doc_id' => 'Government ID', 'doc_address' => 'Proof of Address', 'doc_dbs' => 'DBS Certificate'] as $doc_key => $doc_label): ?>

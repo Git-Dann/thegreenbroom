@@ -172,6 +172,20 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             wp_die('Unsupported save action.');
     }
     
+    /*
+     * Snapshot the verification state before anything is written, so the audit
+     * log records what actually CHANGED rather than what was submitted. The
+     * documents are destroyed on approval by design; this is what is left to
+     * evidence the decision.
+     */
+    $gb_audit_before = [];
+    if ($save_action === 'save_cleaner' && $pid && class_exists('GB_Verification_Log')) {
+        $gb_audit_before = [
+            'checks' => function_exists('gb_get_cleaner_checks') ? gb_get_cleaner_checks($pid) : [],
+            'status' => get_post_status($pid),
+        ];
+    }
+
     // Global Meta Saver
     foreach ($_POST as $key => $value) {
         if (strpos($key, '_gb_') === 0) {
@@ -269,6 +283,33 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             set_post_thumbnail($pid, intval($_POST['_thumbnail_id']));
         }
         update_post_meta($pid, 'hourly_rate', $hourly_rate);
+
+        if ($gb_audit_before && class_exists('GB_Verification_Log')) {
+            $gb_labels = [
+                'id'   => 'Identity',
+                'dbs'  => 'Basic DBS certificate',
+                'refs' => 'Two references',
+            ];
+            $gb_after = function_exists('gb_get_cleaner_checks') ? gb_get_cleaner_checks($pid) : [];
+            foreach ($gb_labels as $gb_k => $gb_label) {
+                $was = !empty($gb_audit_before['checks'][$gb_k]);
+                $now = !empty($gb_after[$gb_k]);
+                if ($was === $now) {
+                    continue;
+                }
+                GB_Verification_Log::record($pid, $now ? 'check_passed' : 'check_cleared', [
+                    'check' => $gb_label,
+                ]);
+            }
+
+            if ($gb_audit_before['status'] !== $cleaner_status) {
+                if ($cleaner_status === 'publish') {
+                    GB_Verification_Log::record($pid, 'listing_published', ['from' => (string) $gb_audit_before['status']]);
+                } else {
+                    GB_Verification_Log::record($pid, 'listing_withdrawn', ['to' => $cleaner_status]);
+                }
+            }
+        }
 
         // Keep location keys synced for manager/public cleaner pages.
         update_post_meta($pid, '_gb_location', $location);
