@@ -349,7 +349,7 @@ add_action( 'init', 'gb_restore_terms_page_content', 21 );
  * saved value in the database was stale.
  */
 function gb_apply_content_audit_fixes() {
-    if ( get_option( 'gb_content_audit_v3' ) ) {
+    if ( get_option( 'gb_content_audit_v4' ) ) {
         return;
     }
 
@@ -513,7 +513,38 @@ function gb_apply_content_audit_fixes() {
         }
     }
 
-    update_option( 'gb_content_audit_v3', 1 );
+    /*
+     * 7. The DBS contradiction.
+     *
+     * Privacy and GDPR both stated that no criminal records data is processed,
+     * while the rest of the site said every cleaner is Basic DBS checked - and
+     * page-verify-profile.php has cleaners upload the certificate itself, which
+     * is then held on file. So the notice was the inaccurate one, not the
+     * marketing copy, and it was inaccurate about Article 10 data.
+     *
+     * This replaces that sentence with what the platform actually does. It is
+     * a factual correction, not legal drafting: the client has been asked to
+     * have it reviewed, including the lawful basis relied on for this data.
+     */
+    $old_dbs = 'We do not request, require, or process criminal records or DBS checks. We also do not collect any data that is classified as special category data under the GDPR.';
+    $new_dbs = 'If you apply to join The Green Broom as a cleaner, we ask you to upload a Basic DBS certificate as part of our verification checks, and we keep a copy of it on file together with the date it was verified. We use it only to confirm that a cleaner has been vetted before their profile is made public, and we do not share it with customers. Customers are never asked for criminal records information. We do not collect any other data that is classified as special category data under the UK GDPR.';
+
+    foreach ( array( 'privacy', 'gdpr' ) as $legal_slug ) {
+        $page = get_page_by_path( $legal_slug );
+        if ( ! $page instanceof WP_Post ) {
+            continue;
+        }
+        $body = (string) $page->post_content;
+        if ( strpos( $body, $old_dbs ) === false ) {
+            continue;
+        }
+        wp_update_post( array(
+            'ID'           => $page->ID,
+            'post_content' => str_replace( $old_dbs, $new_dbs, $body ),
+        ) );
+    }
+
+    update_option( 'gb_content_audit_v4', 1 );
 }
 add_action( 'init', 'gb_apply_content_audit_fixes', 22 );
 
