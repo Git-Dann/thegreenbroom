@@ -295,7 +295,7 @@ if ( ! empty( $gb_selected_services ) ) {
                         </div>
                     <?php endforeach;
                     else : ?>
-                        <p style="color:#94a3b8;">No reviews yet — be the first to book and leave one.</p>
+                        <p style="color:#64748b;">No reviews yet — be the first to book and leave one.</p>
                     <?php endif; ?>
                 </div>
 
