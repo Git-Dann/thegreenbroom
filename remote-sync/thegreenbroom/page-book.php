@@ -381,7 +381,32 @@ get_header();
         <?php wp_nonce_field('gb_make_booking', 'gb_booking_nonce'); ?>
 
         <div class="gb-form-card">
-            <h1>Complete your Booking</h1>
+<?php
+/*
+ * The booking page's wording was the last customer-facing copy still fixed in
+ * the template. Defaults are exactly what was here before, so nothing moves
+ * until somebody edits it in the dashboard.
+ */
+$gb_bk_page = get_page_by_path('book-now');
+$gb_t = function ($key, $default) use ($gb_bk_page) {
+    if ( ! $gb_bk_page instanceof WP_Post ) { return $default; }
+    $v = trim((string) get_post_meta($gb_bk_page->ID, $key, true));
+    return $v === '' ? $default : $v;
+};
+$bk_title   = $gb_t('_gb_bk_title',   'Complete your Booking');
+$bk_l_svc   = $gb_t('_gb_bk_label_service',  'Service Type');
+$bk_l_dur   = $gb_t('_gb_bk_label_duration', 'Duration');
+$bk_l_date  = $gb_t('_gb_bk_label_date',     'Date');
+$bk_l_time  = $gb_t('_gb_bk_label_time',     'Start Time');
+$bk_help    = $gb_t('_gb_bk_time_help',      'Choose a start time that suits you.');
+$bk_l_name  = $gb_t('_gb_bk_label_name',     'Full Name');
+$bk_l_phone = $gb_t('_gb_bk_label_phone',    'Phone Number');
+$bk_l_email = $gb_t('_gb_bk_label_email',    'Email Address');
+$bk_l_addr  = $gb_t('_gb_bk_label_address',  'Property Address');
+$bk_submit  = $gb_t('_gb_bk_submit',         'Continue to Secure Payment');
+$bk_note    = $gb_t('_gb_bk_note',           'You will be redirected to Stripe to pay securely and confirm your booking.');
+?>
+            <h1><?php echo esc_html($bk_title); ?></h1>
             <?php if (!is_user_logged_in()) : ?>
                 <div class="gb-login-prompt">Already have an account? <a href="<?php echo esc_url(home_url('/login')); ?>" style="font-weight:bold; color:inherit;">Log in</a> to pre-fill your details.</div>
             <?php endif; ?>
@@ -389,7 +414,7 @@ get_header();
             <span class="gb-step-title">1. Service Details</span>
             <div class="gb-field-row">
                 <div>
-                    <label for="service-select">Service Type</label>
+                    <label for="service-select"><?php echo esc_html($bk_l_svc); ?></label>
                     <select name="service_id" id="service-select">
                         <?php foreach ($services as $id => $service) : ?>
                             <option
@@ -408,7 +433,7 @@ get_header();
                     </select>
                 </div>
                 <div>
-                    <label for="duration-select">Duration</label>
+                    <label for="duration-select"><?php echo esc_html($bk_l_dur); ?></label>
                     <select name="duration" id="duration-select">
                         <?php foreach ($duration_options as $duration_option) : ?>
                             <option value="<?php echo esc_attr($duration_option); ?>" <?php selected($form_data['duration'], $duration_option); ?>>
@@ -421,11 +446,11 @@ get_header();
 
             <div class="gb-field-row">
                 <div>
-                    <label for="booking-date">Date</label>
+                    <label for="booking-date"><?php echo esc_html($bk_l_date); ?></label>
                     <input type="date" id="booking-date" name="date" required min="<?php echo esc_attr($today_ymd); ?>" value="<?php echo esc_attr($form_data['date']); ?>">
                 </div>
                 <div>
-                    <label for="booking-time">Start Time</label>
+                    <label for="booking-time"><?php echo esc_html($bk_l_time); ?></label>
                     <select id="booking-time" name="time">
                         <?php foreach ($time_slots as $slot) : ?>
                             <option value="<?php echo esc_attr($slot); ?>" <?php selected($form_data['time'], $slot); ?>>
@@ -433,7 +458,7 @@ get_header();
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <div class="gb-field-help" id="time-slot-help">Choose a start time that suits you.</div>
+                    <div class="gb-field-help" id="time-slot-help"><?php echo esc_html($bk_help); ?></div>
                 </div>
             </div>
 
@@ -442,22 +467,22 @@ get_header();
             <span class="gb-step-title">2. Your Details</span>
             <div class="gb-field-row">
                 <div>
-                    <label for="booking-fullname">Full Name</label>
+                    <label for="booking-fullname"><?php echo esc_html($bk_l_name); ?></label>
                     <input id="booking-fullname" type="text" name="fullname" required value="<?php echo esc_attr($form_data['fullname']); ?>">
                 </div>
                 <div>
-                    <label for="booking-phone">Phone Number</label>
+                    <label for="booking-phone"><?php echo esc_html($bk_l_phone); ?></label>
                     <input id="booking-phone" type="tel" name="phone" required value="<?php echo esc_attr($form_data['phone']); ?>" placeholder="+44 7...">
                 </div>
             </div>
             <div class="gb-field-row">
                 <div style="grid-column: span 2;">
-                    <label for="booking-email">Email Address</label>
+                    <label for="booking-email"><?php echo esc_html($bk_l_email); ?></label>
                     <input id="booking-email" type="email" name="email" required value="<?php echo esc_attr($form_data['email']); ?>">
                 </div>
             </div>
             <div style="margin-bottom:20px;">
-                <label for="booking-address">Property Address</label>
+                <label for="booking-address"><?php echo esc_html($bk_l_addr); ?></label>
                 <input id="booking-address" type="text" name="address" required placeholder="Street, City, Postcode" value="<?php echo esc_attr($form_data['address']); ?>">
             </div>
         </div>
@@ -472,8 +497,8 @@ get_header();
             <p class="gb-summary-meta"><strong>Estimated Finish:</strong> <span id="summary-end">-</span></p>
 
             <div class="gb-total-row"><span>Total Est.</span><span>£<span id="total-display">0</span></span></div>
-            <button type="submit" class="gb-btn-submit" id="gb-submit-btn">Continue to Secure Payment</button>
-            <p class="gb-summary-note">You will be redirected to Stripe to pay securely and confirm your booking.</p>
+            <button type="submit" class="gb-btn-submit" id="gb-submit-btn"><?php echo esc_html($bk_submit); ?></button>
+            <p class="gb-summary-note"><?php echo esc_html($bk_note); ?></p>
         </aside>
     </form>
 </div>

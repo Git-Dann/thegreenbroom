@@ -11,7 +11,7 @@ if ($action === 'edit' && $selected_page_id) {
 }
 
 $invalid_edit_target = ($action === 'edit' && $selected_page_id && !$edit_page);
-$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'booking-success'];
+$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'booking-success', 'book-now'];
 ?>
 
 <style>
@@ -335,6 +335,21 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_csup_success_body'  => "We'll be in touch shortly.",
             '_gb_csup_error_title'   => 'Please check your details.',
             '_gb_csup_error_body'    => 'All fields are required, including a valid email.',
+        ];
+    } elseif ($slug === 'book-now') {
+        $gb_page_defaults = [
+            '_gb_bk_title'          => 'Complete your Booking',
+            '_gb_bk_label_service'  => 'Service Type',
+            '_gb_bk_label_duration' => 'Duration',
+            '_gb_bk_label_date'     => 'Date',
+            '_gb_bk_label_time'     => 'Start Time',
+            '_gb_bk_time_help'      => 'Choose a start time that suits you.',
+            '_gb_bk_label_name'     => 'Full Name',
+            '_gb_bk_label_phone'    => 'Phone Number',
+            '_gb_bk_label_email'    => 'Email Address',
+            '_gb_bk_label_address'  => 'Property Address',
+            '_gb_bk_submit'         => 'Continue to Secure Payment',
+            '_gb_bk_note'           => 'You will be redirected to Stripe to pay securely and confirm your booking.',
         ];
     } elseif ($slug === 'booking-success') {
         $gb_page_defaults = [
@@ -826,6 +841,21 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                         ['_gb_csup_error_title', 'On error: heading', 'input'],
                         ['_gb_csup_error_body', 'On error: message', 'textarea'],
                     ];
+                } elseif ($slug === 'book-now') {
+                    $gb_wording_fields = [
+                        ['_gb_bk_title', 'Heading', 'input'],
+                        ['_gb_bk_label_service', 'Form label: service type', 'input'],
+                        ['_gb_bk_label_duration', 'Form label: duration', 'input'],
+                        ['_gb_bk_label_date', 'Form label: date', 'input'],
+                        ['_gb_bk_label_time', 'Form label: start time', 'input'],
+                        ['_gb_bk_time_help', 'Hint under the time picker', 'input'],
+                        ['_gb_bk_label_name', 'Form label: full name', 'input'],
+                        ['_gb_bk_label_phone', 'Form label: phone', 'input'],
+                        ['_gb_bk_label_email', 'Form label: email', 'input'],
+                        ['_gb_bk_label_address', 'Form label: property address', 'input'],
+                        ['_gb_bk_submit', 'Payment button', 'input'],
+                        ['_gb_bk_note', 'Reassurance under the button', 'textarea'],
+                    ];
                 } elseif ($slug === 'booking-success') {
                     $gb_wording_fields = [
                         ['_gb_bs_paid_title', 'Heading once payment has gone through', 'input'],
@@ -1063,6 +1093,10 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
 
     $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'eco-products'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr', 'subscribers-terms-of-association'];
+    // Customer-facing pages whose wording is editable but which are not part of
+    // the marketing core. Previously these sat in the collapsed "Other Pages"
+    // bucket, so nobody could tell they were editable at all.
+    $customer_slugs = ['contact', 'contact-support', 'book-now', 'booking-success'];
 
     $core_pages = [];
     if ($front_id) {
@@ -1082,6 +1116,13 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     foreach ($legal_slugs as $slug_key) {
         if (isset($pages_by_slug[$slug_key])) {
             $legal_pages[$pages_by_slug[$slug_key]->ID] = $pages_by_slug[$slug_key];
+        }
+    }
+
+    $customer_pages = [];
+    foreach ($customer_slugs as $slug_key) {
+        if (isset($pages_by_slug[$slug_key])) {
+            $customer_pages[$pages_by_slug[$slug_key]->ID] = $pages_by_slug[$slug_key];
         }
     }
 
@@ -1156,7 +1197,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
 
     <?php
     // Any remaining published/draft pages that aren't Core or Legal — make them editable too.
-    $shown_ids = array_merge(array_keys($core_pages), array_keys($legal_pages));
+    $shown_ids = array_merge(array_keys($core_pages), array_keys($legal_pages), array_keys($customer_pages));
     $other_pages = [];
     foreach ($all_pages as $page_obj) {
         if (!in_array($page_obj->ID, $shown_ids, true)) {
@@ -1164,12 +1205,41 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         }
     }
     ?>
+    <?php if (!empty($customer_pages)): ?>
+    <div style="margin:34px 0 0;">
+        <div style="margin:0 0 10px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Customer-Facing Pages</div>
+        <p style="margin:0 0 12px; color:#64748b; font-size:12.5px;">Contact, booking and confirmation. Every word a customer reads on these is editable under &ldquo;Page Wording&rdquo; inside each one.</p>
+        <div class="gb-card" style="padding:0; overflow:hidden; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
+            <div class="gb-table-scroll">
+                <table class="gb-booking-table">
+                    <thead><tr><th style="width:40%;">Page</th><th>Status</th><th style="text-align:right;">Action</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($customer_pages as $p): ?>
+                            <tr>
+                                <td><strong style="font-size:15px; color:#0f172a;"><?php echo esc_html($p->post_title); ?></strong><div style="font-size:11px; color:#94a3b8; margin-top:4px;">/<?php echo esc_html($p->post_name); ?></div></td>
+                                <td>
+                                    <span style="background:#ecfdf3; color:#166534; border-radius:20px; padding:6px 12px; font-size:10px; font-weight:800; text-transform:uppercase;">
+                                        &#9998; Wording editable
+                                    </span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <a href="?tab=pages&amp;action=edit&amp;id=<?php echo (int) $p->ID; ?>" class="gb-btn-small-os">Edit Page</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($other_pages)): ?>
     <details class="gb-pages-accordion">
         <summary>
             <span>
-                <span class="gb-pages-accordion-title">Other Pages</span>
-                <span class="gb-pages-accordion-meta"><span class="gb-pages-accordion-count"><?php echo count($other_pages); ?></span> available</span>
+                <span class="gb-pages-accordion-title">Account &amp; System Pages</span>
+                <span class="gb-pages-accordion-meta"><span class="gb-pages-accordion-count"><?php echo count($other_pages); ?></span> &mdash; sign-in, account and dashboard screens</span>
             </span>
             <span class="dashicons dashicons-arrow-down-alt2 gb-pages-accordion-chevron" aria-hidden="true"></span>
         </summary>
