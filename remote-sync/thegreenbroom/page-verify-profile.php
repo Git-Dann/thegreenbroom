@@ -194,7 +194,7 @@ get_header();
                             </ul>
                         </div>
                     <?php endif; ?>
-                    <p style="color:#94a3b8; font-size:13px; margin-top:16px;">
+                    <p style="color:#64748b; font-size:13px; margin-top:16px;">
                         Already sent these? Our team confirms them manually &mdash; nothing more is needed from you.
                         You can update your details below if anything has changed.
                     </p>
@@ -223,17 +223,17 @@ get_header();
                     <div class="gb-section-head">Documents</div>
                     <div class="gb-upload-box <?php echo $gb_doc_present('doc_id') ? 'done' : ''; ?>">
                         <label class="gb-upload-label">Government ID <span class="gb-req">*</span></label>
-                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Passport or Driving License (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_id') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Passport or Driving License (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_id') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
                         <input type="file" name="doc_id" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_id') ? '' : 'required'; ?>>
                     </div>
                     <div class="gb-upload-box <?php echo $gb_doc_present('doc_address') ? 'done' : ''; ?>">
                         <label class="gb-upload-label">Proof of Address <span class="gb-req">*</span></label>
-                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Utility Bill or Bank Statement (recent)<?php echo $gb_doc_present('doc_address') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Utility Bill or Bank Statement (recent)<?php echo $gb_doc_present('doc_address') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
                         <input type="file" name="doc_address" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_address') ? '' : 'required'; ?>>
                     </div>
                     <div class="gb-upload-box <?php echo $gb_doc_present('doc_dbs') ? 'done' : ''; ?>">
                         <label class="gb-upload-label">DBS Certificate <span class="gb-req">*</span></label>
-                        <p style="font-size:12px; color:#94a3b8; margin:0 0 10px;">Your Disclosure &amp; Barring Service certificate (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_dbs') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
+                        <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Your Disclosure &amp; Barring Service certificate (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_dbs') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
                         <input type="file" name="doc_dbs" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_dbs') ? '' : 'required'; ?>>
                     </div>
 
@@ -266,7 +266,7 @@ get_header();
                     </label>
 
                     <button type="submit" style="width:100%; background:#10b981; color:white; border:none; padding:15px; border-radius:8px; font-weight:700; font-size:16px; cursor:pointer; margin-top:16px;">Submit for Verification</button>
-                    <p style="text-align:center; font-size:12px; color:#94a3b8; margin:14px 0 0;">You will not go live until all documents and references are provided and approved.</p>
+                    <p style="text-align:center; font-size:12px; color:#64748b; margin:14px 0 0;">You will not go live until all documents and references are provided and approved.</p>
                 </form>
             <?php endif; ?>
         </div>

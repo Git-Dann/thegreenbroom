@@ -22,7 +22,7 @@ get_header();
     .gb-msg-item { padding: 25px; border-bottom: 1px solid #f1f5f9; }
     .gb-msg-item:last-child { border-bottom: none; }
     .gb-sender { font-weight: 700; color: #0f172a; font-size: 16px; }
-    .gb-date { font-size: 12px; color: #94a3b8; float: right; }
+    .gb-date { font-size: 12px; color: #64748b; float: right; }
     .gb-email { color: #10b981; font-size: 13px; display: block; margin-bottom: 10px; text-decoration: none; }
     .gb-body { background: #f8fafc; padding: 15px; border-radius: 8px; color: #475569; line-height: 1.5; }
 </style>

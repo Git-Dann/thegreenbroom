@@ -115,7 +115,7 @@ if ( ! empty( $gb_selected_services ) ) {
     .gb-verify-ico { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px; background: #f0fdf4; color: #2e7d32; }
     .gb-verify-ico svg { width: 16px; height: 16px; display: block; }
     .gb-verify-label { font-size: 13px; font-weight: 600; color: #334155; line-height: 1.35; }
-    .gb-verify-date { margin: 14px 0 0; text-align: center; font-size: 11.5px; color: #94a3b8; }
+    .gb-verify-date { margin: 14px 0 0; text-align: center; font-size: 11.5px; color: #64748b; }
     .gb-verify-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .gb-verify-chip {
         width: 44px; height: 44px; border-radius: 12px; background: #f2fdf5; border: 1px solid #dcfce7;
@@ -153,7 +153,7 @@ if ( ! empty( $gb_selected_services ) ) {
     .gb-rev-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 9px; flex-wrap: wrap; }
     .gb-rev-author { font-weight: 800; color: #0f172a; font-size: 14.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .gb-rev-verified { background: #dcfce7; color: #166534; font-size: 10px; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.4px; }
-    .gb-rev-date { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+    .gb-rev-date { font-size: 12px; color: #64748b; white-space: nowrap; }
     .gb-rev-body { font-size: 14.5px; color: #475569; line-height: 1.7; margin-top: 8px; }
     .gb-rev-body p { margin: 0; }
 
@@ -179,7 +179,7 @@ if ( ! empty( $gb_selected_services ) ) {
     /* ---------- MODAL ---------- */
     .gb-modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
     .gb-modal-content { background: #fff; padding: 36px; border-radius: 16px; width: 100%; max-width: 450px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25); text-align: left; max-height: 90vh; overflow-y: auto; }
-    .gb-close-modal { position: absolute; top: 14px; right: 18px; font-size: 24px; cursor: pointer; color: #94a3b8; }
+    .gb-close-modal { position: absolute; top: 14px; right: 18px; font-size: 24px; cursor: pointer; color: #64748b; }
     .gb-modal input, .gb-modal textarea { width: 100%; padding: 12px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; box-sizing: border-box; }
     .gb-modal textarea { height: 120px; resize: vertical; }
     .gb-modal label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #334155; }

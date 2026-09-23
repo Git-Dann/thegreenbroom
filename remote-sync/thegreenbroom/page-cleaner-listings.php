@@ -306,7 +306,7 @@ if ($verified_body === '') {
     .gb-review blockquote::after { content:"\201D"; }
     .gb-review figcaption { margin-top:auto; font-size:.86rem; }
     .gb-review-author { display:block; font-weight:800; color:#1b5e20; }
-    .gb-review-meta { display:block; margin-top:2px; color:#94a3b8; }
+    .gb-review-meta { display:block; margin-top:2px; color:#64748b; }
     .gb-review-meta a { color:#64748b; text-decoration:underline; text-underline-offset:2px; }
     .gb-review-meta a:hover { color:#2e7d32; }
 

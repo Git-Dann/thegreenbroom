@@ -64,7 +64,7 @@ get_header();
 
     .gb-auth-card-body { padding: 30px; }
 
-    .gb-os-label-alt { display: block; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .gb-os-label-alt { display: block; font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-os-input-auth { width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; color: #0f172a; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; }
 
     .gb-btn-final { 

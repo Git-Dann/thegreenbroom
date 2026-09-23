@@ -161,13 +161,13 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
             
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Current Status</span>
+                    <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Current Status</span>
                     <span style="background: #fffbeb; color: #92400e; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
                         <?php echo esc_html($sub_status); ?>
                     </span>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Renewal Date</span>
+                    <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Renewal Date</span>
                     <span style="font-size: 14px; font-weight: 700; color: #0f172a;"><?php echo esc_html($renewal_date); ?></span>
                 </div>
             </div>

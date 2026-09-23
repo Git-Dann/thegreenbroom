@@ -80,7 +80,7 @@ if ( $legal_body === '' && $legal_seed !== '' && function_exists( 'gb_get_legal_
 
     .gb-last-updated {
         font-size: 13px;
-        color: #94a3b8;
+        color: #64748b;
         margin-top: 10px;
         font-style: italic;
     }
