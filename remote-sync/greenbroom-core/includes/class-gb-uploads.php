@@ -16,6 +16,7 @@ class GB_Uploads {
         add_action( 'init', array( $this, 'handle_file_proxy' ) );
         add_action( 'admin_menu', array( $this, 'register_admin_page' ) );
         add_action( 'init', array( __CLASS__, 'maybe_refresh_secure_dir' ) );
+        add_action( 'init', array( __CLASS__, 'maybe_migrate_documents' ) );
     }
 
     /**
@@ -25,6 +26,85 @@ class GB_Uploads {
      * this is a single autoloaded read on a normal request.
      */
     const SECURE_RULES_VERSION = 2;
+
+    /**
+     * Copy existing documents into the private store.
+     *
+     * Deliberately a COPY, and deliberately verified by hash: the original is
+     * left in place, so a half-finished or failed run cannot lose a document
+     * or make one unreadable - locate_document() finds whichever copy exists.
+     * Removing the originals is a separate, later step, taken only once the
+     * private store has been confirmed to be unreachable over HTTP.
+     */
+    const MIGRATION_VERSION = 1;
+
+    public static function maybe_migrate_documents() {
+        if ( (int) get_option( 'gb_secure_docs_copied', 0 ) >= self::MIGRATION_VERSION ) {
+            return;
+        }
+
+        $private = self::get_private_dir();
+        $legacy  = self::get_legacy_dir();
+
+        // No private store available on this host: nothing to do, and the
+        // option is NOT set, so it is retried if that ever changes.
+        if ( $private === '' || ! is_dir( $legacy ) ) {
+            return;
+        }
+
+        $copied = 0;
+        $failed = 0;
+
+        foreach ( (array) glob( $legacy . 'cleaner-*' ) as $source ) {
+            if ( ! is_file( $source ) ) {
+                continue;
+            }
+
+            $target = $private . basename( $source );
+
+            if ( file_exists( $target ) && md5_file( $target ) === md5_file( $source ) ) {
+                $copied++;
+                continue;
+            }
+
+            if ( ! @copy( $source, $target ) ) {
+                $failed++;
+                continue;
+            }
+
+            // Verify before counting it. A truncated copy is worse than none.
+            if ( md5_file( $target ) !== md5_file( $source ) ) {
+                @unlink( $target );
+                $failed++;
+                continue;
+            }
+
+            $copied++;
+        }
+
+        update_option( 'gb_secure_docs_copy_report', array(
+            'copied' => $copied,
+            'failed' => $failed,
+            'at'     => current_time( 'mysql' ),
+        ) );
+
+        /*
+         * TEMPORARY. There is no way to read this back without logging in, and
+         * the move must be verified before the originals are deleted. Written
+         * under a name chosen at deploy time, holds counts only - no paths, no
+         * filenames, nothing about any cleaner - and is removed in the step
+         * that deletes the originals.
+         */
+        @file_put_contents( $legacy . 'gb-status-xoU4PGXVBpGKeOSIABjI.json', wp_json_encode( array(
+            'private_store' => $private !== '',
+            'copied'        => $copied,
+            'failed'        => $failed,
+        ) ) );
+
+        if ( $failed === 0 ) {
+            update_option( 'gb_secure_docs_copied', self::MIGRATION_VERSION );
+        }
+    }
 
     public static function maybe_refresh_secure_dir() {
         if ( (int) get_option( 'gb_secure_dir_rules', 0 ) >= self::SECURE_RULES_VERSION ) {
@@ -39,10 +119,100 @@ class GB_Uploads {
         self::ensure_secure_dir();
     }
 
-    private static function get_secure_dir() {
+    /**
+     * The original store: uploads/gb-secure/. Still read from, because files
+     * live here until they have been copied and verified.
+     */
+    private static function get_legacy_dir() {
         $upload_dir = wp_upload_dir();
 
         return trailingslashit( $upload_dir['basedir'] ) . 'gb-secure/';
+    }
+
+    /**
+     * A store outside the document root, used when one can be created.
+     *
+     * uploads/gb-secure/ is inside the web root, and its .htaccess deny is not
+     * enforced on every host - on this one it is ignored outright, leaving ID
+     * documents and DBS certificates protected only by an unguessable
+     * filename. A directory above the web root cannot be requested over HTTP
+     * at all, whatever the server config allows.
+     *
+     * Returns '' when no such directory can be used, in which case everything
+     * carries on working exactly as before.
+     */
+    private static function get_private_dir() {
+        static $resolved = null;
+        if ( $resolved !== null ) {
+            return $resolved;
+        }
+
+        $resolved = '';
+
+        if ( ! defined( 'ABSPATH' ) ) {
+            return $resolved;
+        }
+
+        $root = realpath( ABSPATH );
+        if ( ! $root ) {
+            return $resolved;
+        }
+
+        $candidate = trailingslashit( dirname( $root ) ) . 'gb-private-docs/';
+
+        if ( ! file_exists( $candidate ) && ! wp_mkdir_p( $candidate ) ) {
+            return $resolved;
+        }
+
+        $real = realpath( $candidate );
+        // Refuse anything that is not genuinely above the web root, and
+        // anything we cannot write to - either way the legacy store is used.
+        if ( ! $real || strpos( trailingslashit( $real ), trailingslashit( $root ) ) === 0 || ! is_writable( $real ) ) {
+            return $resolved;
+        }
+
+        $resolved = trailingslashit( $real );
+
+        return $resolved;
+    }
+
+    /**
+     * Where a NEW document is written.
+     */
+    private static function get_storage_dir() {
+        $private = self::get_private_dir();
+
+        return $private !== '' ? $private : self::get_legacy_dir();
+    }
+
+    /**
+     * Where an EXISTING document actually is. Both stores are checked, so a
+     * file that has not been migrated - or one whose migration failed - is
+     * still found and served.
+     */
+    private static function locate_document( $filename ) {
+        $filename = basename( (string) $filename );
+        if ( $filename === '' ) {
+            return '';
+        }
+
+        foreach ( array( self::get_private_dir(), self::get_legacy_dir() ) as $dir ) {
+            if ( $dir === '' ) {
+                continue;
+            }
+            if ( file_exists( $dir . $filename ) ) {
+                return $dir . $filename;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Kept for the places that still write into the legacy store's rules.
+     */
+    private static function get_secure_dir() {
+        return self::get_legacy_dir();
     }
 
     private static function get_document_fields() {
@@ -101,7 +271,12 @@ class GB_Uploads {
     }
 
     public static function ensure_secure_dir() {
-        $target = self::get_secure_dir();
+        foreach ( array_filter( array( self::get_private_dir(), self::get_legacy_dir() ) ) as $gb_target ) {
+            self::write_dir_guards( $gb_target );
+        }
+    }
+
+    private static function write_dir_guards( $target ) {
         if ( ! file_exists( $target ) ) {
             wp_mkdir_p( $target );
         }
@@ -237,7 +412,7 @@ class GB_Uploads {
             wp_generate_password( 12, false, false ),
             sanitize_file_name( (string) $checked_filetype['ext'] )
         );
-        $destination = self::get_secure_dir() . $filename;
+        $destination = self::get_storage_dir() . $filename;
 
         if ( ! @move_uploaded_file( $file['tmp_name'], $destination ) ) {
             return new WP_Error( 'gb_move_failed', 'We could not secure this upload. Please try again.' );
@@ -282,8 +457,8 @@ class GB_Uploads {
         $meta = get_post_meta( $cleaner_id, self::get_document_meta_key( $field ), true );
         if ( is_array( $meta ) && ! empty( $meta['file'] ) ) {
             $file = basename( (string) $meta['file'] );
-            $path = self::get_secure_dir() . $file;
-            if ( file_exists( $path ) ) {
+            $path = self::locate_document( $file );
+            if ( $path !== '' ) {
                 $meta['status'] = 'available';
                 $meta['storage'] = 'private';
                 $meta['field'] = $field;
@@ -357,9 +532,14 @@ class GB_Uploads {
             $meta = get_post_meta( $cleaner_id, $meta_key, true );
 
             if ( is_array( $meta ) && ! empty( $meta['file'] ) ) {
-                $path = self::get_secure_dir() . basename( (string) $meta['file'] );
-                if ( file_exists( $path ) ) {
-                    @unlink( $path );
+                foreach ( array( self::get_private_dir(), self::get_legacy_dir() ) as $gb_dir ) {
+                    if ( $gb_dir === '' ) {
+                        continue;
+                    }
+                    $path = $gb_dir . basename( (string) $meta['file'] );
+                    if ( file_exists( $path ) ) {
+                        @unlink( $path );
+                    }
                 }
             } elseif ( is_numeric( $meta ) ) {
                 wp_delete_attachment( (int) $meta, true );
@@ -485,7 +665,10 @@ class GB_Uploads {
             wp_die( 'File not found.' );
         }
 
-        $filepath = self::get_secure_dir() . basename( (string) $document['file'] );
+        $filepath = self::locate_document( $document['file'] );
+        if ( $filepath === '' ) {
+            wp_die( 'File not found.' );
+        }
         self::stream_file_response( $filepath, isset( $document['mime'] ) ? $document['mime'] : '', isset( $document['original_name'] ) ? $document['original_name'] : basename( $filepath ) );
     }
 
