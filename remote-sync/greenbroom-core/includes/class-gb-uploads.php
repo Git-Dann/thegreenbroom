@@ -686,7 +686,7 @@ class GB_Uploads {
 
     private static function stream_file_response( $filepath, $mime, $filename ) {
         if ( ! file_exists( $filepath ) ) {
-            wp_die( 'File not found.' );
+            wp_die( 'File not found.', 'Not found', array( 'response' => 404 ) );
         }
 
         if ( ! $mime && function_exists( 'mime_content_type' ) ) {
@@ -721,12 +721,12 @@ class GB_Uploads {
             ! isset( $_GET['_wpnonce'] ) ||
             ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'gb_view_verification_doc_' . $cleaner_id . '_' . $field )
         ) {
-            wp_die( 'Unauthorized' );
+            wp_die( 'Unauthorized', 'Unauthorized', array( 'response' => 403 ) );
         }
 
         $document = self::get_cleaner_verification_document( $cleaner_id, $field );
         if ( empty( $document['status'] ) || $document['status'] !== 'available' ) {
-            wp_die( 'File not found.' );
+            wp_die( 'File not found.', 'Not found', array( 'response' => 404 ) );
         }
 
         if ( ! empty( $document['storage'] ) && $document['storage'] === 'legacy' && ! empty( $document['file_path'] ) ) {
@@ -734,12 +734,12 @@ class GB_Uploads {
         }
 
         if ( empty( $document['file'] ) ) {
-            wp_die( 'File not found.' );
+            wp_die( 'File not found.', 'Not found', array( 'response' => 404 ) );
         }
 
         $filepath = self::locate_document( $document['file'] );
         if ( $filepath === '' ) {
-            wp_die( 'File not found.' );
+            wp_die( 'File not found.', 'Not found', array( 'response' => 404 ) );
         }
         self::stream_file_response( $filepath, isset( $document['mime'] ) ? $document['mime'] : '', isset( $document['original_name'] ) ? $document['original_name'] : basename( $filepath ) );
     }

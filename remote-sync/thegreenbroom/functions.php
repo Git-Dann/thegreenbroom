@@ -1854,7 +1854,7 @@ function gb_export_verification_log() {
         || ! isset( $_GET['_wpnonce'] )
         || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'gb_export_verification_log_' . $cleaner_id )
     ) {
-        wp_die( 'Unauthorized' );
+        wp_die( 'Unauthorized', 'Unauthorized', array( 'response' => 403 ) );
     }
 
     $cleaner  = get_the_title( $cleaner_id );
