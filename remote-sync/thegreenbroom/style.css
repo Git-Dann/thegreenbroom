@@ -815,7 +815,12 @@ a.gb-card:hover {
 .gb-avail-table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
 .gb-avail-table th { font-size: .78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; padding: 4px 2px; }
 .gb-avail-table thead th { text-align: center; }
-.gb-avail-table tbody th { text-align: left; width: 5.6rem; text-transform: none; letter-spacing: 0; font-size: .86rem; color: #334155; }
+/* table-layout is fixed, so column widths come from the FIRST row - the header.
+   Setting a width only on the body cells left the label column too narrow and
+   the labels spilled over Monday. Size the first column on both rows. */
+.gb-avail-table thead th:first-child,
+.gb-avail-table tbody th { width: 6.4rem; }
+.gb-avail-table tbody th { text-align: left; text-transform: none; letter-spacing: 0; font-size: .86rem; color: #334155; }
 .gb-avail-table tbody th small { display: block; font-weight: 500; font-size: .7rem; color: #94a3b8; }
 .gb-avail-table td { text-align: center; padding: 0; }
 .gb-avail-editor td { background: #f6f7f9; border-radius: 8px; height: 38px; }
@@ -825,10 +830,19 @@ a.gb-card:hover {
 .gb-avail-table-view td.is-free { background: #eafaf0; color: #166534; }
 .gb-avail-table-view td.is-busy { background: #f6f7f9; color: #cbd5e1; }
 
+/* On a phone the row labels were overrunning the Monday column: table-layout
+   is fixed, so a header cell too narrow for "Afternoon" spills rather than
+   growing. Widen it, drop the time hints that will not fit anyway, and let the
+   day columns take what is left. */
 @media (max-width: 560px) {
     .gb-avail-table { border-spacing: 3px; }
-    .gb-avail-table tbody th { width: 4.2rem; font-size: .78rem; }
-    .gb-avail-table thead th { font-size: .68rem; }
+    .gb-avail-table thead th:first-child,
+    .gb-avail-table tbody th { width: 5rem; }
+    .gb-avail-table tbody th { font-size: .74rem; }
+    .gb-avail-table tbody th small { display: none; }
+    .gb-avail-table thead th { font-size: .62rem; padding: 4px 0; }
+    .gb-avail-editor td { height: 34px; }
+    .gb-avail-editor input[type="checkbox"] { width: 17px; height: 17px; }
 }
 
 /* ==========================================================================
