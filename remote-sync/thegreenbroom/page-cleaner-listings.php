@@ -176,7 +176,7 @@ $listings_badge        = get_post_meta(get_the_ID(), '_gb_listings_badge', true)
 // so the header has to make the case before asking anyone to search.
 $listings_usps_raw = trim((string) get_post_meta(get_the_ID(), '_gb_listings_usps', true));
 if ($listings_usps_raw === '') {
-    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products as standard\nIndependent local cleaners, paid fairly";
+    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products supplied\nIndependent local cleaners, paid fairly";
 }
 $listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_replace("\r\n", "\n", $listings_usps_raw))), 'strlen'));
 
@@ -217,7 +217,7 @@ $why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom');
 $why_cards = array();
 $why_defaults = array(
     array('Properly vetted', 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.'),
-    array('Genuinely eco', 'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.'),
+    array('Genuinely eco', 'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.'),
     array('Fair to cleaners', 'Independent local cleaners set their own rates and keep the bulk of what you pay. Better paid people do better work.'),
     array('No contracts', 'Book a one-off clean or a regular slot. Change it or cancel it whenever you need to.'),
 );

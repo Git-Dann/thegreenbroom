@@ -254,3 +254,44 @@ function gb_reconcile_cleaner_locations() {
 
     update_option( 'gb_cleaner_locations_reconciled', 1, false );
 }
+
+/**
+ * "Plant-based, non-toxic products as standard" became "supplied" on the
+ * cleaner profiles; the client asked for the same change everywhere. Find a
+ * Cleaner carried it twice, in the hero selling points and in a "why book
+ * through us" card.
+ *
+ * Both are template defaults unless somebody has edited them, so this is a
+ * no-op where they have not been stored. Conditional on the exact old string,
+ * as ever.
+ */
+function gb_apply_products_supplied_wording() {
+    if ( get_option( 'gb_products_supplied_wording' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'cleaner-listings' );
+
+    if ( $page ) {
+        $replacements = array(
+            '_gb_listings_usps' => array(
+                "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products as standard\nIndependent local cleaners, paid fairly",
+                "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products supplied\nIndependent local cleaners, paid fairly",
+            ),
+            '_gb_listings_why_2_text' => array(
+                'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.',
+                'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.',
+            ),
+        );
+
+        foreach ( $replacements as $key => $pair ) {
+            list( $was, $now ) = $pair;
+
+            if ( (string) get_post_meta( $page->ID, $key, true ) === $was ) {
+                update_post_meta( $page->ID, $key, $now );
+            }
+        }
+    }
+
+    update_option( 'gb_products_supplied_wording', 1, false );
+}

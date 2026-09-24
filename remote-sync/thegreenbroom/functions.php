@@ -1062,6 +1062,7 @@ function gb_migrate_what_cleaners_do() {
 }
 
 require_once get_template_directory() . '/inc/eco-guide-content.php';
+require_once get_template_directory() . '/inc/green-broom-standard.php';
 require_once get_template_directory() . '/inc/cookie-consent.php';
 require_once get_template_directory() . '/inc/legal-content.php';
 require_once get_template_directory() . '/inc/membership.php';
@@ -2287,7 +2288,7 @@ require_once get_template_directory() . '/inc/pricing-panels.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 6;
+const GB_MIGRATION_VERSION = 7;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2318,7 +2319,9 @@ function gb_run_one_time_migrations() {
         'gb_correct_cleanco_location',
         'gb_align_join_cta_with_pricing',
         'gb_set_cleanco_location',
-        'gb_reconcile_cleaner_locations'
+        'gb_reconcile_cleaner_locations',
+        'gb_apply_products_supplied_wording',
+        'gb_ensure_green_broom_standard_page'
     );
 
     foreach ( $migrations as $migration ) {
