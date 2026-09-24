@@ -149,7 +149,17 @@ $cleaners = new WP_Query($args);
 
 $listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find Your Professional';
 $listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Find trusted local cleaners by entering your postcode.';
-$listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No professionals found. Try adjusting your search criteria.';
+/*
+ * The no-results state is the most common outcome of the site's main action
+ * while the directory is still small, and it used to be a dead end: a line of
+ * grey text and nowhere to go. It now offers the way out - clear the filters
+ * and see everyone - plus a line for people whose area is not covered yet.
+ *
+ * "Professionals" was the old wording; the rest of the site says cleaners.
+ */
+$listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No cleaners match that search yet.';
+$listings_none_sub = get_post_meta(get_the_ID(), '_gb_listings_none_sub', true) ?: 'We are adding cleaners across Merseyside every week. Try a nearby postcode, or see everyone on the platform.';
+$listings_none_btn = get_post_meta(get_the_ID(), '_gb_listings_none_btn', true) ?: 'See all cleaners';
 
 /*
  * Paid-social traffic lands here, so the page opens with a proper hero lockup
@@ -642,8 +652,19 @@ if ($verified_body === '') {
             </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: white; border-radius: 12px; color: #64748b;">
-                <h2><?php echo esc_html($listings_none); ?></h2>
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 30px; background: white; border-radius: 12px; color: #64748b;">
+                <h2 style="margin:0 0 10px; color:#0f172a;"><?php echo esc_html($listings_none); ?></h2>
+                <?php if (trim((string) $listings_none_sub) !== ''): ?>
+                    <p style="margin:0 auto 24px; max-width:460px; line-height:1.6;"><?php echo esc_html($listings_none_sub); ?></p>
+                <?php endif; ?>
+                <?php
+                // Only worth offering when a filter is actually narrowing things
+                // down - with no filters on, "see all cleaners" is this page.
+                $gb_filtered = ($search_term !== '' || $service_filter !== '');
+                ?>
+                <?php if ($gb_filtered && trim((string) $listings_none_btn) !== ''): ?>
+                    <a href="<?php echo esc_url(get_permalink()); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($listings_none_btn); ?></a>
+                <?php endif; ?>
             </div>
         <?php endif; wp_reset_postdata(); ?>
     </div>

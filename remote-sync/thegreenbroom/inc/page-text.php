@@ -318,3 +318,58 @@ function gb_clear_join_testimonial_meta() {
 
     update_option( 'gb_join_testimonial_cleared', 1, false );
 }
+
+/**
+ * Clear the homepage's secondary CTA button.
+ *
+ * The banner reads "Ready to make money cleaning?" - it is there to recruit
+ * cleaners - and the stored second button said "Learn More" pointing at How
+ * It Works, which is mostly about booking a clean. The banner has one job and
+ * a second button to the wrong audience only dilutes it.
+ *
+ * The field still works: type into it in Manager OS and the button appears.
+ * This only empties it, and the default is gone too so a later save cannot
+ * quietly put it back.
+ */
+function gb_clear_home_secondary_cta() {
+    if ( get_option( 'gb_home_secondary_cta_cleared' ) ) {
+        return;
+    }
+
+    $front_id = (int) get_option( 'page_on_front' );
+
+    if ( $front_id ) {
+        if ( (string) get_post_meta( $front_id, '_gb_cta_btn_2', true ) === 'Learn More' ) {
+            delete_post_meta( $front_id, '_gb_cta_btn_2' );
+            delete_post_meta( $front_id, '_gb_cta_link_2' );
+        }
+    }
+
+    update_option( 'gb_home_secondary_cta_cleared', 1, false );
+}
+
+/**
+ * Replace the old no-results wording.
+ *
+ * "No professionals found. Try adjusting your search criteria." was a dead
+ * end, and while the directory is small it is the most common thing a visitor
+ * sees. The page now offers a way out; this brings the stored heading in line
+ * with the new default, and only when nobody has rewritten it.
+ */
+function gb_update_listings_empty_state() {
+    if ( get_option( 'gb_listings_empty_state_v2' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'cleaner-listings' );
+
+    if ( $page ) {
+        $was = 'No professionals found. Try adjusting your search criteria.';
+
+        if ( (string) get_post_meta( $page->ID, '_gb_listings_none', true ) === $was ) {
+            update_post_meta( $page->ID, '_gb_listings_none', 'No cleaners match that search yet.' );
+        }
+    }
+
+    update_option( 'gb_listings_empty_state_v2', 1, false );
+}

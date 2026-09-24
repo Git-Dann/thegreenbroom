@@ -430,18 +430,30 @@ if ( ! empty( $gb_selected_services ) ) {
             <input type="hidden" name="cleaner_id" value="<?php echo (int) $cleaner_id; ?>">
             <?php wp_nonce_field('gb_msg_nonce', 'security'); ?>
 
-            <div style="display:none;">
+            <?php
+            /*
+             * Labels were sitting next to their fields but not tied to them,
+             * so a screen reader announced three unlabelled boxes. Since the
+             * flow now asks people to message a cleaner before booking, this
+             * is the form the whole journey runs through.
+             *
+             * The id carries the cleaner's post id: two profiles could not
+             * collide, but a duplicate id would break the association anyway.
+             */
+            $gb_msg_uid = 'gb-msg-' . (int) $cleaner_id;
+            ?>
+            <div style="display:none;" aria-hidden="true">
                 <input type="text" name="gb_honeypot" value="" autocomplete="off" tabindex="-1">
             </div>
 
-            <label>Your Name</label>
-            <input type="text" name="sender_name" required placeholder="e.g. John Smith">
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-name">Your Name</label>
+            <input id="<?php echo esc_attr($gb_msg_uid); ?>-name" type="text" name="sender_name" required placeholder="e.g. John Smith" autocomplete="name">
 
-            <label>Your Email</label>
-            <input type="email" name="sender_email" required placeholder="john@example.com">
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-email">Your Email</label>
+            <input id="<?php echo esc_attr($gb_msg_uid); ?>-email" type="email" name="sender_email" required placeholder="john@example.com" autocomplete="email">
 
-            <label>Message</label>
-            <textarea name="message_body" required placeholder="Hi, do you bring your own vacuum?"></textarea>
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-body">Message</label>
+            <textarea id="<?php echo esc_attr($gb_msg_uid); ?>-body" name="message_body" required placeholder="Hi, do you bring your own vacuum?"></textarea>
 
             <button type="submit" class="gb-btn-book" style="margin-top:6px;">Send Message</button>
         </form>

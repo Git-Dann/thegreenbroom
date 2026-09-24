@@ -122,8 +122,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_cta_sub'       => 'Join The Green Broom today.',
             '_gb_cta_btn_1'     => 'Get Started Now',
             '_gb_cta_link_1'    => '/register',
-            '_gb_cta_btn_2'     => 'Learn More',
-            '_gb_cta_link_2'    => '/how-it-works',
             '_gb_mid_img'       => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
         ];
     } elseif ($slug === 'how-it-works') {
@@ -236,7 +234,9 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $gb_page_defaults = [
             '_gb_listings_title' => 'Find Your Professional',
             '_gb_listings_sub'   => 'Find trusted local cleaners by entering your postcode.',
-            '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
+            '_gb_listings_none'     => 'No cleaners match that search yet.',
+            '_gb_listings_none_sub' => 'We are adding cleaners across Merseyside every week. Try a nearby postcode, or see everyone on the platform.',
+            '_gb_listings_none_btn' => 'See all cleaners',
             '_gb_listings_eyebrow'     => '',
             '_gb_listings_search_head' => 'Search cleaners near you',
             '_gb_listings_ph_postcode' => 'Search by postcode...',
@@ -923,7 +923,9 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 </div>
                             </div>
 
-                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Heading</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><textarea name="_gb_listings_none_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_listings_none_sub')); ?></textarea><p class="gb-media-help">Shown when a search finds nobody. Name the areas you actually cover &mdash; this is the most common thing a visitor sees while the directory is small.</p></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Button</label><input type="text" name="_gb_listings_none_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none_btn')); ?>"><p class="gb-media-help">Clears the search and shows every cleaner. Leave blank for no button.</p></div>
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Customer reviews strip</h4>
                                 <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">
