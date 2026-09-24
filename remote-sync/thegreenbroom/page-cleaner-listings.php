@@ -52,10 +52,32 @@ if ( $search_term !== '' ) {
 
     $gb_terms = array_values( array_unique( array_filter( $gb_terms ) ) );
 
+    /*
+     * A postcode district has to match on a boundary, not as a substring.
+     * Plain LIKE made a search for L1 return the cleaner in L18, because the
+     * one string contains the other - and the same would hold for M1 against
+     * M11, B1 against B15, and every other single-digit district.
+     *
+     * REGEXP with word boundaries on anything that looks like a district;
+     * everything else stays LIKE, so a free-text search for "Liverpool" still
+     * matches "Mossley Hill, Liverpool, L18".
+     *
+     * \\b, not the [[:<:]] of MySQL 5.7: this host runs MariaDB 10.11, whose
+     * REGEXP is PCRE and does not understand the older syntax at all.
+     */
+    $gb_is_district = static function ( $term ) {
+        return (bool) preg_match( '/^[A-Z]{1,2}[0-9][A-Z0-9]?$/', $term );
+    };
+
     $gb_location_group = [ 'relation' => 'OR' ];
     foreach ( $gb_terms as $gb_term ) {
+        $gb_compare = $gb_is_district( $gb_term ) ? 'REGEXP' : 'LIKE';
+        $gb_value   = $gb_compare === 'REGEXP'
+            ? '\\b' . preg_quote( $gb_term, '/' ) . '\\b'
+            : $gb_term;
+
         foreach ( [ 'gb_postcode', '_gb_location', 'location', 'cleaner_location' ] as $gb_key ) {
-            $gb_location_group[] = [ 'key' => $gb_key, 'value' => $gb_term, 'compare' => 'LIKE' ];
+            $gb_location_group[] = [ 'key' => $gb_key, 'value' => $gb_value, 'compare' => $gb_compare ];
         }
     }
 
