@@ -112,3 +112,32 @@ function gb_apply_client_copy_corrections() {
 
     update_option( 'gb_copy_corrections_v1_applied', 1, false );
 }
+
+/**
+ * CleanCo Ltd was listed in Manchester. They are a Liverpool business.
+ *
+ * Conditional on the stored value still being the wrong one, so this cannot
+ * overwrite a correction somebody makes in the dashboard first. Both location
+ * keys are written, because the listings card reads one and the search matches
+ * on either.
+ */
+function gb_correct_cleanco_location() {
+    if ( get_option( 'gb_cleanco_location_fixed' ) ) {
+        return;
+    }
+
+    $cleaner = get_page_by_path( 'cleanco-ltd', OBJECT, 'gb_cleaner' );
+
+    if ( $cleaner ) {
+        $was = 'Manchester, UK';
+        $now = 'City Centre, Liverpool, L1';
+
+        foreach ( array( 'cleaner_location', 'location', '_gb_location' ) as $key ) {
+            if ( (string) get_post_meta( $cleaner->ID, $key, true ) === $was ) {
+                update_post_meta( $cleaner->ID, $key, $now );
+            }
+        }
+    }
+
+    update_option( 'gb_cleanco_location_fixed', 1, false );
+}
