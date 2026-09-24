@@ -82,7 +82,20 @@ get_header();
             </div>
             <div class="gb-form-group"><label class="gb-label" for="register-full-name">Full Name</label><input id="register-full-name" type="text" name="full_name" class="gb-input" required autocomplete="name"></div>
             <div class="gb-form-group"><label class="gb-label" for="register-email">Email Address</label><input id="register-email" type="email" name="email" class="gb-input" required autocomplete="email"></div>
-            <p id="gb-cleaner-signup-note" style="display:none; margin:0 0 18px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.5;">Cleaner applications include email references and a 15-minute WhatsApp or FaceTime call. Booking link coming soon.</p>
+            <?php
+            /*
+             * What a cleaner applicant is told here has to match what the
+             * pricing panel on Become a Cleaner promised them a click earlier,
+             * so the free-trial line is read from the same stored field the
+             * panel prints. Edit it once in Settings and both agree.
+             *
+             * "Booking link coming soon" was a leftover placeholder on a live
+             * page and is gone.
+             */
+            $gb_reg_free = function_exists('gb_pricing_field') ? trim((string) gb_pricing_field('_gb_price_clean_free')) : '';
+            $gb_reg_show_free = $gb_reg_free !== '' && (!function_exists('gb_pricing_panel_enabled') || gb_pricing_panel_enabled('cleaner'));
+            ?>
+            <p id="gb-cleaner-signup-note" style="display:none; margin:0 0 18px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.5;"><?php if ($gb_reg_show_free): ?><strong><?php echo esc_html($gb_reg_free); ?>.</strong> Nothing to pay today. <?php endif; ?>Cleaner applications include email references and a 15-minute WhatsApp or FaceTime call.</p>
             <div class="gb-form-group">
                 <label class="gb-label" for="register-password">Password</label>
                 <input id="register-password" type="password" name="password" class="gb-input" required autocomplete="new-password" aria-describedby="register-password-help">
