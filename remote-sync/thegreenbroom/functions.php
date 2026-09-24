@@ -2287,7 +2287,7 @@ require_once get_template_directory() . '/inc/pricing-panels.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 5;
+const GB_MIGRATION_VERSION = 6;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2317,7 +2317,8 @@ function gb_run_one_time_migrations() {
         'gb_apply_client_copy_corrections',
         'gb_correct_cleanco_location',
         'gb_align_join_cta_with_pricing',
-        'gb_set_cleanco_location'
+        'gb_set_cleanco_location',
+        'gb_reconcile_cleaner_locations'
     );
 
     foreach ( $migrations as $migration ) {

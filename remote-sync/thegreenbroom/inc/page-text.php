@@ -202,3 +202,55 @@ function gb_set_cleanco_location() {
 
     update_option( 'gb_cleanco_location_set', 1, false );
 }
+
+/**
+ * Reconcile the location keys that had drifted apart.
+ *
+ * A cleaner's location lives under three meta keys. The manager dashboard
+ * wrote all three; the cleaner's own Edit Profile screen wrote only two, so
+ * _gb_location kept whatever a manager had typed however long ago. The search
+ * matches on every key, so a cleaner who had since moved was still turning up
+ * under their old town.
+ *
+ * Edit Profile now writes all three. This clears the drift already stored.
+ * The cleaner's own value wins: the two keys their screen writes are the ones
+ * that were updated most recently, by definition of how the drift happened.
+ */
+function gb_reconcile_cleaner_locations() {
+    if ( get_option( 'gb_cleaner_locations_reconciled' ) ) {
+        return;
+    }
+
+    $cleaners = get_posts( array(
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => 'any',
+        'posts_per_page' => 500,
+        'fields'         => 'ids',
+    ) );
+
+    $keys = array( 'cleaner_location', 'location', '_gb_location' );
+
+    foreach ( $cleaners as $cleaner_id ) {
+        $authoritative = '';
+
+        foreach ( $keys as $key ) {
+            $value = trim( (string) get_post_meta( $cleaner_id, $key, true ) );
+            if ( $value !== '' ) {
+                $authoritative = $value;
+                break;
+            }
+        }
+
+        if ( $authoritative === '' ) {
+            continue;
+        }
+
+        foreach ( $keys as $key ) {
+            if ( trim( (string) get_post_meta( $cleaner_id, $key, true ) ) !== $authoritative ) {
+                update_post_meta( $cleaner_id, $key, $authoritative );
+            }
+        }
+    }
+
+    update_option( 'gb_cleaner_locations_reconciled', 1, false );
+}

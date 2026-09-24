@@ -29,8 +29,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
 
         wp_update_post(['ID' => $cleaner_id, 'post_content' => $bio]);
         update_post_meta($cleaner_id, 'hourly_rate', $rate);
+
+        /*
+         * All three location keys, the same set the manager dashboard writes.
+         * This screen used to write only two, so _gb_location kept whatever a
+         * manager had typed months earlier - and the search matches on every
+         * key, which is how a Liverpool cleaner was still turning up under
+         * "Manchester".
+         */
         update_post_meta($cleaner_id, 'cleaner_location', $loc);
         update_post_meta($cleaner_id, 'location', $loc);
+        update_post_meta($cleaner_id, '_gb_location', $loc);
 
         /*
          * Services the cleaner offers. Stored as an array of published
