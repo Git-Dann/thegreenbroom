@@ -293,7 +293,7 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
             <?php endif; ?>
             <div class="gb-home-cleaner-grid">
                 <?php foreach ($gb_home_cleaners as $gb_c):
-                    $gb_loc  = get_post_meta($gb_c->ID, 'cleaner_location', true) ?: get_post_meta($gb_c->ID, '_gb_location', true);
+                    $gb_loc  = function_exists('gb_get_cleaner_location') ? gb_get_cleaner_location($gb_c->ID) : '';
                     $gb_rate = function_exists('gb_get_cleaner_rate') ? gb_get_cleaner_rate($gb_c->ID) : '';
                     $gb_ver  = function_exists('gb_cleaner_is_fully_verified') && gb_cleaner_is_fully_verified($gb_c->ID);
                 ?>

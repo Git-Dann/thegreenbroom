@@ -47,7 +47,16 @@ $is_verified  = function_exists('gb_cleaner_is_fully_verified')
     // Get Subscription Status from profile meta
     $sub_status = get_post_meta($cleaner_id, '_gb_subscription_status', true) ?: 'trial'; 
     
-    $rating_value = (float) get_post_meta($cleaner_id, '_gb_rating', true);
+    /*
+     * The real rating, computed from approved reviews - the same figure the
+     * public profile shows.
+     *
+     * This used to read _gb_rating, a number typed by hand into the manager
+     * dashboard. A cleaner could be told they were rated 4.8 while their own
+     * public profile said "no reviews yet".
+     */
+    $rating_data  = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0.0, 'rated' => 0];
+    $rating_value = (float) $rating_data['average'];
     if ($rating_value > 0) {
         $rating = number_format($rating_value, 1, '.', '');
     }

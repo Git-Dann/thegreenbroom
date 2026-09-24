@@ -37,9 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
          * key, which is how a Liverpool cleaner was still turning up under
          * "Manchester".
          */
-        update_post_meta($cleaner_id, 'cleaner_location', $loc);
-        update_post_meta($cleaner_id, 'location', $loc);
-        update_post_meta($cleaner_id, '_gb_location', $loc);
+        gb_set_cleaner_location($cleaner_id, $loc);
 
         /*
          * Services the cleaner offers. Stored as an array of published
@@ -74,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
 // 3. Get Data
 $bio = get_post_field('post_content', $cleaner_id);
 $rate = get_post_meta($cleaner_id, 'hourly_rate', true);
-$loc = get_post_meta($cleaner_id, 'cleaner_location', true);
+$loc = gb_get_cleaner_location($cleaner_id);
 
 get_header(); 
 ?>

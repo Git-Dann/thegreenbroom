@@ -344,9 +344,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
         }
 
         // Keep location keys synced for manager/public cleaner pages.
-        update_post_meta($pid, '_gb_location', $location);
-        update_post_meta($pid, 'location', $location);
-        update_post_meta($pid, 'cleaner_location', $location);
+        gb_set_cleaner_location($pid, $location);
 
         // Keep verification badge state aligned with manager status selection.
         gb_sync_cleaner_verification_state($pid, $cleaner_status);

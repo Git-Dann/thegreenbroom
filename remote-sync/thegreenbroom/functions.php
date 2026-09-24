@@ -2071,7 +2071,7 @@ function gb_resolve_meta_description() {
         }
         // A cleaner who has not written a bio still deserves a snippet.
         if ( $description === '' && get_post_type( $post_id ) === 'gb_cleaner' ) {
-            $location = trim( (string) get_post_meta( $post_id, 'cleaner_location', true ) );
+            $location = gb_get_cleaner_location( $post_id );
             $description = sprintf(
                 '%s is an eco-friendly cleaner%s on The Green Broom. View their services, rates and reviews, and book directly.',
                 get_the_title( $post_id ),

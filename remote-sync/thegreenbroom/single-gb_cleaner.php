@@ -5,7 +5,7 @@ get_header();
 $cleaner_id   = get_the_ID();
 $rate         = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
 $verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
-$location     = get_post_meta($cleaner_id, 'location', true);
+$location     = function_exists('gb_get_cleaner_location') ? gb_get_cleaner_location($cleaner_id) : get_post_meta($cleaner_id, 'location', true);
 $member_since = get_the_date('Y', $cleaner_id);
 
 $rating = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0, 'rated' => 0, 'total' => 0];
@@ -219,6 +219,9 @@ if ( ! empty( $gb_selected_services ) ) {
             </span>
         <?php endif; ?>
         <span class="gb-hero-item">🗓️ Member since <?php echo esc_html($member_since); ?></span>
+        <?php if (function_exists('gb_cleaner_is_fully_booked') && gb_cleaner_is_fully_booked($cleaner_id)): ?>
+            <span class="gb-hero-item gb-hero-booked">Fully booked right now</span>
+        <?php endif; ?>
         <?php if ($location): ?>
             <span class="gb-hero-item">📍 <?php echo esc_html($location); ?></span>
         <?php endif; ?>

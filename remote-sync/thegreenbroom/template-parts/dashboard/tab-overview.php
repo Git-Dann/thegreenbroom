@@ -171,8 +171,14 @@ $rating_review_total = 0;
 $rating_simple_sum = 0.0;
 $rating_simple_count = 0;
 foreach ($cleaner_ids as $cleaner_id) {
-    $rating = (float) get_post_meta($cleaner_id, '_gb_rating', true);
-    $reviews = (int) get_post_meta($cleaner_id, '_gb_review_count', true);
+    /*
+     * Computed from approved reviews, not from the numbers that used to be
+     * typed into the cleaner editor. A headline average a manager reads as
+     * real has to be built from real reviews.
+     */
+    $rating_data = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0.0, 'rated' => 0];
+    $rating  = (float) $rating_data['average'];
+    $reviews = (int) $rating_data['rated'];
 
     if ($rating > 0) {
         $rating_simple_sum += $rating;
