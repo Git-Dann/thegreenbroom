@@ -168,3 +168,37 @@ function gb_align_join_cta_with_pricing() {
 
     update_option( 'gb_join_cta_pricing_aligned', 1, false );
 }
+
+/**
+ * Set CleanCo Ltd's location for real.
+ *
+ * The first attempt at this looked for a stored value of "Manchester, UK" and
+ * found nothing, because there was none: the listings template was printing a
+ * hardcoded "Manchester, UK" for any cleaner with no location at all. The
+ * template no longer does that, and this writes the location they should have
+ * had, to every key the site reads.
+ *
+ * Only fills a blank. A location entered in the dashboard in the meantime is
+ * the one that should win.
+ */
+function gb_set_cleanco_location() {
+    if ( get_option( 'gb_cleanco_location_set' ) ) {
+        return;
+    }
+
+    $cleaner = get_page_by_path( 'cleanco-ltd', OBJECT, 'gb_cleaner' );
+
+    if ( $cleaner ) {
+        $location = 'City Centre, Liverpool, L1';
+
+        foreach ( array( 'location', 'cleaner_location', '_gb_location' ) as $key ) {
+            $current = trim( (string) get_post_meta( $cleaner->ID, $key, true ) );
+
+            if ( $current === '' || $current === 'Manchester, UK' ) {
+                update_post_meta( $cleaner->ID, $key, $location );
+            }
+        }
+    }
+
+    update_option( 'gb_cleanco_location_set', 1, false );
+}

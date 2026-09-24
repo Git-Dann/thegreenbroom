@@ -580,7 +580,24 @@ if ($verified_body === '') {
         <?php if($cleaners->have_posts()): ?>
             <?php while($cleaners->have_posts()): $cleaners->the_post(); 
                 $rate = get_post_meta(get_the_ID(), 'hourly_rate', true) ?: '15';
-                $location = get_post_meta(get_the_ID(), 'location', true) ?: 'Manchester, UK';
+                /*
+                 * Location, from whichever key holds it - the cleaner's own
+                 * edit screen writes cleaner_location and location, the manager
+                 * dashboard writes _gb_location.
+                 *
+                 * This used to fall back to a hardcoded "Manchester, UK", so
+                 * every cleaner who had not filled in a location was advertised
+                 * as being in Manchester. A blank location now shows nothing,
+                 * which is true, rather than a city picked at random.
+                 */
+                $location = '';
+                foreach (['location', 'cleaner_location', '_gb_location'] as $gb_loc_key) {
+                    $gb_loc_val = trim((string) get_post_meta(get_the_ID(), $gb_loc_key, true));
+                    if ($gb_loc_val !== '') {
+                        $location = $gb_loc_val;
+                        break;
+                    }
+                }
                 // Same rule as the profile: the card badge means all three checks
                 // are done, so it must not appear on a partial set.
                 $is_verified = function_exists('gb_cleaner_is_fully_verified')
@@ -616,9 +633,11 @@ if ($verified_body === '') {
                         <span class="gb-card-rate">£<?php echo esc_html($rate); ?>/hr</span>
                     </div>
                     
+                    <?php if ($location !== ''): ?>
                     <div class="gb-card-meta">
                         <span>📍 <?php echo esc_html($location); ?></span>
                     </div>
+                    <?php endif; ?>
 
                     <div class="gb-card-excerpt">
                         <?php echo wp_trim_words(get_the_content(), 15, '...'); ?>
