@@ -1640,3 +1640,106 @@ function gb_handle_public_route_fixes() {
     }
 }
 add_action( 'template_redirect', 'gb_handle_public_route_fixes', 0 );
+
+/* ==========================================================================
+   WHERE A CLEANER WORKS, AND WHETHER THEY ARE TAKING WORK
+   ==========================================================================
+   A cleaner's location is stored under three meta keys, because two different
+   screens write it: the cleaner's own Edit Profile and the manager dashboard.
+   Both now write all three, but seven separate places were reading it, each
+   with its own key order, and one read a key nothing has ever written.
+
+   Everything goes through these helpers instead, so a surface cannot quietly
+   disagree with the others about where somebody works.
+   ========================================================================== */
+
+/**
+ * The keys a location may be stored under, in order of preference.
+ *
+ * cleaner_location first: it is one of the two the cleaner's own screen
+ * writes, so when the keys disagree it is the more recently set.
+ */
+function gb_cleaner_location_keys() {
+    return array( 'cleaner_location', 'location', '_gb_location' );
+}
+
+/**
+ * @return string The cleaner's location, or '' when none is set.
+ *                Never a placeholder: a blank location means blank, and the
+ *                caller decides whether to print anything at all.
+ */
+function gb_get_cleaner_location( $cleaner_id ) {
+    foreach ( gb_cleaner_location_keys() as $key ) {
+        $value = trim( (string) get_post_meta( (int) $cleaner_id, $key, true ) );
+
+        if ( $value !== '' ) {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Write a location to every key that holds one, so the surfaces cannot drift
+ * apart again. Both edit screens call this rather than writing keys directly.
+ */
+function gb_set_cleaner_location( $cleaner_id, $location ) {
+    $location = trim( (string) $location );
+
+    foreach ( gb_cleaner_location_keys() as $key ) {
+        update_post_meta( (int) $cleaner_id, $key, $location );
+    }
+
+    return $location;
+}
+
+/**
+ * Is the cleaner currently taking work?
+ *
+ * The manager dashboard has offered an Available / Fully Booked setting for
+ * some time, but nothing anywhere displayed it, so a manager marking somebody
+ * fully booked changed nothing a customer could see.
+ *
+ * Default is available: an unset field means nobody has said otherwise, and
+ * the alternative is a new cleaner appearing closed for business.
+ */
+function gb_cleaner_is_fully_booked( $cleaner_id ) {
+    return (string) get_post_meta( (int) $cleaner_id, '_gb_availability', true ) === 'Booked';
+}
+
+/**
+ * Retire the cleaner archive at /cleaner/.
+ *
+ * It is a second public directory left over from an earlier build, and it was
+ * wrong in three ways that matter:
+ *
+ *   - it printed a Verified badge from a legacy gb_verified flag, not from
+ *     gb_cleaner_is_fully_verified(), so a cleaner who has not passed ID, DBS,
+ *     references and insurance could carry the badge the whole platform is
+ *     sold on;
+ *   - it read a gb_postcode key nothing has written for a long time, showing
+ *     "B1 Area" for a Liverpool company and "Location Unknown" for a cleaner
+ *     whose address is on file;
+ *   - it read gb_avatar_id rather than the featured image, so it fell back to
+ *     a grey Gravatar silhouette.
+ *
+ * Nothing on the site links to it, and Find a Cleaner is the maintained
+ * directory: it has the search, the filters, the real badge rule and the
+ * membership panel. Two directories is the underlying fault, so this sends
+ * the archive to that one rather than teaching it the same rules twice.
+ */
+function gb_redirect_cleaner_archive() {
+    if ( is_admin() || ! is_post_type_archive( 'gb_cleaner' ) ) {
+        return;
+    }
+
+    $listings = get_page_by_path( 'cleaner-listings' );
+    $target   = $listings ? get_permalink( $listings->ID ) : home_url( '/cleaner-listings/' );
+
+    // 301: the page is gone for good, and a search engine that has indexed it
+    // should pass whatever it is worth to the directory that replaced it.
+    wp_safe_redirect( $target, 301 );
+    exit;
+}
+add_action( 'template_redirect', 'gb_redirect_cleaner_archive' );

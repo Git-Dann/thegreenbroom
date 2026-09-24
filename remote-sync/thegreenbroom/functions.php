@@ -1062,6 +1062,7 @@ function gb_migrate_what_cleaners_do() {
 }
 
 require_once get_template_directory() . '/inc/eco-guide-content.php';
+require_once get_template_directory() . '/inc/green-broom-standard.php';
 require_once get_template_directory() . '/inc/cookie-consent.php';
 require_once get_template_directory() . '/inc/legal-content.php';
 require_once get_template_directory() . '/inc/membership.php';
@@ -2070,7 +2071,7 @@ function gb_resolve_meta_description() {
         }
         // A cleaner who has not written a bio still deserves a snippet.
         if ( $description === '' && get_post_type( $post_id ) === 'gb_cleaner' ) {
-            $location = trim( (string) get_post_meta( $post_id, 'cleaner_location', true ) );
+            $location = gb_get_cleaner_location( $post_id );
             $description = sprintf(
                 '%s is an eco-friendly cleaner%s on The Green Broom. View their services, rates and reviews, and book directly.',
                 get_the_title( $post_id ),
@@ -2269,6 +2270,9 @@ require_once get_template_directory() . '/inc/bookings.php';
 require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
 require_once get_template_directory() . '/inc/stripe.php';
+require_once get_template_directory() . '/inc/cleaner-availability.php';
+require_once get_template_directory() . '/inc/cleaner-stats.php';
+require_once get_template_directory() . '/inc/pricing-panels.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS
@@ -2284,7 +2288,7 @@ require_once get_template_directory() . '/inc/stripe.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 1;
+const GB_MIGRATION_VERSION = 10;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2310,7 +2314,17 @@ function gb_run_one_time_migrations() {
         'gb_seed_verification_log_baseline',
         'gb_migrate_eco_guides',
         'gb_retire_standalone_cookie_page',
-        'gb_migrate_eco_guides_to_pages'
+        'gb_migrate_eco_guides_to_pages',
+        'gb_apply_client_copy_corrections',
+        'gb_correct_cleanco_location',
+        'gb_align_join_cta_with_pricing',
+        'gb_set_cleanco_location',
+        'gb_reconcile_cleaner_locations',
+        'gb_apply_products_supplied_wording',
+        'gb_ensure_green_broom_standard_page',
+        'gb_clear_join_testimonial_meta',
+        'gb_clear_home_secondary_cta',
+        'gb_update_listings_empty_state'
     );
 
     foreach ( $migrations as $migration ) {

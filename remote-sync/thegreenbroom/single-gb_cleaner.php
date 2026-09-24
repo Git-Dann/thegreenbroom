@@ -5,7 +5,7 @@ get_header();
 $cleaner_id   = get_the_ID();
 $rate         = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
 $verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
-$location     = get_post_meta($cleaner_id, 'location', true);
+$location     = function_exists('gb_get_cleaner_location') ? gb_get_cleaner_location($cleaner_id) : get_post_meta($cleaner_id, 'location', true);
 $member_since = get_the_date('Y', $cleaner_id);
 
 $rating = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($cleaner_id) : ['average' => 0, 'rated' => 0, 'total' => 0];
@@ -219,6 +219,9 @@ if ( ! empty( $gb_selected_services ) ) {
             </span>
         <?php endif; ?>
         <span class="gb-hero-item">🗓️ Member since <?php echo esc_html($member_since); ?></span>
+        <?php if (function_exists('gb_cleaner_is_fully_booked') && gb_cleaner_is_fully_booked($cleaner_id)): ?>
+            <span class="gb-hero-item gb-hero-booked">Fully booked right now</span>
+        <?php endif; ?>
         <?php if ($location): ?>
             <span class="gb-hero-item">📍 <?php echo esc_html($location); ?></span>
         <?php endif; ?>
@@ -249,6 +252,19 @@ if ( ! empty( $gb_selected_services ) ) {
                         <li><span class="gb-check-icon">✓</span> <?php echo esc_html(get_the_title($service)); ?></li>
                     <?php endforeach; ?>
                 </ul>
+            </div>
+            <?php endif; ?>
+
+            <?php
+            /*
+             * Availability, only when the cleaner has actually filled it in.
+             * An empty grid would read as "never free", which is the opposite
+             * of what a blank field means.
+             */
+            if ( function_exists( 'gb_get_availability_slots' ) && gb_get_availability_slots( $cleaner_id ) ) : ?>
+            <div class="gb-block">
+                <h2 class="gb-section-title">Usual Availability</h2>
+                <?php gb_render_availability_summary( $cleaner_id ); ?>
             </div>
             <?php endif; ?>
 
@@ -367,10 +383,35 @@ if ( ! empty( $gb_selected_services ) ) {
                 </div>
                 <?php endif; ?>
 
+                <?php
+                /*
+                 * Track record, counted from confirmed bookings whose date has
+                 * passed. Nobody types these in, so they cannot be inflated -
+                 * and each one is left off entirely until it is above zero,
+                 * rather than announcing that a new cleaner has done nothing.
+                 */
+                $gb_stats = function_exists( 'gb_get_cleaner_stats' ) ? gb_get_cleaner_stats( $cleaner_id ) : array( 'completed' => 0, 'repeat' => 0 );
+                ?>
+                <?php if ( $gb_stats['completed'] > 0 || $gb_stats['repeat'] > 0 ) : ?>
+                <div class="gb-track-record">
+                    <?php if ( $gb_stats['completed'] > 0 ) : ?>
+                        <div class="gb-track-stat">
+                            <span class="gb-track-stat-value"><?php echo (int) $gb_stats['completed']; ?></span>
+                            <span class="gb-track-stat-label"><?php echo esc_html( _n( 'clean completed', 'cleans completed', $gb_stats['completed'], 'thegreenbroom' ) ); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ( $gb_stats['repeat'] > 0 ) : ?>
+                        <div class="gb-track-stat">
+                            <span class="gb-track-stat-value"><?php echo (int) $gb_stats['repeat']; ?></span>
+                            <span class="gb-track-stat-label"><?php echo esc_html( _n( 'repeat customer', 'repeat customers', $gb_stats['repeat'], 'thegreenbroom' ) ); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
                 <ul class="gb-trust-list">
-                    <li><span>✓</span> Eco-friendly products as standard</li>
+                    <li><span>✓</span> Eco-friendly products supplied</li>
                     <li><span>✓</span> Secure payment through the platform</li>
-                    <li><span>✓</span> Support team on hand if anything goes wrong</li>
                 </ul>
             </div>
         </div>
@@ -389,18 +430,30 @@ if ( ! empty( $gb_selected_services ) ) {
             <input type="hidden" name="cleaner_id" value="<?php echo (int) $cleaner_id; ?>">
             <?php wp_nonce_field('gb_msg_nonce', 'security'); ?>
 
-            <div style="display:none;">
+            <?php
+            /*
+             * Labels were sitting next to their fields but not tied to them,
+             * so a screen reader announced three unlabelled boxes. Since the
+             * flow now asks people to message a cleaner before booking, this
+             * is the form the whole journey runs through.
+             *
+             * The id carries the cleaner's post id: two profiles could not
+             * collide, but a duplicate id would break the association anyway.
+             */
+            $gb_msg_uid = 'gb-msg-' . (int) $cleaner_id;
+            ?>
+            <div style="display:none;" aria-hidden="true">
                 <input type="text" name="gb_honeypot" value="" autocomplete="off" tabindex="-1">
             </div>
 
-            <label>Your Name</label>
-            <input type="text" name="sender_name" required placeholder="e.g. John Smith">
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-name">Your Name</label>
+            <input id="<?php echo esc_attr($gb_msg_uid); ?>-name" type="text" name="sender_name" required placeholder="e.g. John Smith" autocomplete="name">
 
-            <label>Your Email</label>
-            <input type="email" name="sender_email" required placeholder="john@example.com">
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-email">Your Email</label>
+            <input id="<?php echo esc_attr($gb_msg_uid); ?>-email" type="email" name="sender_email" required placeholder="john@example.com" autocomplete="email">
 
-            <label>Message</label>
-            <textarea name="message_body" required placeholder="Hi, do you bring your own vacuum?"></textarea>
+            <label for="<?php echo esc_attr($gb_msg_uid); ?>-body">Message</label>
+            <textarea id="<?php echo esc_attr($gb_msg_uid); ?>-body" name="message_body" required placeholder="Hi, do you bring your own vacuum?"></textarea>
 
             <button type="submit" class="gb-btn-book" style="margin-top:6px;">Send Message</button>
         </form>

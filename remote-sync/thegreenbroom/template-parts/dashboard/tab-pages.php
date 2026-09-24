@@ -50,7 +50,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     @media (max-width: 900px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 180px; } .gb-media-preview img { min-height: 180px; max-height: 240px; } }
     @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; } }
     .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .gb-sub-head { font-size: 11px; font-weight: 800; color: #2e7d32; margin: 25px 0 10px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
     
     .gb-table { width: 100%; border-collapse: collapse; }
     .gb-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -90,9 +89,13 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_hero_sub'      => "The UK's trusted platform for finding eco-friendly cleaners.",
             '_gb_hero_btn_1'    => 'Find a Cleaner',
             '_gb_hero_link_1'   => '/cleaner-listings',
-            '_gb_hero_btn_2'    => 'Join as a Cleaner',
+            '_gb_hero_btn_2'    => 'Become a Cleaner',
             '_gb_hero_link_2'   => '/join',
             '_gb_trust_banner'  => 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners',
+            '_gb_testi_head'    => 'Meet some of our cleaners',
+            '_gb_testi_sub'     => 'Every one of them ID-checked, DBS-checked and reference-checked before they appear here.',
+            '_gb_testi_btn'     => 'Browse all cleaners',
+            '_gb_testi_link'    => '/cleaner-listings',
             '_gb_split_head'    => "Clean homes shouldn't cost the Earth.",
             '_gb_split_body'    => 'Traditional cleaning products are full of harsh chemicals that can harm your family and pets. Plus, finding a reliable cleaner is often a headache of texts and cash payments.',
             '_gb_split_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
@@ -115,17 +118,10 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_feat2_text'    => 'We check IDs and references personally. Safety is our #1 priority.',
             '_gb_feat3_title'   => 'Direct Chat',
             '_gb_feat3_text'    => 'Message your cleaner directly to discuss specific needs or access details.',
-            '_gb_testi_head'    => 'What our customers say',
-            '_gb_testi1_text'   => 'Finally a cleaning service that aligns with my values. My house smells fresh without the chemical smell!',
-            '_gb_testi1_auth'   => '— Sarah J., Manchester',
-            '_gb_testi2_text'   => 'Booking was so easy. Mike was professional, on time, and did an amazing job on the kitchen.',
-            '_gb_testi2_auth'   => '— David P., Leeds',
             '_gb_cta_heading'   => 'Ready to make money cleaning?',
             '_gb_cta_sub'       => 'Join The Green Broom today.',
             '_gb_cta_btn_1'     => 'Get Started Now',
             '_gb_cta_link_1'    => '/register',
-            '_gb_cta_btn_2'     => 'Learn More',
-            '_gb_cta_link_2'    => '/how-it-works',
             '_gb_mid_img'       => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
         ];
     } elseif ($slug === 'how-it-works') {
@@ -135,8 +131,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_hiw_s1_title'   => 'Search & Filter',
             '_gb_hiw_s1_desc'    => 'Enter your postcode and browse profiles. Filter by price, reviews, and specific eco-services.',
             '_gb_hiw_s1_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
-            '_gb_hiw_s2_title'   => 'Book Instantly',
-            '_gb_hiw_s2_desc'    => 'Choose a time slot that works for you. No back-and-forth texts. Our secure calendar system locks in your appointment.',
+            '_gb_hiw_s2_title'   => 'Ask the cleaner a question first',
+            '_gb_hiw_s2_desc'    => 'Message the cleaner through the platform to check they cover your area, agree what you need doing, and settle a price before anything is booked.',
             '_gb_hiw_s2_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
             '_gb_hiw_s3_title'   => 'Secure Payment',
             '_gb_hiw_s3_desc'    => 'Pay securely through the platform using Stripe. Funds are held safely and only released when the job is done.',
@@ -194,7 +190,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_about_cta_sub'    => 'Whether you want a spotless home or a flexible career.',
             '_gb_about_btn1_text'  => 'Find a Cleaner',
             '_gb_about_btn1_link'  => '/cleaner-listings',
-            '_gb_about_btn2_text'  => 'Join as a Cleaner',
+            '_gb_about_btn2_text'  => 'Become a Cleaner',
             '_gb_about_btn2_link'  => '/join',
         ];
     } elseif ($slug === 'what-we-do') {
@@ -238,7 +234,9 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $gb_page_defaults = [
             '_gb_listings_title' => 'Find Your Professional',
             '_gb_listings_sub'   => 'Find trusted local cleaners by entering your postcode.',
-            '_gb_listings_none'  => 'No professionals found. Try adjusting your search criteria.',
+            '_gb_listings_none'     => 'No cleaners match that search yet.',
+            '_gb_listings_none_sub' => 'We are adding cleaners across Merseyside every week. Try a nearby postcode, or see everyone on the platform.',
+            '_gb_listings_none_btn' => 'See all cleaners',
             '_gb_listings_eyebrow'     => '',
             '_gb_listings_search_head' => 'Search cleaners near you',
             '_gb_listings_ph_postcode' => 'Search by postcode...',
@@ -295,10 +293,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_join_s2_desc'    => 'Pass our quick ID and reference check to earn your Verified badge — the mark customers trust.',
             '_gb_join_s3_title'   => '3. Accept jobs & get paid',
             '_gb_join_s3_desc'    => 'Receive booking requests from local customers, accept the ones that suit you, and get paid securely.',
-            '_gb_join_testi_text' => 'I left my agency job and doubled my take-home pay within two months. I pick my own clients, my own hours, and I actually get to keep what I earn.',
-            '_gb_join_testi_auth' => '— Emma R., Cleaner in Bristol',
             '_gb_join_cta_title'  => 'Ready to be your own boss?',
-            '_gb_join_cta_sub'    => 'Join hundreds of cleaners already earning more on their own terms. It is free to create your profile.',
+            '_gb_join_cta_sub'    => 'Set up your profile in minutes. Nothing to pay for your first three months.',
             '_gb_join_cta_btn'    => 'Get Started — It\'s Free',
             '_gb_join_cta_link'   => '/register',
         ];
@@ -310,7 +306,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         ];
     } elseif ($slug === 'contact') {
         $gb_page_defaults = [
-            '_gb_contact_title'         => 'Contact Support',
+            '_gb_contact_title'         => 'Contact',
             '_gb_contact_sub'           => 'Send a message directly to our management team.',
             '_gb_contact_phone_label'   => 'Phone support:',
             '_gb_contact_hours'         => 'Monday to Friday, 9 am to 5 pm',
@@ -560,17 +556,24 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
+                                <div class="gb-sub-head">Cleaner Showcase</div>
+                                <p class="gb-media-help" style="margin:0 0 14px;">The homepage shows your four newest published cleaners here automatically, with their photo, location and rate. There is nothing to type in per cleaner — add or edit them under Cleaners. The whole section hides itself while there are no cleaners.</p>
                                 <div class="gb-form-row">
-                                    <label class="gb-label">Reviews Section Heading</label>
+                                    <label class="gb-label">Section heading</label>
                                     <input type="text" name="_gb_testi_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_head')); ?>">
                                 </div>
-                                <?php for($i=1;$i<=2;$i++): ?>
-                                    <div class="gb-sub-head">Review <?php echo $i; ?></div>
-                                    <div class="gb-form-row">
-                                        <textarea name="_gb_testi<?php echo $i; ?>_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value("_gb_testi{$i}_text")); ?></textarea>
-                                        <input type="text" name="_gb_testi<?php echo $i; ?>_auth" class="gb-input" style="margin-top:8px;" placeholder="Author" value="<?php echo esc_attr($gb_field_value("_gb_testi{$i}_auth")); ?>">
-                                    </div>
-                                <?php endfor; ?>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Section sub-heading</label>
+                                    <textarea name="_gb_testi_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_testi_sub')); ?></textarea>
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Button text</label>
+                                    <input type="text" name="_gb_testi_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_btn')); ?>">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Button link</label>
+                                    <input type="text" name="_gb_testi_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_link')); ?>">
+                                </div>
                                 <?php $gb_render_media_field('_gb_mid_img', 'Middle showcase image', $gb_field_value('_gb_mid_img')); ?>
                             </div>
                         </div>
@@ -715,13 +718,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         <textarea name="_gb_join_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_s{$i}_desc")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
-                            </div>
-                        </div>
-                        <div class="gb-editor-section">
-                            <div class="gb-editor-header"><span class="dashicons dashicons-format-quote"></span> Cleaner Testimonial</div>
-                            <div class="gb-editor-body">
-                                <div class="gb-form-row"><label class="gb-label">Quote</label><textarea name="_gb_join_testi_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_join_testi_text')); ?></textarea></div>
-                                <div class="gb-form-row"><label class="gb-label">Attribution</label><input type="text" name="_gb_join_testi_auth" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_testi_auth')); ?>"></div>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -927,7 +923,9 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                 </div>
                             </div>
 
-                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Heading</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><textarea name="_gb_listings_none_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_listings_none_sub')); ?></textarea><p class="gb-media-help">Shown when a search finds nobody. Name the areas you actually cover &mdash; this is the most common thing a visitor sees while the directory is small.</p></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Button</label><input type="text" name="_gb_listings_none_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none_btn')); ?>"><p class="gb-media-help">Clears the search and shows every cleaner. Leave blank for no button.</p></div>
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Customer reviews strip</h4>
                                 <p style="margin:0 0 16px; color:#64748b; font-size:12.5px;">

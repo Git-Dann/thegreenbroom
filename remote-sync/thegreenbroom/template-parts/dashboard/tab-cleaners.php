@@ -42,17 +42,9 @@
     
     // Core Data
     $rate = get_post_meta($pid, 'hourly_rate', true);
-    $loc = get_post_meta($pid, '_gb_location', true);
-    if ($loc === '') {
-        $loc = get_post_meta($pid, 'cleaner_location', true);
-    }
-    if ($loc === '') {
-        $loc = get_post_meta($pid, 'location', true);
-    }
+    $loc = gb_get_cleaner_location($pid);
     $exp = get_post_meta($pid, '_gb_experience', true);
     $avail = get_post_meta($pid, '_gb_availability', true);
-    $rating = get_post_meta($pid, '_gb_rating', true);
-    $reviews = get_post_meta($pid, '_gb_review_count', true);
     $sub_st = get_post_meta($pid, '_gb_subscription_status', true) ?: 'trial';
     $image_url = get_the_post_thumbnail_url($pid, 'medium') ?: '';
     $stripe_account_id = sanitize_text_field((string) get_post_meta($pid, '_gb_stripe_account_id', true));
@@ -457,9 +449,51 @@
                                 <option value="Booked" <?php selected($avail, 'Booked'); ?>>Fully Booked</option>
                             </select>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                            <div><label class="gb-os-label">Rating</label><input type="number" step="0.1" name="_gb_rating" class="gb-os-input" value="<?php echo esc_attr($rating); ?>"></div>
-                            <div><label class="gb-os-label">Reviews</label><input type="number" name="_gb_review_count" class="gb-os-input" value="<?php echo esc_attr($reviews); ?>"></div>
+                        <?php
+                        /*
+                         * Rating and review count were typed in here. They fed
+                         * the cleaner's own dashboard and the manager overview
+                         * average, while the public profile used the real
+                         * figure computed from approved reviews - so the two
+                         * could say different things about the same cleaner.
+                         *
+                         * Both readers now use the computed figure, and the
+                         * boxes are gone: there is nothing to type, and a
+                         * rating nobody left is not a rating.
+                         */
+                        $gb_real_rating = function_exists('gb_get_cleaner_rating') ? gb_get_cleaner_rating($pid) : ['average' => 0.0, 'rated' => 0];
+                        ?>
+                        <div style="margin-top:15px;">
+                            <label class="gb-os-label">Rating</label>
+                            <p style="margin:4px 0 0; color:#94a3b8; font-size:12px; line-height:1.5;">
+                                <?php if ((int) $gb_real_rating['rated'] > 0): ?>
+                                    <?php echo esc_html(number_format((float) $gb_real_rating['average'], 1)); ?> from <?php echo (int) $gb_real_rating['rated']; ?> rated <?php echo esc_html(_n('review', 'reviews', (int) $gb_real_rating['rated'], 'thegreenbroom')); ?>. Counted from approved reviews &mdash; not editable.
+                                <?php else: ?>
+                                    No rated reviews yet. This is counted from approved reviews and cannot be typed in.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <?php if (function_exists('gb_render_availability_editor')): ?>
+                            <div style="margin-top:20px;">
+                                <label class="gb-os-label">Usual availability</label>
+                                <?php gb_render_availability_editor($pid); ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php
+                        /*
+                         * Track record, for information only. These are counted
+                         * from confirmed bookings whose date has passed, so
+                         * there is nothing to type in and nothing to correct -
+                         * and they stay off the public profile until they are
+                         * above zero.
+                         */
+                        $gb_cleaner_stats = function_exists('gb_get_cleaner_stats') ? gb_get_cleaner_stats($pid) : ['completed' => 0, 'repeat' => 0];
+                        ?>
+                        <div style="margin-top:20px;">
+                            <label class="gb-os-label">Track record</label>
+                            <p style="margin:4px 0 0; color:#94a3b8; font-size:12px; line-height:1.5;">
+                                <?php echo (int) $gb_cleaner_stats['completed']; ?> completed, <?php echo (int) $gb_cleaner_stats['repeat']; ?> repeat customers. Counted from confirmed bookings whose date has passed &mdash; not editable, and hidden on the public profile while they are zero.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -503,15 +537,11 @@
                     $connect_status = get_post_meta($cid, '_gb_stripe_connect_status', true) ?: 'not_connected';
                     $charges_enabled = get_post_meta($cid, '_gb_stripe_charges_enabled', true) === '1';
                     $payouts_enabled = get_post_meta($cid, '_gb_stripe_payouts_enabled', true) === '1';
-                    $loc = get_post_meta($cid, '_gb_location', true);
+                    $loc = gb_get_cleaner_location($cid);
                     if ($loc === '') {
-                        $loc = get_post_meta($cid, 'cleaner_location', true);
-                    }
-                    if ($loc === '') {
-                        $loc = get_post_meta($cid, 'location', true);
-                    }
-                    if ($loc === '') {
-                        $loc = 'UK Base';
+                        // A manager needs to see that this is missing, not a
+                        // stand-in that reads like a real answer.
+                        $loc = 'No location set';
                     }
                     $vetting_gaps = function_exists('gb_get_cleaner_vetting_gaps') ? gb_get_cleaner_vetting_gaps($cid) : [];
                 ?>

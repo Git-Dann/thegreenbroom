@@ -52,10 +52,32 @@ if ( $search_term !== '' ) {
 
     $gb_terms = array_values( array_unique( array_filter( $gb_terms ) ) );
 
+    /*
+     * A postcode district has to match on a boundary, not as a substring.
+     * Plain LIKE made a search for L1 return the cleaner in L18, because the
+     * one string contains the other - and the same would hold for M1 against
+     * M11, B1 against B15, and every other single-digit district.
+     *
+     * REGEXP with word boundaries on anything that looks like a district;
+     * everything else stays LIKE, so a free-text search for "Liverpool" still
+     * matches "Mossley Hill, Liverpool, L18".
+     *
+     * \\b, not the [[:<:]] of MySQL 5.7: this host runs MariaDB 10.11, whose
+     * REGEXP is PCRE and does not understand the older syntax at all.
+     */
+    $gb_is_district = static function ( $term ) {
+        return (bool) preg_match( '/^[A-Z]{1,2}[0-9][A-Z0-9]?$/', $term );
+    };
+
     $gb_location_group = [ 'relation' => 'OR' ];
     foreach ( $gb_terms as $gb_term ) {
+        $gb_compare = $gb_is_district( $gb_term ) ? 'REGEXP' : 'LIKE';
+        $gb_value   = $gb_compare === 'REGEXP'
+            ? '\\b' . preg_quote( $gb_term, '/' ) . '\\b'
+            : $gb_term;
+
         foreach ( [ 'gb_postcode', '_gb_location', 'location', 'cleaner_location' ] as $gb_key ) {
-            $gb_location_group[] = [ 'key' => $gb_key, 'value' => $gb_term, 'compare' => 'LIKE' ];
+            $gb_location_group[] = [ 'key' => $gb_key, 'value' => $gb_value, 'compare' => $gb_compare ];
         }
     }
 
@@ -149,7 +171,17 @@ $cleaners = new WP_Query($args);
 
 $listings_title = get_post_meta(get_the_ID(), '_gb_listings_title', true) ?: 'Find Your Professional';
 $listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Find trusted local cleaners by entering your postcode.';
-$listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No professionals found. Try adjusting your search criteria.';
+/*
+ * The no-results state is the most common outcome of the site's main action
+ * while the directory is still small, and it used to be a dead end: a line of
+ * grey text and nowhere to go. It now offers the way out - clear the filters
+ * and see everyone - plus a line for people whose area is not covered yet.
+ *
+ * "Professionals" was the old wording; the rest of the site says cleaners.
+ */
+$listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No cleaners match that search yet.';
+$listings_none_sub = get_post_meta(get_the_ID(), '_gb_listings_none_sub', true) ?: 'We are adding cleaners across Merseyside every week. Try a nearby postcode, or see everyone on the platform.';
+$listings_none_btn = get_post_meta(get_the_ID(), '_gb_listings_none_btn', true) ?: 'See all cleaners';
 
 /*
  * Paid-social traffic lands here, so the page opens with a proper hero lockup
@@ -176,7 +208,7 @@ $listings_badge        = get_post_meta(get_the_ID(), '_gb_listings_badge', true)
 // so the header has to make the case before asking anyone to search.
 $listings_usps_raw = trim((string) get_post_meta(get_the_ID(), '_gb_listings_usps', true));
 if ($listings_usps_raw === '') {
-    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products as standard\nIndependent local cleaners, paid fairly";
+    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products supplied\nIndependent local cleaners, paid fairly";
 }
 $listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_replace("\r\n", "\n", $listings_usps_raw))), 'strlen'));
 
@@ -217,7 +249,7 @@ $why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom');
 $why_cards = array();
 $why_defaults = array(
     array('Properly vetted', 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.'),
-    array('Genuinely eco', 'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.'),
+    array('Genuinely eco', 'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.'),
     array('Fair to cleaners', 'Independent local cleaners set their own rates and keep the bulk of what you pay. Better paid people do better work.'),
     array('No contracts', 'Book a one-off clean or a regular slot. Change it or cancel it whenever you need to.'),
 );
@@ -580,7 +612,14 @@ if ($verified_body === '') {
         <?php if($cleaners->have_posts()): ?>
             <?php while($cleaners->have_posts()): $cleaners->the_post(); 
                 $rate = get_post_meta(get_the_ID(), 'hourly_rate', true) ?: '15';
-                $location = get_post_meta(get_the_ID(), 'location', true) ?: 'Manchester, UK';
+                /*
+                 * This used to fall back to a hardcoded "Manchester, UK", so
+                 * every cleaner who had not filled in a location was advertised
+                 * as being in Manchester. A blank location now shows nothing,
+                 * which is true, rather than a city picked at random.
+                 */
+                $location = gb_get_cleaner_location(get_the_ID());
+                $fully_booked = gb_cleaner_is_fully_booked(get_the_ID());
                 // Same rule as the profile: the card badge means all three checks
                 // are done, so it must not appear on a partial set.
                 $is_verified = function_exists('gb_cleaner_is_fully_verified')
@@ -616,9 +655,12 @@ if ($verified_body === '') {
                         <span class="gb-card-rate">£<?php echo esc_html($rate); ?>/hr</span>
                     </div>
                     
+                    <?php if ($location !== '' || $fully_booked): ?>
                     <div class="gb-card-meta">
-                        <span>📍 <?php echo esc_html($location); ?></span>
+                        <?php if ($location !== ''): ?><span>📍 <?php echo esc_html($location); ?></span><?php endif; ?>
+                        <?php if ($fully_booked): ?><span class="gb-card-booked">Fully booked</span><?php endif; ?>
                     </div>
+                    <?php endif; ?>
 
                     <div class="gb-card-excerpt">
                         <?php echo wp_trim_words(get_the_content(), 15, '...'); ?>
@@ -632,8 +674,19 @@ if ($verified_body === '') {
             </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <div style="grid-column: 1 / -1; text-align: center; padding: 60px; background: white; border-radius: 12px; color: #64748b;">
-                <h2><?php echo esc_html($listings_none); ?></h2>
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 30px; background: white; border-radius: 12px; color: #64748b;">
+                <h2 style="margin:0 0 10px; color:#0f172a;"><?php echo esc_html($listings_none); ?></h2>
+                <?php if (trim((string) $listings_none_sub) !== ''): ?>
+                    <p style="margin:0 auto 24px; max-width:460px; line-height:1.6;"><?php echo esc_html($listings_none_sub); ?></p>
+                <?php endif; ?>
+                <?php
+                // Only worth offering when a filter is actually narrowing things
+                // down - with no filters on, "see all cleaners" is this page.
+                $gb_filtered = ($search_term !== '' || $service_filter !== '');
+                ?>
+                <?php if ($gb_filtered && trim((string) $listings_none_btn) !== ''): ?>
+                    <a href="<?php echo esc_url(get_permalink()); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($listings_none_btn); ?></a>
+                <?php endif; ?>
             </div>
         <?php endif; wp_reset_postdata(); ?>
     </div>
@@ -642,6 +695,20 @@ if ($verified_body === '') {
         <?php echo paginate_links(array('total' => $cleaners->max_num_pages, 'current' => $paged, 'prev_text' => '←', 'next_text' => '→')); ?>
     </div>
     </div>
+
+    <?php
+    /*
+     * Membership pricing, below the results rather than above them. Browsing is
+     * not gated, so putting the offer in front of cleaners a visitor can already
+     * see would be claiming a wall that is not there. Here it lands at the point
+     * they have found somebody they like.
+     *
+     * Same panel and same stored figures as the homepage.
+     */
+    if ( function_exists( 'gb_render_pricing_panel' ) ) {
+        gb_render_pricing_panel( 'customer' );
+    }
+    ?>
 
     <?php if ($reviews_head !== '' && !empty($reviews)): ?>
     <section class="gb-sell gb-sell-reviews">

@@ -288,6 +288,15 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             $cleaner_status = 'draft';
         }
 
+        /*
+         * Availability. Handled here rather than by the global meta saver
+         * above: that only picks up _gb_ keys, and an all-unticked grid submits
+         * nothing at all, so it could never be cleared.
+         */
+        if (function_exists('gb_save_availability_slots')) {
+            gb_save_availability_slots($pid, isset($_POST['gb_availability_slots']) ? $_POST['gb_availability_slots'] : []);
+        }
+
         $hourly_rate = isset($_POST['hourly_rate']) ? sanitize_text_field(wp_unslash($_POST['hourly_rate'])) : '';
         $location = isset($_POST['_gb_location']) ? sanitize_text_field(wp_unslash($_POST['_gb_location'])) : '';
         $payout_interval = isset($_POST['_gb_stripe_payout_interval']) ? gb_normalize_payout_interval(wp_unslash($_POST['_gb_stripe_payout_interval'])) : 'daily';
@@ -335,9 +344,7 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
         }
 
         // Keep location keys synced for manager/public cleaner pages.
-        update_post_meta($pid, '_gb_location', $location);
-        update_post_meta($pid, 'location', $location);
-        update_post_meta($pid, 'cleaner_location', $location);
+        gb_set_cleaner_location($pid, $location);
 
         // Keep verification badge state aligned with manager status selection.
         gb_sync_cleaner_verification_state($pid, $cleaner_status);

@@ -29,8 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
 
         wp_update_post(['ID' => $cleaner_id, 'post_content' => $bio]);
         update_post_meta($cleaner_id, 'hourly_rate', $rate);
-        update_post_meta($cleaner_id, 'cleaner_location', $loc);
-        update_post_meta($cleaner_id, 'location', $loc);
+
+        /*
+         * All three location keys, the same set the manager dashboard writes.
+         * This screen used to write only two, so _gb_location kept whatever a
+         * manager had typed months earlier - and the search matches on every
+         * key, which is how a Liverpool cleaner was still turning up under
+         * "Manchester".
+         */
+        gb_set_cleaner_location($cleaner_id, $loc);
 
         /*
          * Services the cleaner offers. Stored as an array of published
@@ -49,6 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
             : [];
         update_post_meta($cleaner_id, 'gb_services', array_values(array_intersect($gb_catalogue, $gb_chosen))); 
 
+        /*
+         * Availability. Passed through unconditionally, including when nothing
+         * is ticked: a cleaner who has stopped working Saturdays has to be able
+         * to say so, and unchecked boxes submit nothing at all.
+         */
+        if (function_exists('gb_save_availability_slots')) {
+            gb_save_availability_slots($cleaner_id, isset($_POST['gb_availability_slots']) ? $_POST['gb_availability_slots'] : []);
+        }
+
         $msg = '<div style="background:#d1fae5; color:#065f46; padding:15px; border-radius:8px; margin-bottom:20px;">✅ Saved successfully!</div>';
     }
 }
@@ -56,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
 // 3. Get Data
 $bio = get_post_field('post_content', $cleaner_id);
 $rate = get_post_meta($cleaner_id, 'hourly_rate', true);
-$loc = get_post_meta($cleaner_id, 'cleaner_location', true);
+$loc = gb_get_cleaner_location($cleaner_id);
 
 get_header(); 
 ?>
@@ -126,6 +142,14 @@ get_header();
                         </label>
                     <?php endforeach; ?>
                 </div>
+            <?php endif; ?>
+
+            <?php if (function_exists('gb_render_availability_editor')): ?>
+                <label>When you are usually free</label>
+                <p style="margin:-4px 0 12px; color:#64748b; font-size:13px;">
+                    Customers see this on your profile. Leave it all unticked and it simply will not show.
+                </p>
+                <?php gb_render_availability_editor($cleaner_id); ?>
             <?php endif; ?>
 
             <button type="submit" class="gb-btn">Save Changes</button>
