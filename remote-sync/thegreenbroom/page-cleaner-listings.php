@@ -643,6 +643,20 @@ if ($verified_body === '') {
     </div>
     </div>
 
+    <?php
+    /*
+     * Membership pricing, below the results rather than above them. Browsing is
+     * not gated, so putting the offer in front of cleaners a visitor can already
+     * see would be claiming a wall that is not there. Here it lands at the point
+     * they have found somebody they like.
+     *
+     * Same panel and same stored figures as the homepage.
+     */
+    if ( function_exists( 'gb_render_pricing_panel' ) ) {
+        gb_render_pricing_panel( 'customer' );
+    }
+    ?>
+
     <?php if ($reviews_head !== '' && !empty($reviews)): ?>
     <section class="gb-sell gb-sell-reviews">
         <div class="gb-sell-inner">

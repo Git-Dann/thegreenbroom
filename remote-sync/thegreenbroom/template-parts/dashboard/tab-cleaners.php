@@ -461,6 +461,28 @@
                             <div><label class="gb-os-label">Rating</label><input type="number" step="0.1" name="_gb_rating" class="gb-os-input" value="<?php echo esc_attr($rating); ?>"></div>
                             <div><label class="gb-os-label">Reviews</label><input type="number" name="_gb_review_count" class="gb-os-input" value="<?php echo esc_attr($reviews); ?>"></div>
                         </div>
+                        <?php if (function_exists('gb_render_availability_editor')): ?>
+                            <div style="margin-top:20px;">
+                                <label class="gb-os-label">Usual availability</label>
+                                <?php gb_render_availability_editor($pid); ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php
+                        /*
+                         * Track record, for information only. These are counted
+                         * from confirmed bookings whose date has passed, so
+                         * there is nothing to type in and nothing to correct -
+                         * and they stay off the public profile until they are
+                         * above zero.
+                         */
+                        $gb_cleaner_stats = function_exists('gb_get_cleaner_stats') ? gb_get_cleaner_stats($pid) : ['completed' => 0, 'repeat' => 0];
+                        ?>
+                        <div style="margin-top:20px;">
+                            <label class="gb-os-label">Track record</label>
+                            <p style="margin:4px 0 0; color:#94a3b8; font-size:12px; line-height:1.5;">
+                                <?php echo (int) $gb_cleaner_stats['completed']; ?> completed, <?php echo (int) $gb_cleaner_stats['repeat']; ?> repeat customers. Counted from confirmed bookings whose date has passed &mdash; not editable, and hidden on the public profile while they are zero.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

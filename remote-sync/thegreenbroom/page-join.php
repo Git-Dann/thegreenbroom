@@ -164,6 +164,16 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_join_cta_link', true)  ?: '/regist
         </div>
     </section>
 
+    <?php
+    /*
+     * Cleaner membership pricing, straight before the final call to action so
+     * the price is on the page before somebody is asked to sign up.
+     */
+    if ( function_exists( 'gb_render_pricing_panel' ) ) {
+        gb_render_pricing_panel( 'cleaner' );
+    }
+    ?>
+
     <section class="gb-cta-banner">
         <div class="gb-container">
             <h2 style="font-size:3rem; margin-bottom:20px; font-weight:800; color:white"><?php echo esc_html($cta_head); ?></h2>

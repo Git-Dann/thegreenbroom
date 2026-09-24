@@ -252,6 +252,19 @@ if ( ! empty( $gb_selected_services ) ) {
             </div>
             <?php endif; ?>
 
+            <?php
+            /*
+             * Availability, only when the cleaner has actually filled it in.
+             * An empty grid would read as "never free", which is the opposite
+             * of what a blank field means.
+             */
+            if ( function_exists( 'gb_get_availability_slots' ) && gb_get_availability_slots( $cleaner_id ) ) : ?>
+            <div class="gb-block">
+                <h2 class="gb-section-title">Usual Availability</h2>
+                <?php gb_render_availability_summary( $cleaner_id ); ?>
+            </div>
+            <?php endif; ?>
+
             <div class="gb-block" style="margin-bottom:0;">
                 <h2 class="gb-section-title">Client Reviews<?php echo $rating['total'] ? ' (' . (int) $rating['total'] . ')' : ''; ?></h2>
 
@@ -363,6 +376,32 @@ if ( ! empty( $gb_selected_services ) ) {
                     </ul>
                     <?php if ($gb_verified_on !== ''): ?>
                         <p class="gb-verify-date">Green Broom Verified &mdash; <?php echo esc_html($gb_verified_on); ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php
+                /*
+                 * Track record, counted from confirmed bookings whose date has
+                 * passed. Nobody types these in, so they cannot be inflated -
+                 * and each one is left off entirely until it is above zero,
+                 * rather than announcing that a new cleaner has done nothing.
+                 */
+                $gb_stats = function_exists( 'gb_get_cleaner_stats' ) ? gb_get_cleaner_stats( $cleaner_id ) : array( 'completed' => 0, 'repeat' => 0 );
+                ?>
+                <?php if ( $gb_stats['completed'] > 0 || $gb_stats['repeat'] > 0 ) : ?>
+                <div class="gb-track-record">
+                    <?php if ( $gb_stats['completed'] > 0 ) : ?>
+                        <div class="gb-track-stat">
+                            <span class="gb-track-stat-value"><?php echo (int) $gb_stats['completed']; ?></span>
+                            <span class="gb-track-stat-label"><?php echo esc_html( _n( 'clean completed', 'cleans completed', $gb_stats['completed'], 'thegreenbroom' ) ); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ( $gb_stats['repeat'] > 0 ) : ?>
+                        <div class="gb-track-stat">
+                            <span class="gb-track-stat-value"><?php echo (int) $gb_stats['repeat']; ?></span>
+                            <span class="gb-track-stat-label"><?php echo esc_html( _n( 'repeat customer', 'repeat customers', $gb_stats['repeat'], 'thegreenbroom' ) ); ?></span>
+                        </div>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>

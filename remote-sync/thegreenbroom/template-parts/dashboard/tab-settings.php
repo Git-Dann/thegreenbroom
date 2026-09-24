@@ -103,6 +103,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#cookies" class="gb-settings-nav-link" data-settings-target="cookies"><span class="gb-settings-nav-icon">🍪</span><span>Cookies &amp; consent<small>Banner wording</small></span></a>
             <a href="#retention" class="gb-settings-nav-link" data-settings-target="retention"><span class="gb-settings-nav-icon">🗄</span><span>Data retention<small>How long records are kept</small></span></a>
             <a href="#membership" class="gb-settings-nav-link" data-settings-target="membership"><span class="gb-settings-nav-icon">🔑</span><span>Membership<small>Customer access</small></span></a>
+            <a href="#pricing" class="gb-settings-nav-link" data-settings-target="pricing"><span class="gb-settings-nav-icon">£</span><span>Membership pricing<small>Panels on the public site</small></span></a>
             <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
             <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
@@ -374,6 +375,89 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <strong>What happens when Stripe arrives.</strong> Billing writes to the same membership record the Members screen already uses,
                         so the only remaining step is turning this switch on. Managers and administrators always keep access, and anyone whose membership
                         has lapsed is treated as expired the moment the date passes, not overnight.
+                    </div>
+                </div>
+            </div>
+
+            <div id="pricing" class="gb-editor-section gb-settings-panel">
+                <div class="gb-editor-header"><span class="dashicons dashicons-money-alt"></span> Membership Pricing Panels</div>
+                <div class="gb-editor-body">
+                    <?php
+                    /*
+                     * One set of figures, three places on the public site. The
+                     * customer panel appears on the homepage and on Find a
+                     * Cleaner; the cleaner panel on Become a Cleaner. Editing a
+                     * price here changes it everywhere at once.
+                     */
+                    $gb_price = static function ($key) {
+                        return function_exists('gb_pricing_field') ? gb_pricing_field($key) : '';
+                    };
+                    ?>
+                    <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
+                        These panels state the prices and send people to registration. <strong>Nothing is charged and nothing is locked</strong> &mdash; there is no checkout until Stripe is connected, so you follow up with new sign-ups yourself. When Stripe arrives, only the button changes.
+                    </div>
+
+                    <div class="gb-sub-head">Customer membership &mdash; homepage and Find a Cleaner</div>
+                    <div class="gb-form-row" style="margin-bottom:14px;">
+                        <label class="gb-label">Show this panel</label>
+                        <select name="_gb_price_cust_show" class="gb-input" style="height:45px;">
+                            <option value="1" <?php selected((string) $gb_price('_gb_price_cust_show'), '1'); ?>>Yes</option>
+                            <option value="0" <?php selected((string) $gb_price('_gb_price_cust_show'), '0'); ?>>No &mdash; hide it everywhere</option>
+                        </select>
+                    </div>
+                    <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_price_cust_head" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_head')); ?>"></div>
+                    <div class="gb-form-row"><label class="gb-label">Sub-heading</label><textarea name="_gb_price_cust_sub" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_cust_sub')); ?></textarea></div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">What members get (one per line)</label>
+                        <textarea name="_gb_price_cust_benefits" class="gb-textarea" rows="6"><?php echo esc_textarea($gb_price('_gb_price_cust_benefits')); ?></textarea>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label class="gb-label">Plan 1 name</label><input type="text" name="_gb_price_cust_p1_name" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p1_name')); ?>"></div>
+                        <div><label class="gb-label">Plan 1 price</label><input type="text" name="_gb_price_cust_p1_price" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p1_price')); ?>"></div>
+                        <div><label class="gb-label">Plan 1 period</label><input type="text" name="_gb_price_cust_p1_period" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p1_period')); ?>"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label class="gb-label">Plan 2 name</label><input type="text" name="_gb_price_cust_p2_name" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p2_name')); ?>"></div>
+                        <div><label class="gb-label">Plan 2 price</label><input type="text" name="_gb_price_cust_p2_price" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p2_price')); ?>"></div>
+                        <div><label class="gb-label">Plan 2 period</label><input type="text" name="_gb_price_cust_p2_period" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p2_period')); ?>"></div>
+                        <div><label class="gb-label">Plan 2 flash</label><input type="text" name="_gb_price_cust_p2_flag" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_p2_flag')); ?>"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label class="gb-label">Button text</label><input type="text" name="_gb_price_cust_btn" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_btn')); ?>"></div>
+                        <div><label class="gb-label">Button link</label><input type="text" name="_gb_price_cust_link" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_cust_link')); ?>"></div>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:28px;">
+                        <label class="gb-label">Small print under the button</label>
+                        <textarea name="_gb_price_cust_foot" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_cust_foot')); ?></textarea>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">This is where you say nothing is being charged yet. Clear it once Stripe is live.</p>
+                    </div>
+
+                    <div class="gb-sub-head">Cleaner membership &mdash; Become a Cleaner</div>
+                    <div class="gb-form-row" style="margin-bottom:14px;">
+                        <label class="gb-label">Show this panel</label>
+                        <select name="_gb_price_clean_show" class="gb-input" style="height:45px;">
+                            <option value="1" <?php selected((string) $gb_price('_gb_price_clean_show'), '1'); ?>>Yes</option>
+                            <option value="0" <?php selected((string) $gb_price('_gb_price_clean_show'), '0'); ?>>No &mdash; hide it</option>
+                        </select>
+                    </div>
+                    <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_price_clean_head" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_head')); ?>"></div>
+                    <div class="gb-form-row"><label class="gb-label">Sub-heading</label><textarea name="_gb_price_clean_sub" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_clean_sub')); ?></textarea></div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">What cleaners get (one per line)</label>
+                        <textarea name="_gb_price_clean_benefits" class="gb-textarea" rows="6"><?php echo esc_textarea($gb_price('_gb_price_clean_benefits')); ?></textarea>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label class="gb-label">Free trial flash</label><input type="text" name="_gb_price_clean_free" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_free')); ?>"></div>
+                        <div><label class="gb-label">Price after the trial</label><input type="text" name="_gb_price_clean_price" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_price')); ?>"></div>
+                        <div><label class="gb-label">Period</label><input type="text" name="_gb_price_clean_period" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_period')); ?>"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label class="gb-label">Button text</label><input type="text" name="_gb_price_clean_btn" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_btn')); ?>"></div>
+                        <div><label class="gb-label">Button link</label><input type="text" name="_gb_price_clean_link" class="gb-input" value="<?php echo esc_attr($gb_price('_gb_price_clean_link')); ?>"></div>
+                    </div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">Small print under the button</label>
+                        <textarea name="_gb_price_clean_foot" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_clean_foot')); ?></textarea>
                     </div>
                 </div>
             </div>

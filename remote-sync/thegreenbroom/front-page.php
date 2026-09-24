@@ -222,6 +222,17 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
         </div>
     </section>
 
+    <?php
+    /*
+     * Membership pricing, straight after the problem the split section sets up.
+     * Wording, prices and the button all come from Settings, and the same panel
+     * appears on Find a Cleaner, so the figures are stated once.
+     */
+    if ( function_exists( 'gb_render_pricing_panel' ) ) {
+        gb_render_pricing_panel( 'customer' );
+    }
+    ?>
+
     <section class="gb-section gb-bg-light">
         <div class="gb-container">
             <div class="gb-text-center">

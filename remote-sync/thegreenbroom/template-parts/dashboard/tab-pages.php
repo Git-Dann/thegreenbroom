@@ -50,7 +50,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     @media (max-width: 900px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 180px; } .gb-media-preview img { min-height: 180px; max-height: 240px; } }
     @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; } }
     .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .gb-sub-head { font-size: 11px; font-weight: 800; color: #2e7d32; margin: 25px 0 10px; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
     
     .gb-table { width: 100%; border-collapse: collapse; }
     .gb-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }

@@ -2269,6 +2269,9 @@ require_once get_template_directory() . '/inc/bookings.php';
 require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
 require_once get_template_directory() . '/inc/stripe.php';
+require_once get_template_directory() . '/inc/cleaner-availability.php';
+require_once get_template_directory() . '/inc/cleaner-stats.php';
+require_once get_template_directory() . '/inc/pricing-panels.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS
