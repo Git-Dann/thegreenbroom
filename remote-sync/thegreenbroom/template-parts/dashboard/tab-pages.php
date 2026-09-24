@@ -296,7 +296,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_join_testi_text' => 'I left my agency job and doubled my take-home pay within two months. I pick my own clients, my own hours, and I actually get to keep what I earn.',
             '_gb_join_testi_auth' => '— Emma R., Cleaner in Bristol',
             '_gb_join_cta_title'  => 'Ready to be your own boss?',
-            '_gb_join_cta_sub'    => 'Join hundreds of cleaners already earning more on their own terms. It is free to create your profile.',
+            '_gb_join_cta_sub'    => 'Set up your profile in minutes. Nothing to pay for your first three months.',
             '_gb_join_cta_btn'    => 'Get Started — It\'s Free',
             '_gb_join_cta_link'   => '/register',
         ];

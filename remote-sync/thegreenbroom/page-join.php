@@ -51,7 +51,7 @@ $s3_desc  = get_post_meta(get_the_ID(), '_gb_join_s3_desc', true)  ?: 'Receive b
 
 // F. Bottom CTA
 $cta_head  = get_post_meta(get_the_ID(), '_gb_join_cta_title', true) ?: 'Ready to be your own boss?';
-$cta_sub   = get_post_meta(get_the_ID(), '_gb_join_cta_sub', true)   ?: 'Join hundreds of cleaners already earning more on their own terms. It is free to create your profile.';
+$cta_sub   = get_post_meta(get_the_ID(), '_gb_join_cta_sub', true)   ?: 'Set up your profile in minutes. Nothing to pay for your first three months.';
 $cta_btn   = get_post_meta(get_the_ID(), '_gb_join_cta_btn', true)   ?: 'Get Started — It\'s Free';
 $cta_link  = get_post_meta(get_the_ID(), '_gb_join_cta_link', true)  ?: '/register';
 ?>

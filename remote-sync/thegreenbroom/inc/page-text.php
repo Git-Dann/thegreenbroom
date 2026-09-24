@@ -141,3 +141,30 @@ function gb_correct_cleanco_location() {
 
     update_option( 'gb_cleanco_location_fixed', 1, false );
 }
+
+/**
+ * The Become a Cleaner page ended with "It is free to create your profile",
+ * directly under a panel that now states it is free for three months and
+ * GBP 14.95 a month after that. The two cannot both stand.
+ *
+ * Conditional on the old line still being in place, so an edit made in the
+ * dashboard first is left alone.
+ */
+function gb_align_join_cta_with_pricing() {
+    if ( get_option( 'gb_join_cta_pricing_aligned' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'join' );
+
+    if ( $page ) {
+        $was = 'Join hundreds of cleaners already earning more on their own terms. It is free to create your profile.';
+        $now = 'Set up your profile in minutes. Nothing to pay for your first three months.';
+
+        if ( (string) get_post_meta( $page->ID, '_gb_join_cta_sub', true ) === $was ) {
+            update_post_meta( $page->ID, '_gb_join_cta_sub', $now );
+        }
+    }
+
+    update_option( 'gb_join_cta_pricing_aligned', 1, false );
+}
