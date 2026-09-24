@@ -119,11 +119,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_feat2_text'    => 'We check IDs and references personally. Safety is our #1 priority.',
             '_gb_feat3_title'   => 'Direct Chat',
             '_gb_feat3_text'    => 'Message your cleaner directly to discuss specific needs or access details.',
-            '_gb_testi_head'    => 'What our customers say',
-            '_gb_testi1_text'   => 'Finally a cleaning service that aligns with my values. My house smells fresh without the chemical smell!',
-            '_gb_testi1_auth'   => '— Sarah J., Manchester',
-            '_gb_testi2_text'   => 'Booking was so easy. Mike was professional, on time, and did an amazing job on the kitchen.',
-            '_gb_testi2_auth'   => '— David P., Leeds',
             '_gb_cta_heading'   => 'Ready to make money cleaning?',
             '_gb_cta_sub'       => 'Join The Green Broom today.',
             '_gb_cta_btn_1'     => 'Get Started Now',
@@ -564,17 +559,24 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
+                                <div class="gb-sub-head">Cleaner Showcase</div>
+                                <p class="gb-media-help" style="margin:0 0 14px;">The homepage shows your four newest published cleaners here automatically, with their photo, location and rate. There is nothing to type in per cleaner — add or edit them under Cleaners. The whole section hides itself while there are no cleaners.</p>
                                 <div class="gb-form-row">
-                                    <label class="gb-label">Reviews Section Heading</label>
+                                    <label class="gb-label">Section heading</label>
                                     <input type="text" name="_gb_testi_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_head')); ?>">
                                 </div>
-                                <?php for($i=1;$i<=2;$i++): ?>
-                                    <div class="gb-sub-head">Review <?php echo $i; ?></div>
-                                    <div class="gb-form-row">
-                                        <textarea name="_gb_testi<?php echo $i; ?>_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value("_gb_testi{$i}_text")); ?></textarea>
-                                        <input type="text" name="_gb_testi<?php echo $i; ?>_auth" class="gb-input" style="margin-top:8px;" placeholder="Author" value="<?php echo esc_attr($gb_field_value("_gb_testi{$i}_auth")); ?>">
-                                    </div>
-                                <?php endfor; ?>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Section sub-heading</label>
+                                    <textarea name="_gb_testi_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_testi_sub')); ?></textarea>
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Button text</label>
+                                    <input type="text" name="_gb_testi_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_btn')); ?>">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Button link</label>
+                                    <input type="text" name="_gb_testi_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_link')); ?>">
+                                </div>
                                 <?php $gb_render_media_field('_gb_mid_img', 'Middle showcase image', $gb_field_value('_gb_mid_img')); ?>
                             </div>
                         </div>

@@ -2284,7 +2284,7 @@ require_once get_template_directory() . '/inc/stripe.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 1;
+const GB_MIGRATION_VERSION = 2;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2310,7 +2310,8 @@ function gb_run_one_time_migrations() {
         'gb_seed_verification_log_baseline',
         'gb_migrate_eco_guides',
         'gb_retire_standalone_cookie_page',
-        'gb_migrate_eco_guides_to_pages'
+        'gb_migrate_eco_guides_to_pages',
+        'gb_apply_client_copy_corrections'
     );
 
     foreach ( $migrations as $migration ) {
