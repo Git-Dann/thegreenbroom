@@ -295,3 +295,26 @@ function gb_apply_products_supplied_wording() {
 
     update_option( 'gb_products_supplied_wording', 1, false );
 }
+
+/**
+ * Clear the Become a Cleaner testimonial's stored values.
+ *
+ * The section was removed at the client's request and the dashboard fields
+ * that fed it have gone too, so "Emma R., Cleaner in Bristol" was sitting in
+ * the database with nothing left to read it. Same treatment the homepage's
+ * two invented reviews got.
+ */
+function gb_clear_join_testimonial_meta() {
+    if ( get_option( 'gb_join_testimonial_cleared' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'join' );
+
+    if ( $page ) {
+        delete_post_meta( $page->ID, '_gb_join_testi_text' );
+        delete_post_meta( $page->ID, '_gb_join_testi_auth' );
+    }
+
+    update_option( 'gb_join_testimonial_cleared', 1, false );
+}

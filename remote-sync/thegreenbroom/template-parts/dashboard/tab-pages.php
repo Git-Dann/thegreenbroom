@@ -293,8 +293,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_join_s2_desc'    => 'Pass our quick ID and reference check to earn your Verified badge — the mark customers trust.',
             '_gb_join_s3_title'   => '3. Accept jobs & get paid',
             '_gb_join_s3_desc'    => 'Receive booking requests from local customers, accept the ones that suit you, and get paid securely.',
-            '_gb_join_testi_text' => 'I left my agency job and doubled my take-home pay within two months. I pick my own clients, my own hours, and I actually get to keep what I earn.',
-            '_gb_join_testi_auth' => '— Emma R., Cleaner in Bristol',
             '_gb_join_cta_title'  => 'Ready to be your own boss?',
             '_gb_join_cta_sub'    => 'Set up your profile in minutes. Nothing to pay for your first three months.',
             '_gb_join_cta_btn'    => 'Get Started — It\'s Free',
@@ -720,13 +718,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                         <textarea name="_gb_join_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_s{$i}_desc")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
-                            </div>
-                        </div>
-                        <div class="gb-editor-section">
-                            <div class="gb-editor-header"><span class="dashicons dashicons-format-quote"></span> Cleaner Testimonial</div>
-                            <div class="gb-editor-body">
-                                <div class="gb-form-row"><label class="gb-label">Quote</label><textarea name="_gb_join_testi_text" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_join_testi_text')); ?></textarea></div>
-                                <div class="gb-form-row"><label class="gb-label">Attribution</label><input type="text" name="_gb_join_testi_auth" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_testi_auth')); ?>"></div>
                             </div>
                         </div>
                     <?php endif; ?>

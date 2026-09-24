@@ -69,6 +69,18 @@ $cta_sub       = get_post_meta(get_the_ID(), '_gb_cta_sub', true)       ?: 'Join
 $cta_btn_1     = get_post_meta(get_the_ID(), '_gb_cta_btn_1', true)     ?: 'Get Started Now';
 $cta_link_1    = get_post_meta(get_the_ID(), '_gb_cta_link_1', true)    ?: '/register';
 
+/*
+ * The dashboard has offered a "Secondary CTA Button" for some time and this
+ * banner only ever rendered the first one, so whatever a manager typed there
+ * went nowhere.
+ *
+ * No default: an unset field means nobody has asked for a second button, and
+ * inventing one would change the page without being asked. Fill it in and it
+ * appears; leave it and the banner looks exactly as it does today.
+ */
+$cta_btn_2     = trim((string) get_post_meta(get_the_ID(), '_gb_cta_btn_2', true));
+$cta_link_2    = trim((string) get_post_meta(get_the_ID(), '_gb_cta_link_2', true));
+
 // Prefer WordPress-generated image sizes so a phone never downloads an original.
 $gb_image_source = static function( $url, $size, $fallback_width, $fallback_height ) {
     $attachment_id = attachment_url_to_postid( $url );
@@ -337,6 +349,9 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
             <p style="font-size:1.3rem; margin-bottom:40px; opacity:0.9;"><?php echo esc_html($cta_sub); ?></p>
             <div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
                 <a href="<?php echo esc_url($cta_link_1); ?>" class="gb-btn gb-btn-white"><?php echo esc_html($cta_btn_1); ?></a>
+                <?php if ($cta_btn_2 !== '' && $cta_link_2 !== ''): ?>
+                    <a href="<?php echo esc_url($cta_link_2); ?>" class="gb-btn gb-btn-outline-white"><?php echo esc_html($cta_btn_2); ?></a>
+                <?php endif; ?>
             </div>
         </div>
     </section>

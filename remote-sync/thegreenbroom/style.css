@@ -858,3 +858,6 @@ a.gb-card:hover {
    Fully Booked setting for a long time; nothing displayed it until now. */
 .gb-card-booked { display: inline-block; background: #fef3c7; color: #92400e; border-radius: 20px; padding: 3px 10px; font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
 .gb-hero-booked { background: rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 12px; font-weight: 700; }
+/* Outline pair for the white button on the dark CTA banner. */
+.gb-btn-outline-white { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.85); }
+.gb-btn-outline-white:hover { background: rgba(255,255,255,0.14); border-color: #fff; }
