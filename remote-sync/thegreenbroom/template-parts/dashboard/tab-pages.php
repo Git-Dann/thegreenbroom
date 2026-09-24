@@ -90,9 +90,13 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_hero_sub'      => "The UK's trusted platform for finding eco-friendly cleaners.",
             '_gb_hero_btn_1'    => 'Find a Cleaner',
             '_gb_hero_link_1'   => '/cleaner-listings',
-            '_gb_hero_btn_2'    => 'Join as a Cleaner',
+            '_gb_hero_btn_2'    => 'Become a Cleaner',
             '_gb_hero_link_2'   => '/join',
             '_gb_trust_banner'  => 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners',
+            '_gb_testi_head'    => 'Meet some of our cleaners',
+            '_gb_testi_sub'     => 'Every one of them ID-checked, DBS-checked and reference-checked before they appear here.',
+            '_gb_testi_btn'     => 'Browse all cleaners',
+            '_gb_testi_link'    => '/cleaner-listings',
             '_gb_split_head'    => "Clean homes shouldn't cost the Earth.",
             '_gb_split_body'    => 'Traditional cleaning products are full of harsh chemicals that can harm your family and pets. Plus, finding a reliable cleaner is often a headache of texts and cash payments.',
             '_gb_split_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
@@ -135,8 +139,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_hiw_s1_title'   => 'Search & Filter',
             '_gb_hiw_s1_desc'    => 'Enter your postcode and browse profiles. Filter by price, reviews, and specific eco-services.',
             '_gb_hiw_s1_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
-            '_gb_hiw_s2_title'   => 'Book Instantly',
-            '_gb_hiw_s2_desc'    => 'Choose a time slot that works for you. No back-and-forth texts. Our secure calendar system locks in your appointment.',
+            '_gb_hiw_s2_title'   => 'Ask the cleaner a question first',
+            '_gb_hiw_s2_desc'    => 'Message the cleaner through the platform to check they cover your area, agree what you need doing, and settle a price before anything is booked.',
             '_gb_hiw_s2_img'     => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
             '_gb_hiw_s3_title'   => 'Secure Payment',
             '_gb_hiw_s3_desc'    => 'Pay securely through the platform using Stripe. Funds are held safely and only released when the job is done.',
@@ -194,7 +198,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_about_cta_sub'    => 'Whether you want a spotless home or a flexible career.',
             '_gb_about_btn1_text'  => 'Find a Cleaner',
             '_gb_about_btn1_link'  => '/cleaner-listings',
-            '_gb_about_btn2_text'  => 'Join as a Cleaner',
+            '_gb_about_btn2_text'  => 'Become a Cleaner',
             '_gb_about_btn2_link'  => '/join',
         ];
     } elseif ($slug === 'what-we-do') {
@@ -310,7 +314,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         ];
     } elseif ($slug === 'contact') {
         $gb_page_defaults = [
-            '_gb_contact_title'         => 'Contact Support',
+            '_gb_contact_title'         => 'Contact',
             '_gb_contact_sub'           => 'Send a message directly to our management team.',
             '_gb_contact_phone_label'   => 'Phone support:',
             '_gb_contact_hours'         => 'Monday to Friday, 9 am to 5 pm',

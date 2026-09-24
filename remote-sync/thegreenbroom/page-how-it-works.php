@@ -18,8 +18,8 @@ $s1_title = get_post_meta(get_the_ID(), '_gb_hiw_s1_title', true) ?: 'Search & F
 $s1_desc  = get_post_meta(get_the_ID(), '_gb_hiw_s1_desc', true)  ?: 'Enter your postcode and browse profiles. Filter by price, reviews, and specific eco-services.';
 $s1_img   = get_post_meta(get_the_ID(), '_gb_hiw_s1_img', true)   ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png';
 
-$s2_title = get_post_meta(get_the_ID(), '_gb_hiw_s2_title', true) ?: 'Book Instantly';
-$s2_desc  = get_post_meta(get_the_ID(), '_gb_hiw_s2_desc', true)  ?: 'Choose a time slot that works for you. No back-and-forth texts. Our secure calendar system locks in your appointment.';
+$s2_title = get_post_meta(get_the_ID(), '_gb_hiw_s2_title', true) ?: 'Ask the cleaner a question first';
+$s2_desc  = get_post_meta(get_the_ID(), '_gb_hiw_s2_desc', true)  ?: 'Message the cleaner through the platform to check they cover your area, agree what you need doing, and settle a price before anything is booked.';
 $s2_img   = get_post_meta(get_the_ID(), '_gb_hiw_s2_img', true)   ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png';
 
 $s3_title = get_post_meta(get_the_ID(), '_gb_hiw_s3_title', true) ?: 'Secure Payment';

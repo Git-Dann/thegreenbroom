@@ -16,7 +16,7 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
  * from page meta and falls back to exactly what was here before, so nothing
  * moves until somebody edits it.
  */
-$c_title   = gb_page_text('_gb_contact_title',   'Contact Support');
+$c_title   = gb_page_text('_gb_contact_title',   'Contact');
 $c_sub     = gb_page_text('_gb_contact_sub',     'Send a message directly to our management team.');
 $c_phone_l = gb_page_text('_gb_contact_phone_label', 'Phone support:');
 $c_hours   = gb_page_text('_gb_contact_hours',   'Monday to Friday, 9 am to 5 pm');

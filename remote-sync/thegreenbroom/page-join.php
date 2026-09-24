@@ -48,9 +48,6 @@ $s2_desc  = get_post_meta(get_the_ID(), '_gb_join_s2_desc', true)  ?: 'Pass our 
 $s3_title = get_post_meta(get_the_ID(), '_gb_join_s3_title', true) ?: '3. Accept jobs & get paid';
 $s3_desc  = get_post_meta(get_the_ID(), '_gb_join_s3_desc', true)  ?: 'Receive booking requests from local customers, accept the ones that suit you, and get paid securely.';
 
-// E. Testimonial
-$testi_text = get_post_meta(get_the_ID(), '_gb_join_testi_text', true) ?: 'I left my agency job and doubled my take-home pay within two months. I pick my own clients, my own hours, and I actually get to keep what I earn.';
-$testi_auth = get_post_meta(get_the_ID(), '_gb_join_testi_auth', true) ?: '— Emma R., Cleaner in Bristol';
 
 // F. Bottom CTA
 $cta_head  = get_post_meta(get_the_ID(), '_gb_join_cta_title', true) ?: 'Ready to be your own boss?';
@@ -164,13 +161,6 @@ $cta_link  = get_post_meta(get_the_ID(), '_gb_join_cta_link', true)  ?: '/regist
                 <div class="gb-step-card"><h3><?php echo esc_html($s2_title); ?></h3><p><?php echo esc_html($s2_desc); ?></p></div>
                 <div class="gb-step-card"><h3><?php echo esc_html($s3_title); ?></h3><p><?php echo esc_html($s3_desc); ?></p></div>
             </div>
-        </div>
-    </section>
-
-    <section class="gb-section gb-testi">
-        <div class="gb-container">
-            <blockquote>&ldquo;<?php echo esc_html($testi_text); ?>&rdquo;</blockquote>
-            <cite><?php echo esc_html($testi_auth); ?></cite>
         </div>
     </section>
 

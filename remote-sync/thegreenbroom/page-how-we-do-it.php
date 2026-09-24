@@ -49,7 +49,7 @@ $cta_head   = get_post_meta(get_the_ID(), '_gb_about_cta_head', true)   ?: 'Join
 $cta_sub    = get_post_meta(get_the_ID(), '_gb_about_cta_sub', true)    ?: 'Whether you want a spotless home or a flexible career.';
 $cta_btn1   = get_post_meta(get_the_ID(), '_gb_about_btn1_text', true)  ?: 'Find a Cleaner';
 $cta_link1  = get_post_meta(get_the_ID(), '_gb_about_btn1_link', true)  ?: '/cleaner-listings';
-$cta_btn2   = get_post_meta(get_the_ID(), '_gb_about_btn2_text', true)  ?: 'Join as a Cleaner';
+$cta_btn2   = get_post_meta(get_the_ID(), '_gb_about_btn2_text', true)  ?: 'Become a Cleaner';
 $cta_link2  = get_post_meta(get_the_ID(), '_gb_about_btn2_link', true)  ?: '/join';
 ?>
 

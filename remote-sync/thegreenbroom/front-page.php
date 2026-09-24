@@ -13,7 +13,7 @@ $hero_sub      = get_post_meta(get_the_ID(), '_gb_hero_sub', true)      ?: "The 
 $hero_bg       = get_post_meta(get_the_ID(), '_gb_hero_bg', true)       ?: 'https://images.unsplash.com/photo-1581578731117-10d52143b1e8?auto=format&fit=crop&w=1920&q=80';
 $hero_btn_1    = get_post_meta(get_the_ID(), '_gb_hero_btn_1', true)    ?: 'Find a Cleaner';
 $hero_link_1   = get_post_meta(get_the_ID(), '_gb_hero_link_1', true)   ?: '/cleaner-listings';
-$hero_btn_2    = get_post_meta(get_the_ID(), '_gb_hero_btn_2', true)    ?: 'Join as a Cleaner';
+$hero_btn_2    = get_post_meta(get_the_ID(), '_gb_hero_btn_2', true)    ?: 'Become a Cleaner';
 $hero_link_2   = get_post_meta(get_the_ID(), '_gb_hero_link_2', true)   ?: '/join';
 
 // B. Trust Bar (UPDATED to match the new Dashboard Field)
@@ -58,13 +58,10 @@ $feat3_text    = get_post_meta(get_the_ID(), '_gb_feat3_text', true)    ?: 'Mess
 $mid_img       = get_post_meta(get_the_ID(), '_gb_mid_img', true)       ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png';
 
 // G. Testimonials
-$testi_head    = get_post_meta(get_the_ID(), '_gb_testi_head', true)    ?: 'What our customers say';
-
-$testi1_text   = get_post_meta(get_the_ID(), '_gb_testi1_text', true)   ?: "Finally a cleaning service that aligns with my values. My house smells fresh without the chemical smell!";
-$testi1_auth   = get_post_meta(get_the_ID(), '_gb_testi1_auth', true)   ?: "— Sarah J., Manchester";
-
-$testi2_text   = get_post_meta(get_the_ID(), '_gb_testi2_text', true)   ?: "Booking was so easy. Mike was professional, on time, and did an amazing job on the kitchen.";
-$testi2_auth   = get_post_meta(get_the_ID(), '_gb_testi2_auth', true)   ?: "— David P., Leeds";
+$testi_head    = get_post_meta(get_the_ID(), '_gb_testi_head', true)    ?: 'Meet some of our cleaners';
+$testi_sub     = get_post_meta(get_the_ID(), '_gb_testi_sub', true)     ?: 'Every one of them ID-checked, DBS-checked and reference-checked before they appear here.';
+$testi_btn     = get_post_meta(get_the_ID(), '_gb_testi_btn', true)     ?: 'Browse all cleaners';
+$testi_link    = get_post_meta(get_the_ID(), '_gb_testi_link', true)    ?: '/cleaner-listings';
 
 // H. Bottom CTA
 $cta_heading   = get_post_meta(get_the_ID(), '_gb_cta_heading', true)   ?: 'Ready to make money cleaning?';
@@ -139,6 +136,17 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
     .gb-feat-icon { font-size: 3rem; margin-bottom: 20px; display: block; }
 
     /* TESTIMONIALS & CTA */
+    .gb-home-cleaner-sub { font-size: 1.15rem; color: #555; line-height: 1.6; text-align: center; max-width: 640px; margin: 0 auto; }
+    .gb-home-cleaner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 26px; margin-top: 40px; }
+    .gb-home-cleaner { display: flex; flex-direction: column; background: #fff; border: 1px solid #eee; border-radius: 14px; overflow: hidden; text-decoration: none; color: inherit; transition: transform .2s, box-shadow .2s; }
+    .gb-home-cleaner:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(0,0,0,.09); border-color: #2e7d32; }
+    .gb-home-cleaner-photo { height: 190px; background: #f0fdf4; overflow: hidden; }
+    .gb-home-cleaner-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .gb-home-cleaner-body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 5px; }
+    .gb-home-cleaner-name { font-weight: 800; color: #0f172a; font-size: 1.05rem; }
+    .gb-home-cleaner-loc { color: #64748b; font-size: .88rem; }
+    .gb-home-cleaner-badge { align-self: flex-start; margin-top: 4px; background: #ecfdf3; color: #166534; border-radius: 20px; padding: 4px 11px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .gb-home-cleaner-rate { margin-top: 6px; color: #2e7d32; font-weight: 700; font-size: .92rem; }
     .gb-testi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
     .gb-testi-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 1px solid #eee; }
     .gb-stars { color: #f57f17; margin-bottom: 10px; display: block; }
@@ -248,15 +256,57 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
         </div>
     </section>
 
+    <?php
+    /*
+     * Real cleaners, not invented reviews.
+     *
+     * This section previously held two made-up testimonials from customers who
+     * do not exist. It now shows up to four published cleaners, newest first,
+     * and disappears entirely when there are none - so it fills out on its own
+     * as cleaners join, and never shows a placeholder.
+     */
+    $gb_home_cleaners = get_posts([
+        'post_type'      => 'gb_cleaner',
+        'post_status'    => 'publish',
+        'posts_per_page' => 4,
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+    ]);
+    ?>
+    <?php if ($gb_home_cleaners): ?>
     <section class="gb-section gb-bg-light">
         <div class="gb-container">
             <h2 class="gb-heading-md gb-text-center"><?php echo esc_html($testi_head); ?></h2>
-            <div class="gb-testi-grid">
-                <div class="gb-testi-card"><span class="gb-stars">★★★★★</span><p class="gb-testi-text">"<?php echo esc_html($testi1_text); ?>"</p><span class="gb-testi-author"><?php echo esc_html($testi1_auth); ?></span></div>
-                <div class="gb-testi-card"><span class="gb-stars">★★★★★</span><p class="gb-testi-text">"<?php echo esc_html($testi2_text); ?>"</p><span class="gb-testi-author"><?php echo esc_html($testi2_auth); ?></span></div>
+            <?php if ($testi_sub !== ''): ?>
+                <p class="gb-home-cleaner-sub"><?php echo esc_html($testi_sub); ?></p>
+            <?php endif; ?>
+            <div class="gb-home-cleaner-grid">
+                <?php foreach ($gb_home_cleaners as $gb_c):
+                    $gb_loc  = get_post_meta($gb_c->ID, 'cleaner_location', true) ?: get_post_meta($gb_c->ID, '_gb_location', true);
+                    $gb_rate = function_exists('gb_get_cleaner_rate') ? gb_get_cleaner_rate($gb_c->ID) : '';
+                    $gb_ver  = function_exists('gb_cleaner_is_fully_verified') && gb_cleaner_is_fully_verified($gb_c->ID);
+                ?>
+                    <a class="gb-home-cleaner" href="<?php echo esc_url(get_permalink($gb_c->ID)); ?>">
+                        <div class="gb-home-cleaner-photo">
+                            <?php if (has_post_thumbnail($gb_c->ID)): ?>
+                                <?php echo get_the_post_thumbnail($gb_c->ID, 'medium', ['alt' => esc_attr(get_the_title($gb_c->ID)) . ' profile photo', 'loading' => 'lazy', 'decoding' => 'async']); ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="gb-home-cleaner-body">
+                            <span class="gb-home-cleaner-name"><?php echo esc_html(get_the_title($gb_c->ID)); ?></span>
+                            <?php if ($gb_loc): ?><span class="gb-home-cleaner-loc"><?php echo esc_html($gb_loc); ?></span><?php endif; ?>
+                            <?php if ($gb_ver): ?><span class="gb-home-cleaner-badge">Verified</span><?php endif; ?>
+                            <?php if ($gb_rate): ?><span class="gb-home-cleaner-rate">&pound;<?php echo esc_html($gb_rate); ?> per hour</span><?php endif; ?>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
             </div>
+            <p class="gb-text-center" style="margin-top:34px;">
+                <a href="<?php echo esc_url($testi_link); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($testi_btn); ?></a>
+            </p>
         </div>
     </section>
+    <?php endif; ?>
 
     <?php
     $gb_reviews_embed = get_post_meta((int) get_option('page_on_front'), '_gb_reviews_embed', true);
