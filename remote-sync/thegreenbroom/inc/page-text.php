@@ -441,7 +441,7 @@ function gb_reorder_home_feature_cards() {
  * since rewritten is theirs, and is left alone.
  */
 function gb_trim_panel_and_listing_wording() {
-    if ( get_option( 'gb_panel_listing_wording_v2' ) ) {
+    if ( get_option( 'gb_panel_listing_wording_v3' ) ) {
         return;
     }
 
@@ -450,46 +450,76 @@ function gb_trim_panel_and_listing_wording() {
         : (int) get_option( 'page_on_front' );
 
     if ( $settings_id ) {
-        $was = "Verified local cleaners, ID and reference checked\nSecure bookings through the platform\nCashless payment, no cash on the doorstep\nReal reviews from real bookings\nMember benefits and offers";
-        $now = "Verified local cleaners, ID and reference checked\nSecure bookings through the platform\nNo cash on the doorstep\nReal reviews from real bookings\nMember benefits and offers";
-
-        if ( (string) get_post_meta( $settings_id, '_gb_price_cust_benefits', true ) === $was ) {
-            update_post_meta( $settings_id, '_gb_price_cust_benefits', $now );
-        }
+        gb_replace_meta_line( $settings_id, '_gb_price_cust_benefits', array(
+            'Cashless payment, no cash on the doorstep' => 'No cash on the doorstep',
+        ) );
     }
 
     $page = get_page_by_path( 'cleaner-listings' );
 
-    if ( ! $page ) {
-        update_option( 'gb_panel_listing_wording_v2', 1, false );
+    if ( $page ) {
+        gb_replace_meta_line( $page->ID, '_gb_listings_usps', array(
+            'Plant-based, non-toxic products supplied'    => 'Plant-based, non-toxic products',
+            'Plant-based, non-toxic products as standard' => 'Plant-based, non-toxic products',
+        ) );
 
-        return;
-    }
+        $was = array(
+            'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.',
+            'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.',
+        );
 
-    $replacements = array(
-        '_gb_listings_usps' => array(
-            'now' => "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products\nIndependent local cleaners, paid fairly",
-            'was' => array(
-                "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products supplied\nIndependent local cleaners, paid fairly",
-                "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products as standard\nIndependent local cleaners, paid fairly",
-            ),
-        ),
-        '_gb_listings_why_2_text' => array(
-            'now' => 'Plant-based, non-toxic products. Safer for your home, your children and your pets.',
-            'was' => array(
-                'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.',
-                'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.',
-            ),
-        ),
-    );
-
-    foreach ( $replacements as $key => $change ) {
-        if ( in_array( (string) get_post_meta( $page->ID, $key, true ), $change['was'], true ) ) {
-            update_post_meta( $page->ID, $key, $change['now'] );
+        if ( in_array( (string) get_post_meta( $page->ID, '_gb_listings_why_2_text', true ), $was, true ) ) {
+            update_post_meta(
+                $page->ID,
+                '_gb_listings_why_2_text',
+                'Plant-based, non-toxic products. Safer for your home, your children and your pets.'
+            );
         }
     }
 
-    update_option( 'gb_panel_listing_wording_v2', 1, false );
+    update_option( 'gb_panel_listing_wording_v3', 1, false );
+}
+
+/**
+ * Replace whole lines inside a multi-line meta field.
+ *
+ * The first version of this compared the entire stored blob against the exact
+ * seeded string and silently did nothing, because a value saved through a
+ * dashboard textarea comes back with CRLF line endings and the comparison was
+ * against LF. Working a line at a time fixes that and is better anyway: an
+ * unrelated bullet the client has since reworded no longer stops the one line
+ * we were asked to change.
+ *
+ * Still conditional - a line is only rewritten where it still reads exactly as
+ * it did - and the field's own line endings are preserved.
+ */
+function gb_replace_meta_line( $post_id, $meta_key, array $replacements ) {
+    $stored = (string) get_post_meta( (int) $post_id, $meta_key, true );
+
+    if ( $stored === '' ) {
+        return false;
+    }
+
+    $eol   = strpos( $stored, "\r\n" ) !== false ? "\r\n" : "\n";
+    $lines = preg_split( '/\r\n|\r|\n/', $stored );
+    $hit   = false;
+
+    foreach ( $lines as $i => $line ) {
+        $trimmed = trim( $line );
+
+        if ( isset( $replacements[ $trimmed ] ) ) {
+            $lines[ $i ] = $replacements[ $trimmed ];
+            $hit         = true;
+        }
+    }
+
+    if ( ! $hit ) {
+        return false;
+    }
+
+    update_post_meta( (int) $post_id, $meta_key, implode( $eol, $lines ) );
+
+    return true;
 }
 
 /**
