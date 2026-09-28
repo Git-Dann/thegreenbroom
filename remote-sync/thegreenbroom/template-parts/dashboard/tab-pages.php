@@ -19,11 +19,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-builder-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px; }
     .gb-builder-layout { display: grid; grid-template-columns: 280px 1fr; gap: 30px; align-items: start; }
     .gb-nav-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; position: sticky; top: 20px; }
-    .gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
-    .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 12px; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
-    .gb-editor-header .dashicons { font-size: 18px; color: #2e7d32; }
-    .gb-editor-body { padding: 25px; }
-    .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-textarea { min-height: 70px; resize: vertical; }
     .gb-upload-wrapper { margin-top: 5px; }
@@ -36,7 +31,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-media-input { min-width: 0; width: 100%; padding: 0; overflow: hidden; border: 0; outline: 0; background: transparent; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
     .gb-media-input::placeholder { color: #94a3b8; }
     .gb-media-actions { display: flex; flex: 0 0 auto; align-items: stretch; gap: 8px; margin-top: 0; }
-    .gb-media-actions .gb-btn-small-os { white-space: nowrap; }
+    .gb-media-actions
     .gb-media-actions .gb-upload-btn { border-color: #2e7d32; color: #2e7d32; }
     .gb-media-actions .gb-upload-btn:hover { border-color: #256b2a; background: #f0fdf4; }
     .gb-media-clear { display: none; }
@@ -47,19 +42,12 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-media-preview.is-empty::before { content: '\f128'; font-family: dashicons; color: #cbd5e1; font-size: 24px; }
     .gb-media-preview.is-error::before { content: '\f534'; font-family: dashicons; color: #f59e0b; font-size: 24px; }
     @media (max-width: 900px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 180px; } .gb-media-preview img { min-height: 180px; max-height: 240px; } }
-    @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; } }
-    .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions}
     
     .gb-table { width: 100%; border-collapse: collapse; }
     .gb-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
     .gb-table td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; }
 
-    .gb-btn-small-os { 
-        text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; 
-        color: #334155; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; 
-        transition: all 0.2s ease; background: white; cursor: pointer;
-    }
-    .gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
 
     .gb-pages-accordion { margin-top: 28px; overflow: hidden; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
     .gb-pages-accordion > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; color: #64748b; cursor: pointer; list-style: none; }

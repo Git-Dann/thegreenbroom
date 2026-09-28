@@ -68,7 +68,6 @@ $gb_payment_class = static function($payment_status) {
 
 <style>
     /* --- SHARED & LIST VIEW STYLES --- */
-    .gb-booking-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .gb-booking-table th { text-align: left; padding: 12px 15px; border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
     .gb-booking-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     
@@ -83,11 +82,8 @@ $gb_payment_class = static function($payment_status) {
     .cleaner-tag:hover { background: #e2e8f0; }
 
     .booking-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-    .btn-os { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #334155; text-decoration: none; }
-    .btn-os.active { background: #2e7d32; color: #fff; border-color: #2e7d32; }
 
     /* --- MANAGE APPOINTMENT (EDIT) STYLES --- */
-    .gb-edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     
     /* Header Dropdown & Button Scaling */
     .gb-header-actions { display: flex; gap: 12px; align-items: center; }

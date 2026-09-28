@@ -15,13 +15,6 @@ $connected_cleaners = get_posts([
 <style>
     .gb-services-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     .gb-config-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; }
-    .gb-btn-small-os {
-        text-decoration: none; padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 6px;
-        color: #334155; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center;
-        transition: all 0.2s ease; background: white; cursor: pointer; text-transform: uppercase;
-    }
-    .gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
-    .gb-btn-primary-os { background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; }
     .gb-pill-ok { background:#dcfce7; color:#166534; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }
     .gb-pill-muted { background:#f1f5f9; color:#475569; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }
     .gb-pill-warn { background:#fffbeb; color:#92400e; border-radius:20px; padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; }

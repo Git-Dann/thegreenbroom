@@ -4,7 +4,6 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
 
 <style>
     /* Green OS Blog Styling - Locked UI */
-    .gb-edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     .gb-blog-layout { display: grid; grid-template-columns: 1fr 320px; gap: 30px; align-items: start; }
     .gb-writer-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 30px; }
     .gb-headline-input { width: 100%; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 24px; font-weight: 800; color: #0f172a; box-sizing: border-box; font-family: inherit; }
@@ -20,7 +19,7 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
     .gb-featured-preview { width: 100%; height: 160px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
     .gb-featured-preview img { width: 100%; height: 100%; object-fit: cover; }
     .gb-featured-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .gb-featured-actions .gb-btn-small-os { align-items:center; gap:6px; }
+    .gb-featured-actions
     .gb-featured-actions .gb-btn-small-os:first-child { border-color:#2e7d32; color:#2e7d32; }
     .gb-featured-actions .gb-btn-small-os:first-child:hover { background:#f0fdf4; border-color:#256b2a; }
     .gb-blog-table { width: 100%; border-collapse: collapse; }

@@ -105,16 +105,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     .gb-settings-nav-link.is-active small { color:#4d7c5a; }
     .gb-settings-nav-icon { width:22px; color:inherit; text-align:center; font-size:14px; }
     .gb-settings-content { min-width:0; }
-    .gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
     html.gb-settings-js .gb-settings-panel:not(.is-active) { display:none; }
-    .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
-    .gb-editor-header .dashicons { font-size: 16px; color: #64748b; }
-    .gb-editor-body { padding: 25px; }
-    .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
-    .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .gb-btn-small-os { text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; color: #334155; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; transition: all 0.2s ease; background: white; cursor: pointer; }
-    .gb-btn-small-os:hover { background:#f8fafc; border-color:#cbd5e1; }
     @media (max-width: 900px) {
         .gb-settings-shell { grid-template-columns:1fr; }
         .gb-settings-nav { position:static; }
@@ -128,8 +120,6 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
         .gb-settings-header { align-items:flex-start; flex-direction:column; gap:16px; }
         .gb-settings-header__actions { width:100%; }
         .gb-settings-header__actions button { width:100%; }
-        .gb-editor-body { padding:18px; }
-        .gb-link-row { grid-template-columns:1fr; gap:0; }
     }
 </style>
 

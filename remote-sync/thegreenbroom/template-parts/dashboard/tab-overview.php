@@ -230,18 +230,6 @@ $active_services_count = (int) $service_post_counts->publish;
 
     /* Standardized Buttons */
     .gb-quick-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .gb-btn-small-os { 
-        background: #f8fafc; 
-        border: 1px solid #e2e8f0; 
-        padding: 8px; 
-        border-radius: 6px; 
-        font-size: 11px; 
-        font-weight: 600; 
-        text-align: center; 
-        color: #334155; 
-        text-decoration: none;
-    }
-    .gb-btn-small-os:hover { border-color: #10b981; color: #10b981; background: #fff; }
 
     /* Charts */
     .gb-chart-container { display: flex; align-items: flex-end; gap: 10px; height: 60px; margin-top: 5px; }
