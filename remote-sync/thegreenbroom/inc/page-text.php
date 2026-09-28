@@ -660,3 +660,33 @@ function gb_redirect_retired_paths() {
     }
 }
 add_action( 'template_redirect', 'gb_redirect_retired_paths', 1 );
+
+/**
+ * The client changed their mind on this bullet, which is their prerogative.
+ *
+ * "Cashless payment, no cash on the doorstep" first lost its opening half.
+ * They then asked for the opposite: keep the cashless half, drop the
+ * doorstep half. So the line ends up as "Cashless payment".
+ *
+ * Both starting points are handled, because which one is in the database
+ * depends on whether the previous change reached a given install: the line as
+ * it now reads here, and the original it was cut down from.
+ */
+function gb_restore_cashless_payment_bullet() {
+    if ( get_option( 'gb_cashless_bullet_restored' ) ) {
+        return;
+    }
+
+    $settings_id = function_exists( 'gb_get_site_settings_id' )
+        ? (int) gb_get_site_settings_id()
+        : (int) get_option( 'page_on_front' );
+
+    if ( $settings_id ) {
+        gb_replace_meta_line( $settings_id, '_gb_price_cust_benefits', array(
+            'No cash on the doorstep'                  => 'Cashless payment',
+            'Cashless payment, no cash on the doorstep' => 'Cashless payment',
+        ) );
+    }
+
+    update_option( 'gb_cashless_bullet_restored', 1, false );
+}
