@@ -936,3 +936,33 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 @media (max-width: 1400px) { .gb-grid-overview { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 1000px) { .gb-grid-overview { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .gb-grid-overview { grid-template-columns: 1fr; } }
+
+/* Settings sidebar group headings. Fifteen flat links with four Stripe
+   screens scattered among them was the complaint; these break them into
+   Payments, Members & cleaners, Site & content, and Data & account. */
+.gb-settings-nav-group {
+    margin: 18px 0 6px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #94a3b8;
+}
+.gb-settings-nav-group:first-of-type { margin-top: 10px; }
+
+/* Below 900px the sidebar becomes a horizontal scrolling strip, so a heading
+   that stacked above its links would sit in the middle of the row. Here they
+   become inline separators instead, which keeps the grouping legible rather
+   than dropping it on a phone. */
+@media (max-width: 900px) {
+    .gb-settings-nav-group {
+        flex: 0 0 auto;
+        align-self: center;
+        margin: 0 2px 0 8px;
+        padding: 0;
+        white-space: nowrap;
+        font-size: 9px;
+    }
+    .gb-settings-nav-group:first-of-type { margin-left: 2px; }
+}
