@@ -70,7 +70,7 @@ foreach ($gb_customers as $gb_u) {
 
 <div class="gb-card" style="padding:0; overflow:hidden; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
     <div class="gb-table-scroll">
-        <table class="gb-booking-table">
+        <table class="gb-booking-table gb-members-table">
             <thead><tr><th style="width:28%;">Customer</th><th>Status</th><th>Plan</th><th>Renews / ended</th><th style="text-align:right;">Set membership</th></tr></thead>
             <tbody>
             <?php if (empty($gb_rows)): ?>
@@ -84,7 +84,7 @@ foreach ($gb_customers as $gb_u) {
                         <div style="font-size:11px; color:#94a3b8; margin-top:3px;"><?php echo esc_html($gb_u->user_email); ?></div>
                     </td>
                     <td>
-                        <span style="display:inline-block; padding:5px 11px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; background:<?php echo esc_attr($gb_colour); ?>1a; color:<?php echo esc_attr($gb_colour); ?>;">
+                        <span style="display:inline-block; white-space:nowrap; padding:5px 11px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; background:<?php echo esc_attr($gb_colour); ?>1a; color:<?php echo esc_attr($gb_colour); ?>;">
                             <?php echo esc_html($gb_m['status'] === 'none' ? 'Not a member' : $gb_m['status']); ?>
                         </span>
                         <?php if ($gb_m['source'] === 'manual' && $gb_m['status'] !== 'none'): ?>
@@ -94,22 +94,22 @@ foreach ($gb_customers as $gb_u) {
                     <td style="font-size:12.5px; color:#475569;"><?php echo esc_html($gb_m['plan'] ? ($gb_plans[$gb_m['plan']]['label'] ?? $gb_m['plan']) : '&mdash;'); ?></td>
                     <td style="font-size:12.5px; color:#475569; white-space:nowrap;"><?php echo $gb_m['expires'] ? esc_html(date_i18n('j M Y', strtotime($gb_m['expires']))) : '&mdash;'; ?></td>
                     <td style="text-align:right;">
-                        <form method="post" style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+                        <form method="post" style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
                             <input type="hidden" name="gb_save_action" value="save_membership">
                             <input type="hidden" name="gb_member_user" value="<?php echo (int) $gb_u->ID; ?>">
                             <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
-                            <select name="gb_member_status" class="gb-input" style="width:auto; min-width:120px; height:36px; font-size:12px;">
+                            <select name="gb_member_status" class="gb-input gb-input-sm" style="min-width:128px;">
                                 <?php foreach (['none' => 'Not a member', 'active' => 'Active', 'expired' => 'Expired', 'cancelled' => 'Cancelled'] as $gb_sv => $gb_sl): ?>
                                     <option value="<?php echo esc_attr($gb_sv); ?>" <?php selected($gb_m['status'], $gb_sv); ?>><?php echo esc_html($gb_sl); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <select name="gb_member_plan" class="gb-input" style="width:auto; min-width:110px; height:36px; font-size:12px;">
+                            <select name="gb_member_plan" class="gb-input gb-input-sm" style="min-width:112px;">
                                 <option value="">No plan</option>
                                 <?php foreach ($gb_plans as $gb_pk => $gb_pv): ?>
                                     <option value="<?php echo esc_attr($gb_pk); ?>" <?php selected($gb_m['plan'], $gb_pk); ?>><?php echo esc_html($gb_pv['label']); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <input type="date" name="gb_member_expires" class="gb-input" style="width:auto; height:36px; font-size:12px;" value="<?php echo esc_attr($gb_m['expires']); ?>" title="Leave blank to set automatically from the plan">
+                            <input type="date" name="gb_member_expires" class="gb-input gb-input-sm" value="<?php echo esc_attr($gb_m['expires']); ?>" title="Leave blank to set automatically from the plan">
                             <button type="submit" class="gb-btn-small-os">Save</button>
                         </form>
                     </td>
