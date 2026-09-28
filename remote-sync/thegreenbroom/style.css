@@ -936,3 +936,160 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 @media (max-width: 1400px) { .gb-grid-overview { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 1000px) { .gb-grid-overview { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .gb-grid-overview { grid-template-columns: 1fr; } }
+
+/* Settings sidebar group headings. Fifteen flat links with four Stripe
+   screens scattered among them was the complaint; these break them into
+   Payments, Members & cleaners, Site & content, and Data & account. */
+.gb-settings-nav-group {
+    margin: 18px 0 6px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #94a3b8;
+}
+.gb-settings-nav-group:first-of-type { margin-top: 10px; }
+
+/* Below 900px the sidebar becomes a horizontal scrolling strip, so a heading
+   that stacked above its links would sit in the middle of the row. Here they
+   become inline separators instead, which keeps the grouping legible rather
+   than dropping it on a phone. */
+@media (max-width: 900px) {
+    .gb-settings-nav-group {
+        flex: 0 0 auto;
+        align-self: center;
+        margin: 0 2px 0 8px;
+        padding: 0;
+        white-space: nowrap;
+        font-size: 9px;
+    }
+    .gb-settings-nav-group:first-of-type { margin-left: 2px; }
+}
+
+/* ==========================================================================
+   MANAGER DASHBOARD: THE SHARED COMPONENT VOCABULARY
+   ==========================================================================
+   Seventeen of these were declared inside individual tabs' inline <style>
+   blocks, and nine of them disagreed with each other. .gb-btn-small-os had
+   six definitions - 11px here, 12px there, uppercase on two screens, a green
+   hover on one and grey on the rest - and on Blog and Pages it was only a
+   fragment (white-space, align-items) with no visual styling at all, because
+   the real definition lived in a tab those pages never load.
+
+   One definition each, here, where every tab can see them. Where a screen
+   genuinely wants something different, it says so explicitly at the bottom
+   rather than redefining the component.
+   ========================================================================== */
+
+/* Secondary button: the workhorse, used on nearly every screen. */
+.gb-btn-small-os {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+/* Primary button. */
+.gb-btn-primary-os {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    height: 44px;
+    padding: 0 20px;
+    border: 1px solid #2e7d32;
+    border-radius: 8px;
+    background: #2e7d32;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+.gb-btn-primary-os:hover { background: #256428; border-color: #256428; }
+
+/* Filter pill, as used by the bookings and helpdesk filter bars. */
+.btn-os {
+    display: inline-block;
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.btn-os.active { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+
+/* Editor panels. */
+.gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
+.gb-editor-header {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 800;
+    font-size: 12px;
+    color: #2e7d32;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.gb-editor-header .dashicons { color: #2e7d32; font-size: 18px; }
+.gb-editor-body { padding: 25px; }
+.gb-edit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+
+/* Forms. */
+.gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+.gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+/* Filter and search bars. */
+.gb-filter-bar { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; }
+.gb-search-container { flex-grow: 1; position: relative; }
+.gb-search-container .dashicons { position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 18px; }
+.gb-search-input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; }
+
+/* Listing tables. The minimum widths live with the scroll container rules in
+   the dashboard shell, not here. */
+.gb-booking-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+/* ---- Screens that genuinely want something different ---- */
+/* Overview sits outside the dashboard shell's !important normalisation on
+   purpose, and ran a smaller tinted button with a green hover. Consolidating
+   removed its local copy, so it is restated here rather than that screen
+   being quietly restyled. */
+.gb-tab-overview .gb-btn-small-os {
+    display: block;
+    padding: 8px;
+    border-radius: 6px;
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+}
+.gb-tab-overview .gb-btn-small-os:hover { background: #fff; border-color: #10b981; color: #10b981; }
+
+/* Settings tightens up and stacks its link rows on a small screen. These were
+   inside a max-width:640px media query in its own style block - not, as a
+   first read of them suggested, a deliberate Settings-wide density. Applying
+   them at every width would have shrunk the padding and collapsed the link
+   rows on desktop. */
+@media (max-width: 640px) {
+    .gb-tab-settings .gb-editor-body { padding: 18px; }
+    .gb-tab-settings .gb-link-row { grid-template-columns: 1fr; gap: 0; }
+}

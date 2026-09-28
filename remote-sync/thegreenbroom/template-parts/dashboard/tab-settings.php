@@ -4,8 +4,20 @@ $settings_id = get_option('page_on_front');
 $email_verification_setting = get_post_meta($settings_id, '_gb_require_email_verification', true);
 $email_verification_setting = $email_verification_setting === '' ? 'yes' : $email_verification_setting;
 $stripe_config = function_exists('gb_get_stripe_config') ? gb_get_stripe_config() : [];
+/*
+ * What "Stripe keys: Action needed" actually means.
+ *
+ * This used to demand the Connect webhook secret alongside the three that
+ * matter, so a correctly configured account with working keys, a working
+ * webhook and live products still showed a permanent orange warning. Nothing
+ * on the platform reads that secret until cleaners are being paid through
+ * Connect, so it is tracked separately and quietly.
+ */
 $stripe_missing = function_exists('gb_get_stripe_config_issues')
-    ? gb_get_stripe_config_issues($stripe_config, ['publishable_key', 'secret_key', 'webhook_secret', 'connect_webhook_secret'])
+    ? gb_get_stripe_config_issues($stripe_config, ['publishable_key', 'secret_key', 'webhook_secret'])
+    : [];
+$stripe_connect_missing = function_exists('gb_get_stripe_config_issues')
+    ? gb_get_stripe_config_issues($stripe_config, ['connect_webhook_secret'])
     : [];
 $stripe_notice = isset($_GET['stripe_notice']) ? sanitize_key(wp_unslash($_GET['stripe_notice'])) : '';
 $stripe_msg_raw = isset($_GET['stripe_msg']) ? sanitize_text_field(wp_unslash($_GET['stripe_msg'])) : '';
@@ -22,8 +34,53 @@ $support_email = get_post_meta($settings_id, '_gb_support_email', true) ?: 'info
 $support_phone = get_post_meta($settings_id, '_gb_support_phone', true) ?: '07974 903568';
 $from_address = get_post_meta($settings_id, '_gb_email_from_address', true) ?: 'info@thegreenbroom.co.uk';
 $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@thegreenbroom.co.uk';
+/*
+ * Every settings section, grouped.
+ *
+ * This is the single source of truth: the sidebar is rendered from it and the
+ * list of sections a URL may ask for is derived from it. They had drifted -
+ * the sidebar offered fifteen sections and the allow-list knew about twelve,
+ * so ?section=pricing, ?section=documents and ?section=stripe-plans all
+ * silently dumped you on Environment. Deriving one from the other means that
+ * cannot happen again.
+ *
+ * The order inside each group is the order somebody actually works through
+ * them: pick the mode, add the keys, set the prices, then create the plans.
+ */
+$gb_settings_groups = [
+    'Payments' => [
+        ['env',          '🌐', 'Environment',        'Test or live'],
+        ['stripe',       '🔑', 'Stripe credentials', 'Keys and webhooks'],
+        ['pricing',      '£',  'Membership pricing', 'What the public site shows'],
+        ['stripe-plans', '🎟', 'Membership plans',   'Products in Stripe'],
+        ['monetisation', '%',  'Tax & fees',         'VAT settings'],
+        ['stripe-tools', '🛒', 'Stripe tools',       'Storefront preview'],
+    ],
+    'Members & cleaners' => [
+        ['membership',   '🔑', 'Customer access',    'Who can browse cleaners'],
+        ['safeguarding', '🛡', 'Safeguarding',       'Booking rules'],
+        ['agreement',    '▤',  'Cleaner agreement',  'Terms and signature'],
+    ],
+    'Site & content' => [
+        ['social',       '↗',  'Contact & social',   'Public details'],
+        ['cookies',      '🍪', 'Cookies & consent',  'Banner wording'],
+        ['documents',    '▦',  'Documents',          'Downloadable PDFs'],
+        ['email',        '✉',  'Email & delivery',   'Brevo and sender'],
+    ],
+    'Data & account' => [
+        ['retention',    '🗄', 'Data retention',     'How long records are kept'],
+        ['account',      '●',  'Your account',       'Password'],
+    ],
+];
+
+$settings_sections = [];
+foreach ($gb_settings_groups as $gb_group_items) {
+    foreach ($gb_group_items as $gb_item) {
+        $settings_sections[] = $gb_item[0];
+    }
+}
+
 $active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
-$settings_sections = ['env', 'safeguarding', 'email', 'social', 'cookies', 'retention', 'membership', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
 if (!in_array($active_settings_section, $settings_sections, true)) {
     $active_settings_section = 'env';
 }
@@ -48,16 +105,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     .gb-settings-nav-link.is-active small { color:#4d7c5a; }
     .gb-settings-nav-icon { width:22px; color:inherit; text-align:center; font-size:14px; }
     .gb-settings-content { min-width:0; }
-    .gb-editor-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 25px; overflow: hidden; }
     html.gb-settings-js .gb-settings-panel:not(.is-active) { display:none; }
-    .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
-    .gb-editor-header .dashicons { font-size: 16px; color: #64748b; }
-    .gb-editor-body { padding: 25px; }
-    .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
-    .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .gb-btn-small-os { text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; color: #334155; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; transition: all 0.2s ease; background: white; cursor: pointer; }
-    .gb-btn-small-os:hover { background:#f8fafc; border-color:#cbd5e1; }
     @media (max-width: 900px) {
         .gb-settings-shell { grid-template-columns:1fr; }
         .gb-settings-nav { position:static; }
@@ -71,8 +120,6 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
         .gb-settings-header { align-items:flex-start; flex-direction:column; gap:16px; }
         .gb-settings-header__actions { width:100%; }
         .gb-settings-header__actions button { width:100%; }
-        .gb-editor-body { padding:18px; }
-        .gb-link-row { grid-template-columns:1fr; gap:0; }
     }
 </style>
 
@@ -95,21 +142,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     <aside class="gb-settings-nav" aria-label="Settings sections">
         <div class="gb-settings-nav-card">
             <p class="gb-settings-nav-title">Settings</p>
-            <a href="#env" class="gb-settings-nav-link" data-settings-target="env"><span class="gb-settings-nav-icon">🌐</span><span>Environment<small>Stripe mode</small></span></a>
-            <a href="#safeguarding" class="gb-settings-nav-link" data-settings-target="safeguarding"><span class="gb-settings-nav-icon">🛡</span><span>Safeguarding<small>Booking rules</small></span></a>
-            <a href="#email" class="gb-settings-nav-link" data-settings-target="email"><span class="gb-settings-nav-icon">✉</span><span>Email &amp; delivery<small>Brevo and sender</small></span></a>
-            <a href="#social" class="gb-settings-nav-link" data-settings-target="social"><span class="gb-settings-nav-icon">↗</span><span>Contact &amp; social<small>Public details</small></span></a>
-            <a href="#cookies" class="gb-settings-nav-link" data-settings-target="cookies"><span class="gb-settings-nav-icon">🍪</span><span>Cookies &amp; consent<small>Banner wording</small></span></a>
-            <a href="#retention" class="gb-settings-nav-link" data-settings-target="retention"><span class="gb-settings-nav-icon">🗄</span><span>Data retention<small>How long records are kept</small></span></a>
-            <a href="#membership" class="gb-settings-nav-link" data-settings-target="membership"><span class="gb-settings-nav-icon">🔑</span><span>Membership<small>Customer access</small></span></a>
-            <a href="#pricing" class="gb-settings-nav-link" data-settings-target="pricing"><span class="gb-settings-nav-icon">£</span><span>Membership pricing<small>Panels on the public site</small></span></a>
-            <a href="#agreement" class="gb-settings-nav-link" data-settings-target="agreement"><span class="gb-settings-nav-icon">▤</span><span>Cleaner agreement<small>Terms and signature</small></span></a>
-            <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
-            <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
-            <a href="#stripe" class="gb-settings-nav-link" data-settings-target="stripe"><span class="gb-settings-nav-icon">🔑</span><span>Stripe credentials<small>Keys and webhooks</small></span></a>
-            <a href="#stripe-plans" class="gb-settings-nav-link" data-settings-target="stripe-plans"><span class="gb-settings-nav-icon">🎟</span><span>Membership plans<small>Products in Stripe</small></span></a>
-            <a href="#stripe-tools" class="gb-settings-nav-link" data-settings-target="stripe-tools"><span class="gb-settings-nav-icon">🛒</span><span>Stripe tools<small>Storefront preview</small></span></a>
-            <a href="#account" class="gb-settings-nav-link" data-settings-target="account"><span class="gb-settings-nav-icon">●</span><span>Your account<small>Password</small></span></a>
+            <?php foreach ($gb_settings_groups as $gb_group_label => $gb_group_items): ?>
+                <p class="gb-settings-nav-group"><?php echo esc_html($gb_group_label); ?></p>
+                <?php foreach ($gb_group_items as $gb_item): ?>
+                    <a href="#<?php echo esc_attr($gb_item[0]); ?>" class="gb-settings-nav-link" data-settings-target="<?php echo esc_attr($gb_item[0]); ?>"><span class="gb-settings-nav-icon"><?php echo esc_html($gb_item[1]); ?></span><span><?php echo esc_html($gb_item[2]); ?><small><?php echo esc_html($gb_item[3]); ?></small></span></a>
+                <?php endforeach; ?>
+            <?php endforeach; ?>
         </div>
     </aside>
 
@@ -546,6 +584,11 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             Stripe setup incomplete for current mode. Fill in: <?php echo esc_html(implode(', ', $stripe_missing)); ?>.
                         </div>
                     <?php else: ?>
+                        <?php if (!empty($stripe_connect_missing)): ?>
+                            <div style="margin:0 0 14px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:12.5px; line-height:1.6;">
+                                The Connect webhook secret is not set. Nothing needs it yet &mdash; it is only read once cleaners are being paid out through Connect, and it comes from a second webhook endpoint in Stripe, not the one above.
+                            </div>
+                        <?php endif; ?>
                         <div style="margin:0 0 14px; padding:10px 12px; border:1px solid #dcfce7; border-radius:8px; background:#f0fdf4; color:#166534; font-size:13px;">
                             Stripe credentials look complete for the active mode.
                         </div>

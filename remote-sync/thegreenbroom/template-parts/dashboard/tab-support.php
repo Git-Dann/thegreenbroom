@@ -12,10 +12,6 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
     .gb-support-grid { display: grid; grid-template-columns: 1fr 340px; gap: 30px; align-items: start; }
     
     /* Filtering Bar */
-    .gb-filter-bar { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; }
-    .gb-search-container { flex-grow: 1; position: relative; }
-    .gb-search-container .dashicons { position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 18px; }
-    .gb-search-input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; }
     
     /* Inbox Table */
     .gb-support-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
@@ -23,12 +19,6 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
     .gb-support-table td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
 
     /* Action Buttons - Synced with Blog */
-    .gb-btn-small-os { 
-        text-decoration: none; padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; 
-        color: #334155; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; 
-        transition: all 0.2s ease; background: white; cursor: pointer; text-transform: uppercase;
-    }
-    .gb-btn-small-os:hover { background: #f8fafc; border-color: #cbd5e1; }
     .gb-btn-reply { background: #2e7d32 !important; color: white !important; border: none !important; }
 
     /* Avatar & Status */
@@ -36,7 +26,6 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
     .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 4px; font-weight: 800; text-transform: uppercase; }
 
     /* Same anti-clipping rules as the Helpdesk table. */
-    .gb-booking-table { min-width: 900px; }
     .gb-booking-table td:first-child, .gb-booking-table th:first-child { width: 36px; padding-left: 12px; padding-right: 0; }
     .gb-booking-table td:last-child, .gb-booking-table th:last-child { white-space: nowrap; padding-right: 20px; }
 </style>

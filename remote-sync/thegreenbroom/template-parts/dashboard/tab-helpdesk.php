@@ -60,16 +60,8 @@ if (isset($_POST['gb_resolve_ticket'])) {
     .gb-helpdesk-table td:nth-child(2) { white-space: nowrap; }
     .gb-helpdesk-table td:last-child, .gb-helpdesk-table th:last-child { white-space: nowrap; padding-right: 20px; }
     
-    .gb-filter-bar { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; }
-    .gb-search-container { flex-grow: 1; position: relative; }
-    .gb-search-container .dashicons { position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 18px; }
-    .gb-search-input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; }
     
-    .btn-os { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #334155; text-decoration: none; display: inline-block; }
-    .btn-os.active { background: #2e7d32; color: #fff; border-color: #2e7d32; }
 
-    .gb-btn-small-os { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #334155; text-decoration: none; cursor: pointer; }
-    .gb-btn-primary-os { background: #2e7d32; color: #fff; border: 1px solid #2e7d32; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
     
     .gb-modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); z-index:99999; align-items:center; justify-content:center; padding:20px; text-align:left; backdrop-filter: blur(4px); }
 </style>
