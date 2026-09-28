@@ -49,8 +49,7 @@ $reply_to = get_post_meta($settings_id, '_gb_email_reply_to', true) ?: 'info@the
  */
 $gb_settings_groups = [
     'Payments' => [
-        ['env',          '🌐', 'Environment',        'Test or live'],
-        ['stripe',       '🔑', 'Stripe credentials', 'Keys and webhooks'],
+        ['stripe',       '🔑', 'Stripe credentials', 'Mode, keys and webhooks'],
         ['pricing',      '£',  'Membership pricing', 'What the public site shows'],
         ['stripe-plans', '🎟', 'Membership plans',   'Products in Stripe'],
         ['monetisation', '%',  'Tax & fees',         'VAT settings'],
@@ -80,9 +79,10 @@ foreach ($gb_settings_groups as $gb_group_items) {
     }
 }
 
-$active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'env';
+$active_settings_section = isset($_GET['section']) ? sanitize_key(wp_unslash($_GET['section'])) : 'stripe';
 if (!in_array($active_settings_section, $settings_sections, true)) {
-    $active_settings_section = 'env';
+    // ?section=env still lands here: Environment was folded into this screen.
+    $active_settings_section = 'stripe';
 }
 ?>
 
@@ -157,27 +157,6 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <input type="hidden" name="post_id" value="<?php echo $settings_id; ?>">
             <input type="hidden" name="_gb_settings_section" value="<?php echo esc_attr($active_settings_section); ?>">
             <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
-
-            <div id="env" class="gb-editor-section gb-settings-panel">
-                <div class="gb-editor-header"><span class="dashicons dashicons-admin-site"></span> API Environment</div>
-                <div class="gb-editor-body">
-                    <div style="margin:0 0 16px; padding:12px 14px; border:1px solid <?php echo $stripe_mode === 'live' ? '#fde68a' : '#bfdbfe'; ?>; border-radius:8px; background:<?php echo $stripe_mode === 'live' ? '#fffbeb' : '#eff6ff'; ?>; color:<?php echo $stripe_mode === 'live' ? '#92400e' : '#1d4ed8'; ?>; font-size:13px;">
-                        Active Stripe environment: <strong><?php echo esc_html($stripe_mode_label); ?></strong>.
-                        <?php if ($stripe_mode === 'test'): ?>
-                            Connect onboarding links, checkout sessions, and webhook validation will use your Stripe sandbox credentials.
-                        <?php else: ?>
-                            Live mode uses real Stripe credentials and real money movement.
-                        <?php endif; ?>
-                    </div>
-                    <div class="gb-form-row" style="margin-bottom: 0;">
-                        <label class="gb-label">Operation Mode</label>
-                        <select name="_gb_stripe_mode" class="gb-input" style="height: 45px;">
-                            <option value="test" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'test'); ?>>🛠️ Test Mode (Sandbox)</option>
-                            <option value="live" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'live'); ?>>💰 Live Mode (Real Payments)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
 
             <div id="safeguarding" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-shield-alt"></span> Standards & Safeguarding</div>
@@ -577,8 +556,32 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             </div>
 
             <div id="stripe" class="gb-editor-section gb-settings-panel">
-                <div class="gb-editor-header"><span class="dashicons dashicons-shield"></span> Stripe Connect Credentials</div>
+                <div class="gb-editor-header"><span class="dashicons dashicons-shield"></span> Stripe Credentials</div>
                 <div class="gb-editor-body">
+                    <?php
+                    /*
+                     * The mode was its own settings section, one dropdown away
+                     * from the two columns of keys it chooses between. It picks
+                     * which column is live, so it belongs at the top of them.
+                     */
+                    ?>
+                    <div style="margin:0 0 16px; padding:12px 14px; border:1px solid <?php echo $stripe_mode === 'live' ? '#fde68a' : '#bfdbfe'; ?>; border-radius:8px; background:<?php echo $stripe_mode === 'live' ? '#fffbeb' : '#eff6ff'; ?>; color:<?php echo $stripe_mode === 'live' ? '#92400e' : '#1d4ed8'; ?>; font-size:13px;">
+                        Active Stripe environment: <strong><?php echo esc_html($stripe_mode_label); ?></strong>.
+                        <?php if ($stripe_mode === 'test'): ?>
+                            Connect onboarding links, checkout sessions, and webhook validation will use your Stripe sandbox credentials.
+                        <?php else: ?>
+                            Live mode uses real Stripe credentials and real money movement.
+                        <?php endif; ?>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom: 0;">
+                        <label class="gb-label">Operation Mode</label>
+                        <select name="_gb_stripe_mode" class="gb-input" style="height: 45px;">
+                            <option value="test" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'test'); ?>>🛠️ Test Mode (Sandbox)</option>
+                            <option value="live" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'live'); ?>>💰 Live Mode (Real Payments)</option>
+                        </select>
+                    </div>
+                    <hr style="border:none; border-top:1px solid #e2e8f0; margin:22px 0;">
+
                     <?php if (!empty($stripe_missing)): ?>
                         <div style="margin:0 0 14px; padding:10px 12px; border:1px solid #fecaca; border-radius:8px; background:#fef2f2; color:#991b1b; font-size:13px;">
                             Stripe setup incomplete for current mode. Fill in: <?php echo esc_html(implode(', ', $stripe_missing)); ?>.
