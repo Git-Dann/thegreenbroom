@@ -44,14 +44,22 @@ foreach ($gb_customers as $gb_u) {
     <?php endif; ?>
 </div>
 
-<div class="gb-os-grid" style="margin-bottom:24px;">
+<?php
+/*
+ * gb-grid-stats, not gb-os-grid. The latter is the two-column editor layout -
+ * a main column and a 340px sidebar - so four stat cards were being poured
+ * into a shape built for two things, and its definition was not even loaded
+ * on this tab, which is why they came out as a stack of bare text.
+ */
+?>
+<div class="gb-grid-stats" style="margin-bottom:24px;">
     <?php foreach ([
         'active'    => ['Active members', '#16a34a'],
         'expired'   => ['Expired', '#d97706'],
         'cancelled' => ['Cancelled', '#64748b'],
         'none'      => ['No membership', '#94a3b8'],
     ] as $gb_k => $gb_cfg): ?>
-        <div class="gb-widget">
+        <div class="gb-widget gb-widget-stat">
             <div class="gb-widget-body">
                 <div class="gb-stat-val" style="color:<?php echo esc_attr($gb_cfg[1]); ?>;"><?php echo (int) ($gb_counts[$gb_k] ?? 0); ?></div>
                 <div class="gb-stat-label"><?php echo esc_html($gb_cfg[0]); ?></div>

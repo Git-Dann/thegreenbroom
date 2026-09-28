@@ -33,7 +33,6 @@
     .pill-verified { background: #fff; color: #2e7d32; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 10px; display: inline-flex; align-items: center; gap: 5px; }
 
     /* GRID UTILITY */
-    .gb-os-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
 </style>
 
 <?php if ($action == 'edit') {

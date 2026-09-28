@@ -225,40 +225,8 @@ $active_services_count = (int) $service_post_counts->publish;
     .gb-overview-header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }
     .gb-overview-header h1 { font-size: 24px; color: #1b5e20; margin: 0; font-weight: 800; }
     
-    /* 4-Column Balanced Grid */
-    .gb-grid-overview { 
-        display: grid; 
-        grid-template-columns: repeat(4, 1fr); 
-        gap: 20px; 
-    }
-
-    /* Standardized Widget Container */
-    .gb-widget { 
-        background: #ffffff; 
-        border: 1px solid #e2e8f0; 
-        border-radius: 12px; 
-        display: flex; 
-        flex-direction: column;
-        min-height: 180px; 
-        transition: transform 0.2s;
-    }
-    .gb-widget:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .gb-widget-head { 
-        padding: 12px 16px; 
-        border-bottom: 1px solid #f1f5f9; 
-        font-size: 11px; 
-        font-weight: 700; 
-        text-transform: uppercase; 
-        color: #64748b; 
-        letter-spacing: 0.5px;
-        display: flex;
-        justify-content: space-between;
-    }
-    .gb-widget-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-
-    /* Compact Stat Layout */
-    .gb-stat-val { font-size: 28px; font-weight: 800; color: #1b5e20; line-height: 1; }
-    .gb-stat-label { font-size: 12px; color: #94a3b8; margin-top: 5px; font-weight: 500; }
+    /* Widgets, stat cards and the overview grid now live in style.css,
+       so every tab can use them and not just this one. */
 
     /* Standardized Buttons */
     .gb-quick-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -279,8 +247,6 @@ $active_services_count = (int) $service_post_counts->publish;
     .gb-chart-container { display: flex; align-items: flex-end; gap: 10px; height: 60px; margin-top: 5px; }
     .gb-chart-bar { background: #10b981; width: 100%; border-radius: 4px 4px 0 0; }
 
-    @media (max-width: 1400px) { .gb-grid-overview { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 1000px) { .gb-grid-overview { grid-template-columns: repeat(2, 1fr); } }
 </style>
 
 <div class="gb-overview-header">

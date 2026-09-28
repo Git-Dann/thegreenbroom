@@ -23,7 +23,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
     .gb-editor-header { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 12px; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
     .gb-editor-header .dashicons { font-size: 18px; color: #2e7d32; }
     .gb-editor-body { padding: 25px; }
-    .gb-form-row { margin-bottom: 20px; }
     .gb-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-textarea { min-height: 70px; resize: vertical; }
