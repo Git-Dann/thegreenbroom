@@ -107,6 +107,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <a href="#documents" class="gb-settings-nav-link" data-settings-target="documents"><span class="gb-settings-nav-icon">▦</span><span>Documents<small>Downloadable PDFs</small></span></a>
             <a href="#monetisation" class="gb-settings-nav-link" data-settings-target="monetisation"><span class="gb-settings-nav-icon">£</span><span>Tax &amp; fees<small>VAT settings</small></span></a>
             <a href="#stripe" class="gb-settings-nav-link" data-settings-target="stripe"><span class="gb-settings-nav-icon">🔑</span><span>Stripe credentials<small>Keys and webhooks</small></span></a>
+            <a href="#stripe-plans" class="gb-settings-nav-link" data-settings-target="stripe-plans"><span class="gb-settings-nav-icon">🎟</span><span>Membership plans<small>Products in Stripe</small></span></a>
             <a href="#stripe-tools" class="gb-settings-nav-link" data-settings-target="stripe-tools"><span class="gb-settings-nav-icon">🛒</span><span>Stripe tools<small>Storefront preview</small></span></a>
             <a href="#account" class="gb-settings-nav-link" data-settings-target="account"><span class="gb-settings-nav-icon">●</span><span>Your account<small>Password</small></span></a>
         </div>
@@ -624,6 +625,80 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                 </div>
             </div>
         </form>
+
+        <div id="stripe-plans" class="gb-editor-section gb-settings-panel">
+            <div class="gb-editor-header"><span class="dashicons dashicons-tickets-alt"></span> Membership Plans in Stripe</div>
+            <div class="gb-editor-body">
+                <?php
+                $gb_subs_mode   = get_post_meta($settings_id, '_gb_stripe_mode', true) ?: 'test';
+                $gb_subs_report = function_exists('gb_get_subscription_report') ? gb_get_subscription_report() : array();
+                $gb_subs_cat    = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : array();
+                ?>
+                <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
+                    The prices below come straight from the panels on the public site, so the page and the card charge cannot say different things. Change a price under <strong>Membership pricing</strong>, run this again, and Stripe follows.
+                    <br><br>
+                    Safe to run as often as you like. Anyone already paying stays on the price they signed up at &mdash; changing a price here never re-rates somebody mid-term.
+                </div>
+
+                <table class="gb-booking-table" style="margin-bottom:18px;">
+                    <thead><tr><th>Plan</th><th>Charges</th><th>Every</th><th>Free trial</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($gb_subs_cat as $gb_pk => $gb_plan):
+                        $gb_rec  = function_exists('gb_get_subscription_record') ? gb_get_subscription_record($gb_pk) : array();
+                        $gb_row  = isset($gb_subs_report['plans'][$gb_pk]) ? $gb_subs_report['plans'][$gb_pk] : array();
+                        $gb_live = !empty($gb_rec['price_id']);
+                        $gb_amt  = function_exists('gb_subscription_plan_amount') ? gb_subscription_plan_amount($gb_pk) : null;
+                        $gb_amt_err = is_wp_error($gb_amt) ? $gb_amt->get_error_message() : '';
+                        ?>
+                        <tr>
+                            <td><strong style="font-size:13px; color:#0f172a;"><?php echo esc_html($gb_plan['label']); ?></strong></td>
+                            <td style="font-size:12.5px; color:#475569; white-space:nowrap;">
+                                <?php if ($gb_amt_err === ''): ?>
+                                    <?php echo function_exists('gb_format_minor_amount') ? gb_format_minor_amount($gb_amt) : (int) $gb_amt; ?>
+                                <?php else: ?>
+                                    <span style="color:#b91c1c;">Cannot read the price</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="font-size:12.5px; color:#475569; white-space:nowrap;"><?php echo (int) $gb_plan['interval_count'] === 1 ? esc_html($gb_plan['interval']) : esc_html($gb_plan['interval_count'] . ' ' . $gb_plan['interval'] . 's'); ?></td>
+                            <td style="font-size:12.5px; color:#475569;"><?php echo $gb_plan['trial_days'] ? esc_html($gb_plan['trial_days'] . ' days') : '&mdash;'; ?></td>
+                            <td style="font-size:12px;">
+                                <?php if (!empty($gb_row) && empty($gb_row['ok'])): ?>
+                                    <span style="color:#b91c1c; font-weight:700;">Failed</span>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_row['error']); ?></div>
+                                <?php elseif ($gb_live): ?>
+                                    <span style="color:#16a34a; font-weight:700;">Set up</span>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px; font-family:monospace;"><?php echo esc_html($gb_rec['price_id']); ?></div>
+                                <?php elseif ($gb_amt_err !== ''): ?>
+                                    <span style="color:#b91c1c; font-weight:700;">Blocked</span>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_amt_err); ?></div>
+                                <?php else: ?>
+                                    <span style="color:#94a3b8; font-weight:700;">Not set up yet</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <?php if (!empty($gb_subs_report['when'])): ?>
+                    <p style="margin:0 0 14px; color:#94a3b8; font-size:12px;">
+                        Last run <?php echo esc_html($gb_subs_report['when']); ?> in <strong><?php echo esc_html($gb_subs_mode); ?></strong> mode.
+                        <?php if (!empty($gb_subs_report['error'])): ?>
+                            <span style="color:#b91c1c;"><?php echo esc_html($gb_subs_report['error']); ?></span>
+                        <?php endif; ?>
+                    </p>
+                <?php endif; ?>
+
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="gb_stripe_provision_subscriptions">
+                    <?php wp_nonce_field('gb_stripe_provision_subscriptions'); ?>
+                    <button type="submit" class="gb-btn gb-btn-primary">Set up the plans in Stripe</button>
+                    <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
+                        Creates the products and recurring prices in whichever Stripe account the keys above belong to. Test and live are kept apart, so setting up in test does not touch live.
+                    </p>
+                </form>
+            </div>
+        </div>
 
         <div id="stripe-tools" class="gb-editor-section gb-settings-panel">
             <div class="gb-editor-header"><span class="dashicons dashicons-cart"></span> Stripe Connect Commerce Toolkit (Sample)</div>
