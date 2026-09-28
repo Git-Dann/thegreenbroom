@@ -2290,7 +2290,7 @@ require_once get_template_directory() . '/inc/membership-checkout.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 12;
+const GB_MIGRATION_VERSION = 13;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2329,7 +2329,8 @@ function gb_run_one_time_migrations() {
         'gb_update_listings_empty_state',
         'gb_reorder_home_feature_cards',
         'gb_trim_panel_and_listing_wording',
-        'gb_apply_structure_changes_2026_09'
+        'gb_apply_structure_changes_2026_09',
+        'gb_restore_cashless_payment_bullet'
     );
 
     foreach ( $migrations as $migration ) {
