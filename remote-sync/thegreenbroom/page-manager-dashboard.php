@@ -1050,6 +1050,9 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-table-scroll > .gb-table-os { min-width: 1040px; }
             .gb-table-scroll > .gb-blog-table { min-width: 820px; }
             .gb-table-scroll > .gb-booking-table { min-width: 900px; }
+            /* The membership row carries two dropdowns, a date and a button, which
+               need more room than 900px leaves before they wrap onto a second line. */
+            .gb-table-scroll > .gb-members-table { min-width: 1120px; }
             /* Column 1 is the avatar, not the name. An earlier min-width here
                overrode the header's width:60px and stretched that cell to 210px,
                leaving a large gap before the name. !important is needed because
