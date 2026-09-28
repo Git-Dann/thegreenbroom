@@ -861,3 +861,64 @@ a.gb-card:hover {
 /* Outline pair for the white button on the dark CTA banner. */
 .gb-btn-outline-white { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.85); }
 .gb-btn-outline-white:hover { background: rgba(255,255,255,0.14); border-color: #fff; }
+
+/* ==========================================================================
+   MANAGER DASHBOARD: SHARED WIDGETS AND STAT CARDS
+   ==========================================================================
+   These lived inside individual tabs' inline <style> blocks. Tabs are included
+   one at a time by ?tab=, so a class defined in the Overview tab did nothing
+   on any other tab that used it - which is why the Members screen rendered its
+   four stat cards as a stack of bare text.
+
+   They belong to the dashboard as a whole, so they live here where every tab
+   can see them.
+   ========================================================================== */
+.gb-grid-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+.gb-widget {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+    transition: transform 0.2s;
+}
+.gb-widget:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.gb-widget-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+}
+.gb-widget-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+
+/* A stat card carries a number and a label and nothing else, so it does not
+   need the height a widget with a heading and a list does. */
+.gb-widget-stat { min-height: 0; }
+.gb-widget-stat .gb-widget-body { padding: 20px 18px; }
+
+/* A row of stat cards. Deliberately not the overview grid's fixed columns:
+   the dashboard content area sits beside a sidebar, so its real width is not
+   the window width, and a hard breakpoint at 1400px was dropping the fourth
+   card onto a row of its own on an ordinary laptop. auto-fit fits as many as
+   genuinely go, at any width, with no breakpoints to get wrong. */
+.gb-grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 20px; }
+
+.gb-stat-val { font-size: 28px; font-weight: 800; color: #1b5e20; line-height: 1; }
+.gb-stat-label { font-size: 12px; color: #94a3b8; margin-top: 5px; font-weight: 500; }
+
+/* The two-column editor layout: main column plus a fixed sidebar. */
+.gb-os-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+
+/* Spacing between fields in every dashboard form. */
+.gb-form-row { margin-bottom: 20px; }
+
+@media (max-width: 1400px) { .gb-grid-overview { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1000px) { .gb-grid-overview { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px)  { .gb-grid-overview { grid-template-columns: 1fr; } }
