@@ -1143,6 +1143,13 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 
 .gb-success-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 0 0 40px; }
 .gb-success-actions .gb-btn { min-width: 190px; }
+/* .gb-btn-outline is declared only inside the homepage's inline <style>, so on
+   any other template it falls through to the filled .gb-btn and the secondary
+   action reads as a second primary. Scoped here rather than declared globally:
+   What Cleaners Do uses the same class and has the same gap, and restyling
+   that page is not this change's business. */
+.gb-success-actions .gb-btn-outline { background: transparent; color: #1b5e20; border: 2px solid #1b5e20; }
+.gb-success-actions .gb-btn-outline:hover { background: #1b5e20; color: #fff; }
 
 .gb-success-next { text-align: left; background: #fff; border: 1px solid #e6eee8; border-radius: 14px; padding: 24px 26px; }
 .gb-success-next h2 { margin: 0 0 14px; font-size: 1.05rem; font-weight: 800; color: #0f172a; }
