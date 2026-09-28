@@ -2273,6 +2273,7 @@ require_once get_template_directory() . '/inc/stripe.php';
 require_once get_template_directory() . '/inc/cleaner-availability.php';
 require_once get_template_directory() . '/inc/cleaner-stats.php';
 require_once get_template_directory() . '/inc/pricing-panels.php';
+require_once get_template_directory() . '/inc/stripe-subscriptions.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS
