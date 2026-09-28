@@ -690,3 +690,66 @@ function gb_restore_cashless_payment_bullet() {
 
     update_option( 'gb_cashless_bullet_restored', 1, false );
 }
+
+/**
+ * The page Stripe returns a paying customer or cleaner to.
+ *
+ * Its template is matched by slug, so the slug is fixed and the template is
+ * pinned explicitly as well - a page that loses its template here would send
+ * somebody who has just paid to a blank generic page, which is the one moment
+ * that must not go wrong.
+ *
+ * Kept out of the menus on purpose: it is a destination, not a page anybody
+ * should browse to.
+ */
+function gb_ensure_membership_success_page() {
+    if ( get_option( 'gb_membership_success_page' ) ) {
+        return;
+    }
+
+    $existing = get_page_by_path( 'membership-success' );
+
+    if ( $existing instanceof WP_Post ) {
+        update_post_meta( $existing->ID, '_wp_page_template', 'page-membership-success.php' );
+
+        if ( $existing->post_status !== 'publish' ) {
+            wp_update_post( array( 'ID' => $existing->ID, 'post_status' => 'publish' ) );
+        }
+
+        update_option( 'gb_membership_success_page', 1, false );
+
+        return;
+    }
+
+    $page_id = wp_insert_post( array(
+        'post_type'    => 'page',
+        'post_title'   => 'Membership Success',
+        'post_name'    => 'membership-success',
+        'post_status'  => 'publish',
+        'post_content' => '',
+    ), true );
+
+    if ( ! is_wp_error( $page_id ) && $page_id ) {
+        update_post_meta( $page_id, '_wp_page_template', 'page-membership-success.php' );
+        flush_rewrite_rules( false );
+    }
+
+    update_option( 'gb_membership_success_page', 1, false );
+}
+
+/**
+ * Keep the success page out of search results.
+ *
+ * It only makes sense to the person who has just paid, and a stranger landing
+ * on it from Google would be told they are a member when they are not.
+ */
+function gb_noindex_membership_success( $robots ) {
+    if ( is_page( 'membership-success' ) ) {
+        $robots['noindex']  = true;
+        $robots['nofollow'] = true;
+        unset( $robots['index'], $robots['follow'] );
+    }
+
+    return $robots;
+}
+add_filter( 'wp_robots', 'gb_noindex_membership_success' );

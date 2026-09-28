@@ -157,7 +157,14 @@ function gb_membership_checkout_visible( $plan_key ) {
 function gb_membership_return_url( $plan_key, $result ) {
     $catalogue = gb_subscription_catalogue();
     $audience  = isset( $catalogue[ $plan_key ]['audience'] ) ? $catalogue[ $plan_key ]['audience'] : 'customer';
-    $base      = $audience === 'cleaner' ? home_url( '/join/' ) : home_url( '/cleaner-listings/' );
+    // Success gets a page of its own, because "what now?" is a real question
+    // and a one-line notice on the panel they just bought from does not answer
+    // it. Everything else goes back where they were.
+    if ( $result === 'success' ) {
+        return add_query_arg( array( 'plan' => $plan_key ), home_url( '/membership-success/' ) );
+    }
+
+    $base = $audience === 'cleaner' ? home_url( '/join/' ) : home_url( '/cleaner-listings/' );
 
     return add_query_arg( array( 'gb_membership' => $result ), $base );
 }
@@ -365,6 +372,42 @@ function gb_membership_status_from_stripe( $stripe_status ) {
 }
 
 /**
+ * When the paid-for period ends.
+ *
+ * Stripe moved current_period_end off the subscription and onto each
+ * subscription item in the 2025-03-31 API release; this account is on a later
+ * version again, so the old top-level field is simply absent and reading only
+ * that gave no renewal date at all. Both places are checked, newest first,
+ * with trial_end as the answer while a trial is running.
+ */
+function gb_membership_period_end( array $subscription ) {
+    if ( ! empty( $subscription['items']['data'] ) && is_array( $subscription['items']['data'] ) ) {
+        $latest = 0;
+
+        foreach ( $subscription['items']['data'] as $item ) {
+            if ( ! empty( $item['current_period_end'] ) ) {
+                $latest = max( $latest, (int) $item['current_period_end'] );
+            }
+        }
+
+        if ( $latest > 0 ) {
+            return $latest;
+        }
+    }
+
+    if ( ! empty( $subscription['current_period_end'] ) ) {
+        return (int) $subscription['current_period_end'];
+    }
+
+    // A trial that has not produced an invoice yet.
+    if ( ! empty( $subscription['trial_end'] ) ) {
+        return (int) $subscription['trial_end'];
+    }
+
+    return 0;
+}
+
+/**
  * The single place a Stripe subscription becomes site state.
  */
 function gb_membership_apply_subscription( array $subscription ) {
@@ -392,7 +435,7 @@ function gb_membership_apply_subscription( array $subscription ) {
         return;
     }
 
-    $period_end = isset( $subscription['current_period_end'] ) ? (int) $subscription['current_period_end'] : 0;
+    $period_end = gb_membership_period_end( $subscription );
     $expires    = $period_end > 0 ? gmdate( 'Y-m-d', $period_end ) : '';
 
     $subscription_id = sanitize_text_field( (string) $subscription['id'] );
