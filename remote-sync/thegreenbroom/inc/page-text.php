@@ -373,3 +373,290 @@ function gb_update_listings_empty_state() {
 
     update_option( 'gb_listings_empty_state_v2', 1, false );
 }
+
+/**
+ * Put the homepage's three feature cards in the order the client asked for:
+ * Fully Verified on the left, Direct Chat in the middle, Eco-Friendly on the
+ * right. And "Vetted" becomes "Verified".
+ *
+ * The values rotate rather than the template, so "Feature 1" in the dashboard
+ * still means the left-hand card. Rotating whatever is stored - rather than
+ * only the seeded wording - means an edited description travels with its own
+ * card instead of being stranded under a different heading.
+ */
+function gb_reorder_home_feature_cards() {
+    if ( get_option( 'gb_home_features_reordered' ) ) {
+        return;
+    }
+
+    $home_id = (int) get_option( 'page_on_front' );
+
+    if ( ! $home_id ) {
+        update_option( 'gb_home_features_reordered', 1, false );
+
+        return;
+    }
+
+    $cards = array();
+
+    for ( $i = 1; $i <= 3; $i++ ) {
+        $cards[ $i ] = array(
+            'title' => (string) get_post_meta( $home_id, "_gb_feat{$i}_title", true ),
+            'text'  => (string) get_post_meta( $home_id, "_gb_feat{$i}_text", true ),
+        );
+    }
+
+    // Nothing stored means the template defaults are already correct.
+    $stored = array_filter( array_column( $cards, 'title' ) );
+
+    if ( empty( $stored ) ) {
+        update_option( 'gb_home_features_reordered', 1, false );
+
+        return;
+    }
+
+    // Eco was first, vetting second, chat third. Vetting moves to the front,
+    // chat to the middle, eco to the end.
+    $order = array( 1 => $cards[2], 2 => $cards[3], 3 => $cards[1] );
+
+    foreach ( $order as $slot => $card ) {
+        $title = $card['title'] === 'Fully Vetted' ? 'Fully Verified' : $card['title'];
+
+        update_post_meta( $home_id, "_gb_feat{$slot}_title", $title );
+        update_post_meta( $home_id, "_gb_feat{$slot}_text", $card['text'] );
+    }
+
+    update_option( 'gb_home_features_reordered', 1, false );
+}
+
+/**
+ * Two wording changes the client asked for on the same pass.
+ *
+ * "Cashless payment, no cash on the doorstep" said the same thing twice, so
+ * the first half goes. And "supplied" comes off the non-toxic products line -
+ * which it had only just gained, so both the current and the previous wording
+ * are matched here rather than assuming which one is in the database.
+ *
+ * Conditional on the exact stored string throughout: a line the client has
+ * since rewritten is theirs, and is left alone.
+ */
+function gb_trim_panel_and_listing_wording() {
+    if ( get_option( 'gb_panel_listing_wording_v3' ) ) {
+        return;
+    }
+
+    $settings_id = function_exists( 'gb_get_site_settings_id' )
+        ? (int) gb_get_site_settings_id()
+        : (int) get_option( 'page_on_front' );
+
+    if ( $settings_id ) {
+        gb_replace_meta_line( $settings_id, '_gb_price_cust_benefits', array(
+            'Cashless payment, no cash on the doorstep' => 'No cash on the doorstep',
+        ) );
+    }
+
+    $page = get_page_by_path( 'cleaner-listings' );
+
+    if ( $page ) {
+        gb_replace_meta_line( $page->ID, '_gb_listings_usps', array(
+            'Plant-based, non-toxic products supplied'    => 'Plant-based, non-toxic products',
+            'Plant-based, non-toxic products as standard' => 'Plant-based, non-toxic products',
+        ) );
+
+        $was = array(
+            'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.',
+            'Plant-based, non-toxic products as standard. Safer for your home, your children and your pets.',
+        );
+
+        if ( in_array( (string) get_post_meta( $page->ID, '_gb_listings_why_2_text', true ), $was, true ) ) {
+            update_post_meta(
+                $page->ID,
+                '_gb_listings_why_2_text',
+                'Plant-based, non-toxic products. Safer for your home, your children and your pets.'
+            );
+        }
+    }
+
+    update_option( 'gb_panel_listing_wording_v3', 1, false );
+}
+
+/**
+ * Replace whole lines inside a multi-line meta field.
+ *
+ * The first version of this compared the entire stored blob against the exact
+ * seeded string and silently did nothing, because a value saved through a
+ * dashboard textarea comes back with CRLF line endings and the comparison was
+ * against LF. Working a line at a time fixes that and is better anyway: an
+ * unrelated bullet the client has since reworded no longer stops the one line
+ * we were asked to change.
+ *
+ * Still conditional - a line is only rewritten where it still reads exactly as
+ * it did - and the field's own line endings are preserved.
+ */
+function gb_replace_meta_line( $post_id, $meta_key, array $replacements ) {
+    $stored = (string) get_post_meta( (int) $post_id, $meta_key, true );
+
+    if ( $stored === '' ) {
+        return false;
+    }
+
+    $eol   = strpos( $stored, "\r\n" ) !== false ? "\r\n" : "\n";
+    $lines = preg_split( '/\r\n|\r|\n/', $stored );
+    $hit   = false;
+
+    foreach ( $lines as $i => $line ) {
+        $trimmed = trim( $line );
+
+        if ( isset( $replacements[ $trimmed ] ) ) {
+            $lines[ $i ] = $replacements[ $trimmed ];
+            $hit         = true;
+        }
+    }
+
+    if ( ! $hit ) {
+        return false;
+    }
+
+    update_post_meta( (int) $post_id, $meta_key, implode( $eol, $lines ) );
+
+    return true;
+}
+
+/**
+ * The client's structural changes: the slug in the address bar, the fourth
+ * service, the How it Works page, and the Green Broom Standard's home.
+ *
+ * All four touch real posts rather than wording, so each step is conditional
+ * on finding what it expects and none of them destroys anything: the retired
+ * page goes to the trash, where it can be restored, and the Standard keeps the
+ * post it already had rather than being recreated as a copy.
+ */
+function gb_apply_structure_changes_2026_09() {
+    if ( get_option( 'gb_structure_changes_2026_09' ) ) {
+        return;
+    }
+
+    /*
+     * 1. "What Cleaners Do" was still /what-we-do in the address bar.
+     *
+     * The slug was left alone last time to protect existing links. Redirecting
+     * the old one protects them just as well, so the title and the URL can
+     * finally agree. The template is pinned explicitly first: page-what-we-do
+     * .php is matched by slug, so renaming without pinning would drop the page
+     * onto the generic template.
+     */
+    $services = get_page_by_path( 'what-we-do' );
+
+    if ( $services instanceof WP_Post ) {
+        update_post_meta( $services->ID, '_wp_page_template', 'page-what-we-do.php' );
+        wp_update_post( array( 'ID' => $services->ID, 'post_name' => 'what-cleaners-do' ) );
+    }
+
+    /*
+     * 2. The fourth service card. The template no longer prints it, but stored
+     *    meta would keep it alive if the card were ever restored, so it goes.
+     */
+    $services = get_page_by_path( 'what-cleaners-do' );
+
+    if ( $services instanceof WP_Post ) {
+        foreach ( array( 'title', 'desc', 'list', 'btn', 'link' ) as $field ) {
+            delete_post_meta( $services->ID, '_gb_svc_4_' . $field );
+        }
+    }
+
+    /*
+     * 3. How it Works is retired. Trashed rather than deleted: the client can
+     *    ask for it back, and a redirect keeps the old URL working either way.
+     */
+    $hiw = get_page_by_path( 'how-it-works' );
+
+    if ( $hiw instanceof WP_Post && $hiw->post_status !== 'trash' ) {
+        wp_trash_post( $hiw->ID );
+    }
+
+    /*
+     * 4. The Green Broom Standard becomes a page of its own instead of an item
+     *    inside Eco Products. Converting the existing post keeps whatever the
+     *    client has edited into it; only the type and the slug change.
+     */
+    $standard = get_posts( array(
+        'post_type'      => 'gb_eco_product',
+        'post_status'    => 'any',
+        'title'          => 'The Green Broom Standard',
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( ! empty( $standard ) ) {
+        wp_update_post( array(
+            'ID'          => (int) $standard[0],
+            'post_type'   => 'page',
+            'post_name'   => 'the-green-broom-standard',
+            'post_status' => 'publish',
+        ) );
+    }
+
+    /*
+     * 5. Anything still pointing at the retired page.
+     */
+    $link_fields = array(
+        'cleaner-listings' => '_gb_listings_link_2',
+        'join'             => '_gb_join_hero_link2',
+    );
+
+    foreach ( $link_fields as $slug => $meta_key ) {
+        $page = get_page_by_path( $slug );
+
+        if ( $page instanceof WP_Post && (string) get_post_meta( $page->ID, $meta_key, true ) === '/how-it-works' ) {
+            update_post_meta( $page->ID, $meta_key, '/what-cleaners-do' );
+        }
+    }
+
+    $join = get_page_by_path( 'join' );
+
+    if ( $join instanceof WP_Post && (string) get_post_meta( $join->ID, '_gb_join_hero_btn2', true ) === 'See How It Works' ) {
+        update_post_meta( $join->ID, '_gb_join_hero_btn2', 'See What Cleaners Do' );
+    }
+
+    /*
+     * 6. "Phone support:" before the number.
+     */
+    foreach ( array( 'contact' => '_gb_contact_phone_label', 'contact-support' => '_gb_csup_phone_label' ) as $slug => $meta_key ) {
+        $page = get_page_by_path( $slug );
+
+        if ( $page instanceof WP_Post && (string) get_post_meta( $page->ID, $meta_key, true ) === 'Phone support:' ) {
+            update_post_meta( $page->ID, $meta_key, 'Phone:' );
+        }
+    }
+
+    flush_rewrite_rules( false );
+
+    update_option( 'gb_structure_changes_2026_09', 1, false );
+}
+
+/**
+ * Keep the URLs that moved working.
+ *
+ * Three of them, all 301 because all three are permanent. Registered on
+ * template_redirect so they run before WordPress decides it has a 404, and
+ * only for an exact path match so a deeper URL is left alone.
+ */
+function gb_redirect_retired_paths() {
+    if ( is_admin() ) {
+        return;
+    }
+
+    $path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+
+    $moved = array(
+        'what-we-do'                       => '/what-cleaners-do/',
+        'how-it-works'                     => '/what-cleaners-do/',
+        'eco-guide/the-green-broom-standard' => '/the-green-broom-standard/',
+    );
+
+    if ( isset( $moved[ $path ] ) ) {
+        wp_safe_redirect( home_url( $moved[ $path ] ), 301 );
+        exit;
+    }
+}
+add_action( 'template_redirect', 'gb_redirect_retired_paths', 1 );

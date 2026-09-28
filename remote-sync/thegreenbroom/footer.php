@@ -56,8 +56,8 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
         <div class="gb-footer-col">
             <h2>Company</h2>
             <ul class="gb-footer-links">
-                <li><a href="/how-it-works">How It Works</a></li>
-                <li><a href="/what-we-do">What Cleaners Do</a></li>
+                <li><a href="/what-cleaners-do">What Cleaners Do</a></li>
+                <li><a href="/the-green-broom-standard">The Green Broom Standard</a></li>
                 <li><a href="/how-we-do-it">How We Do It</a></li>
                 <li><a href="/eco-products">Eco Products</a></li>
                 <li><a href="/cleaner-listings">Find a Cleaner</a></li>

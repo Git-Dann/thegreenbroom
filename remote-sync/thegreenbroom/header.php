@@ -33,14 +33,18 @@
             <nav id="site-navigation" class="main-navigation">
                 <?php
                 // MENU STRUCTURE
+                // Home sits at the top level rather than inside About: the
+                // client asked for the homepage in the menu, and "About >
+                // Home" reads oddly. One line to move it if they prefer.
                 $header_menu = [
+                    ['label' => 'Home', 'url' => '/'],
                     [
                         'label' => 'About',
                         'url' => null, // parent-only, not clickable
                         'children' => [
-                            ['label' => 'How it Works', 'url' => '/how-it-works'],
-                            ['label' => 'What Cleaners Do', 'url' => '/what-we-do'],
+                            ['label' => 'What Cleaners Do', 'url' => '/what-cleaners-do'],
                             ['label' => 'How We Do It', 'url' => '/how-we-do-it'],
+                            ['label' => 'The Green Broom Standard', 'url' => '/the-green-broom-standard'],
                             ['label' => 'Eco Products', 'url' => '/eco-products']
                         ]
                     ],

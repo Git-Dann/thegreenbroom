@@ -199,7 +199,7 @@ if ($rating_review_total > 0) {
 }
 
 // Page + Service Widgets
-$core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings'];
+$core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleaner-listings'];
 $front_id = (int) get_option('page_on_front');
 $core_pages_live = 0;
 

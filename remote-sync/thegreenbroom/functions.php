@@ -2274,6 +2274,7 @@ require_once get_template_directory() . '/inc/cleaner-availability.php';
 require_once get_template_directory() . '/inc/cleaner-stats.php';
 require_once get_template_directory() . '/inc/pricing-panels.php';
 require_once get_template_directory() . '/inc/stripe-subscriptions.php';
+require_once get_template_directory() . '/inc/membership-checkout.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS
@@ -2289,7 +2290,7 @@ require_once get_template_directory() . '/inc/stripe-subscriptions.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 10;
+const GB_MIGRATION_VERSION = 12;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2325,7 +2326,10 @@ function gb_run_one_time_migrations() {
         'gb_ensure_green_broom_standard_page',
         'gb_clear_join_testimonial_meta',
         'gb_clear_home_secondary_cta',
-        'gb_update_listings_empty_state'
+        'gb_update_listings_empty_state',
+        'gb_reorder_home_feature_cards',
+        'gb_trim_panel_and_listing_wording',
+        'gb_apply_structure_changes_2026_09'
     );
 
     foreach ( $migrations as $migration ) {

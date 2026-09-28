@@ -45,17 +45,33 @@ $step3_text    = get_post_meta(get_the_ID(), '_gb_step3_text', true)    ?: "Come
 // E. Features Grid
 $feat_head     = get_post_meta(get_the_ID(), '_gb_feat_head', true)     ?: 'Why The Green Broom?';
 
-$feat1_title   = get_post_meta(get_the_ID(), '_gb_feat1_title', true)   ?: 'Eco-Friendly';
-$feat1_text    = get_post_meta(get_the_ID(), '_gb_feat1_text', true)    ?: 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.';
+// Feature 1 is the left-hand card, 2 the middle, 3 the right, which is how the
+// dashboard labels them - so the order the client asked for lives in the
+// values, not in a reshuffled template where editing "Feature 1" would change
+// the card on the right.
+$feat1_title   = get_post_meta(get_the_ID(), '_gb_feat1_title', true)   ?: 'Fully Verified';
+$feat1_text    = get_post_meta(get_the_ID(), '_gb_feat1_text', true)    ?: 'We check IDs and references personally. Safety is our #1 priority.';
 
-$feat2_title   = get_post_meta(get_the_ID(), '_gb_feat2_title', true)   ?: 'Fully Vetted';
-$feat2_text    = get_post_meta(get_the_ID(), '_gb_feat2_text', true)    ?: 'We check IDs and references personally. Safety is our #1 priority.';
+$feat2_title   = get_post_meta(get_the_ID(), '_gb_feat2_title', true)   ?: 'Direct Chat';
+$feat2_text    = get_post_meta(get_the_ID(), '_gb_feat2_text', true)    ?: 'Message your cleaner directly to discuss specific needs or access details.';
 
-$feat3_title   = get_post_meta(get_the_ID(), '_gb_feat3_title', true)   ?: 'Direct Chat';
-$feat3_text    = get_post_meta(get_the_ID(), '_gb_feat3_text', true)    ?: 'Message your cleaner directly to discuss specific needs or access details.';
+$feat3_title   = get_post_meta(get_the_ID(), '_gb_feat3_title', true)   ?: 'Eco-Friendly';
+$feat3_text    = get_post_meta(get_the_ID(), '_gb_feat3_text', true)    ?: 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.';
 
-// F. Middle Image
-$mid_img       = get_post_meta(get_the_ID(), '_gb_mid_img', true)       ?: 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png';
+// F. Why we are different
+$diff_head     = get_post_meta(get_the_ID(), '_gb_diff_head', true)     ?: 'Why The Green Broom Is Different';
+$diff_1_head   = get_post_meta(get_the_ID(), '_gb_diff_1_head', true)   ?: 'Traditional Agency';
+$diff_1_list   = get_post_meta(get_the_ID(), '_gb_diff_1_list', true)   ?: "Agency commissions with every clean\nAgency controls the relationship\nLess flexibility\nCleaner receives less money on every clean";
+$diff_2_head   = get_post_meta(get_the_ID(), '_gb_diff_2_head', true)   ?: 'The Green Broom';
+$diff_2_list   = get_post_meta(get_the_ID(), '_gb_diff_2_list', true)   ?: "Small subscription fee\nDirect relationship with your cleaner\nNo ongoing commissions";
+
+$gb_diff_lines = static function ( $raw ) {
+    $lines = array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) $raw ) );
+
+    return array_values( array_filter( $lines, static function ( $line ) {
+        return $line !== '';
+    } ) );
+};
 
 // G. Testimonials
 $testi_head    = get_post_meta(get_the_ID(), '_gb_testi_head', true)    ?: 'Meet some of our cleaners';
@@ -95,7 +111,6 @@ $gb_image_source = static function( $url, $size, $fallback_width, $fallback_heig
 $hero_image_desktop = $gb_image_source( $hero_bg, 'large', 1920, 1080 );
 $hero_image_mobile  = $gb_image_source( $hero_bg, 'medium_large', 768, 432 );
 $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
-$mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
 ?>
 
 <style>
@@ -263,21 +278,42 @@ $mid_image = $gb_image_source( $mid_img, 'large', 1200, 675 );
         <div class="gb-container">
             <div class="gb-text-center"><h2 class="gb-heading-md"><?php echo esc_html($feat_head); ?></h2></div>
             <div class="gb-feat-grid">
-                <div class="gb-feat-card"><span class="gb-feat-icon">🌱</span><h3><?php echo esc_html($feat1_title); ?></h3><p><?php echo esc_html($feat1_text); ?></p></div>
-                <div class="gb-feat-card"><span class="gb-feat-icon">🛡️</span><h3><?php echo esc_html($feat2_title); ?></h3><p><?php echo esc_html($feat2_text); ?></p></div>
-                <div class="gb-feat-card"><span class="gb-feat-icon">💬</span><h3><?php echo esc_html($feat3_title); ?></h3><p><?php echo esc_html($feat3_text); ?></p></div>
+                <div class="gb-feat-card"><span class="gb-feat-icon">🛡️</span><h3><?php echo esc_html($feat1_title); ?></h3><p><?php echo esc_html($feat1_text); ?></p></div>
+                <div class="gb-feat-card"><span class="gb-feat-icon">💬</span><h3><?php echo esc_html($feat2_title); ?></h3><p><?php echo esc_html($feat2_text); ?></p></div>
+                <div class="gb-feat-card"><span class="gb-feat-icon">🌱</span><h3><?php echo esc_html($feat3_title); ?></h3><p><?php echo esc_html($feat3_text); ?></p></div>
             </div>
         </div>
     </section>
 
-    <section class="gb-section" style="padding:0;">
-        <div class="gb-container" style="max-width:1200px; padding:0;">
-             <picture>
-                 <?php gb_picture_sources( $mid_image['url'] ); ?>
-             <img src="<?php echo esc_url( $mid_image['url'] ); ?>" width="<?php echo esc_attr( $mid_image['width'] ); ?>" height="<?php echo esc_attr( $mid_image['height'] ); ?>" alt="Cleaner" style="width:100%; height:auto; display:block;" loading="lazy" decoding="async">
-             </picture>
+    <?php
+    $gb_diff_1 = $gb_diff_lines( $diff_1_list );
+    $gb_diff_2 = $gb_diff_lines( $diff_2_list );
+    ?>
+    <?php if ( trim( (string) $diff_head ) !== '' && ( $gb_diff_1 || $gb_diff_2 ) ) : ?>
+    <section class="gb-section gb-bg-light">
+        <div class="gb-container">
+            <div class="gb-text-center"><h2 class="gb-heading-md"><?php echo esc_html( $diff_head ); ?></h2></div>
+            <div class="gb-diff-grid">
+                <div class="gb-diff-card gb-diff-them">
+                    <h3><?php echo esc_html( $diff_1_head ); ?></h3>
+                    <ul>
+                        <?php foreach ( $gb_diff_1 as $gb_diff_line ) : ?>
+                            <li><span aria-hidden="true">&times;</span> <?php echo esc_html( $gb_diff_line ); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <div class="gb-diff-card gb-diff-us">
+                    <h3><?php echo esc_html( $diff_2_head ); ?></h3>
+                    <ul>
+                        <?php foreach ( $gb_diff_2 as $gb_diff_line ) : ?>
+                            <li><span aria-hidden="true">&#10003;</span> <?php echo esc_html( $gb_diff_line ); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
         </div>
     </section>
+    <?php endif; ?>
 
     <?php
     /*

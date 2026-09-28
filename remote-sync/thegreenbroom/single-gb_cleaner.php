@@ -410,7 +410,7 @@ if ( ! empty( $gb_selected_services ) ) {
                 <?php endif; ?>
 
                 <ul class="gb-trust-list">
-                    <li><span>✓</span> Eco-friendly products supplied</li>
+                    <li><span>✓</span> Eco-friendly products</li>
                     <li><span>✓</span> Secure payment through the platform</li>
                 </ul>
             </div>
