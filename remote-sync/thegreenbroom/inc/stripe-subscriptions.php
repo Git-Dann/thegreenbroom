@@ -368,6 +368,32 @@ function gb_stripe_provision_membership_products() {
  * price id it landed on - and that is what makes it checkable against the
  * Stripe dashboard.
  */
+/**
+ * Send the manager back to the plans table with the outcome.
+ *
+ * Not gb_redirect_manager_settings_with_stripe_notice(): that lands on the
+ * default settings section, which is Stripe credentials, so pressing the
+ * button appeared to do nothing - the answer was rendered on a screen that
+ * says nothing about plans. The table is the answer, so we go to the table.
+ *
+ * It also only understands 'ok' and turns everything else red, which would
+ * have painted a clean run as a failure.
+ */
+function gb_redirect_to_subscription_plans($status, $message) {
+    $url = add_query_arg(
+        array(
+            'tab'           => 'settings',
+            'section'       => 'stripe-plans',
+            'stripe_notice' => $status === 'ok' ? 'ok' : 'error',
+            'stripe_msg'    => sanitize_text_field((string) $message),
+        ),
+        home_url('/manager-dashboard/')
+    );
+
+    wp_safe_redirect($url);
+    exit;
+}
+
 function gb_handle_stripe_provision_subscriptions() {
     if (!is_user_logged_in()) {
         wp_safe_redirect(home_url('/login'));
@@ -396,8 +422,7 @@ function gb_handle_stripe_provision_subscriptions() {
             'plans' => array(),
         ));
 
-        gb_redirect_manager_settings_with_stripe_notice('error', $report->get_error_message());
-        exit;
+        gb_redirect_to_subscription_plans('error', $report->get_error_message());
     }
 
     $failed = 0;
@@ -418,8 +443,7 @@ function gb_handle_stripe_provision_subscriptions() {
         ? 'Membership plans are set up in Stripe.'
         : sprintf('%d of %d plans could not be set up. See the detail below.', $failed, count($report));
 
-    gb_redirect_manager_settings_with_stripe_notice($failed === 0 ? 'success' : 'error', $message);
-    exit;
+    gb_redirect_to_subscription_plans($failed === 0 ? 'ok' : 'error', $message);
 }
 add_action('admin_post_gb_stripe_provision_subscriptions', 'gb_handle_stripe_provision_subscriptions');
 

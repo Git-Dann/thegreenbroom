@@ -675,6 +675,11 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
         <div id="stripe-plans" class="gb-editor-section gb-settings-panel">
             <div class="gb-editor-header"><span class="dashicons dashicons-tickets-alt"></span> Membership Plans in Stripe</div>
             <div class="gb-editor-body">
+                <?php if ($stripe_notice !== '' && $stripe_msg !== ''): ?>
+                    <div style="margin:0 0 14px; padding:10px 12px; border:1px solid <?php echo $stripe_notice === 'ok' ? '#dcfce7' : '#fecaca'; ?>; border-radius:8px; background:<?php echo $stripe_notice === 'ok' ? '#f0fdf4' : '#fef2f2'; ?>; color:<?php echo $stripe_notice === 'ok' ? '#166534' : '#991b1b'; ?>; font-size:13px;">
+                        <?php echo esc_html($stripe_msg); ?>
+                    </div>
+                <?php endif; ?>
                 <?php
                 $gb_subs_mode   = get_post_meta($settings_id, '_gb_stripe_mode', true) ?: 'test';
                 $gb_subs_report = function_exists('gb_get_subscription_report') ? gb_get_subscription_report() : array();

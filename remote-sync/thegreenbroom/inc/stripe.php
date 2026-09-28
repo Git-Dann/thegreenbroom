@@ -1545,6 +1545,13 @@ function gb_handle_stripe_webhook() {
         }
     }
 
+    // Memberships. Everything above this line is bookings and Connect; the
+    // recurring side lives in inc/membership-checkout.php and picks out the
+    // events it cares about for itself.
+    if (function_exists('gb_membership_handle_stripe_event')) {
+        gb_membership_handle_stripe_event($event_type, $event_object);
+    }
+
     status_header(200);
     echo 'ok';
     exit;

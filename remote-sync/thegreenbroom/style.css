@@ -815,6 +815,17 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 .gb-pricing-btn { display: block; width: 100%; text-align: center; margin-top: 6px; }
 .gb-pricing-foot { margin: 14px 0 0; font-size: .82rem; line-height: 1.5; color: #64748b; text-align: center; }
 
+/* Buy buttons. Inside a plan card they sit under the price; the cleaner panel
+   has one plan, so its button is the card's own call to action. */
+.gb-pricing-buy { margin: 12px 0 0; }
+.gb-pricing-buy .gb-pricing-btn { margin-top: 0; }
+.gb-pricing-testflag { display: block; margin-top: 8px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #b45309; }
+
+.gb-membership-notice { margin: 0 0 18px; padding: 12px 14px; border-radius: 10px; font-size: .88rem; line-height: 1.5; text-align: left; }
+.gb-membership-notice-ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.gb-membership-notice-info { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; }
+.gb-membership-notice-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
 @media (max-width: 860px) {
     .gb-pricing-panel { padding: 50px 0; }
     .gb-pricing-inner { grid-template-columns: 1fr; gap: 32px; }
