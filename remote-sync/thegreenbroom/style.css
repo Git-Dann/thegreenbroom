@@ -817,6 +817,25 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 
 /* Buy buttons. Inside a plan card they sit under the price; the cleaner panel
    has one plan, so its button is the card's own call to action. */
+/* Why we are different: two columns, the agency's costs against ours. Not a
+   row-by-row table - the client's two lists are different lengths, and a table
+   would have needed a blank cell or a line I invented to pair with. */
+.gb-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 34px; }
+.gb-diff-card { background: #fff; border: 2px solid #e6eee8; border-radius: 16px; padding: 28px 26px; }
+.gb-diff-card h3 { margin: 0 0 18px; font-size: 1.15rem; font-weight: 800; color: #0f172a; }
+.gb-diff-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.gb-diff-card li { display: grid; grid-template-columns: 22px 1fr; align-items: start; gap: 8px; font-size: .95rem; line-height: 1.5; color: #475569; }
+.gb-diff-card li span { font-weight: 800; line-height: 1.45; }
+.gb-diff-them li span { color: #b91c1c; }
+.gb-diff-us { border-color: #2e7d32; background: #f4fbf5; }
+.gb-diff-us li span { color: #2e7d32; }
+.gb-diff-us li { color: #1f3d24; }
+
+@media (max-width: 760px) {
+    .gb-diff-grid { grid-template-columns: 1fr; gap: 16px; }
+    .gb-diff-card { padding: 22px 20px; }
+}
+
 .gb-pricing-buy { margin: 12px 0 0; }
 .gb-pricing-buy .gb-pricing-btn { margin-top: 0; }
 .gb-pricing-testflag { display: block; margin-top: 8px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #b45309; }

@@ -18,7 +18,7 @@ $support_phone = function_exists('gb_get_support_phone') ? gb_get_support_phone(
  */
 $c_title   = gb_page_text('_gb_contact_title',   'Contact');
 $c_sub     = gb_page_text('_gb_contact_sub',     'Send a message directly to our management team.');
-$c_phone_l = gb_page_text('_gb_contact_phone_label', 'Phone support:');
+$c_phone_l = gb_page_text('_gb_contact_phone_label', 'Phone:');
 $c_hours   = gb_page_text('_gb_contact_hours',   'Monday to Friday, 9 am to 5 pm');
 $c_ok      = gb_page_text('_gb_contact_success', 'Success! Your message has been sent to our team.');
 $c_err     = gb_page_text('_gb_contact_error',   'Please complete all fields with a valid email address.');

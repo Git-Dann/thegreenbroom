@@ -208,7 +208,7 @@ $listings_badge        = get_post_meta(get_the_ID(), '_gb_listings_badge', true)
 // so the header has to make the case before asking anyone to search.
 $listings_usps_raw = trim((string) get_post_meta(get_the_ID(), '_gb_listings_usps', true));
 if ($listings_usps_raw === '') {
-    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products supplied\nIndependent local cleaners, paid fairly";
+    $listings_usps_raw = "DBS-checked, ID-verified and fully insured\nPlant-based, non-toxic products\nIndependent local cleaners, paid fairly";
 }
 $listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_replace("\r\n", "\n", $listings_usps_raw))), 'strlen'));
 
@@ -217,7 +217,7 @@ $listings_usps = array_values(array_filter(array_map('trim', explode("\n", str_r
 $listings_btn_1  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_1', true));
 $listings_link_1 = get_post_meta(get_the_ID(), '_gb_listings_link_1', true) ?: '#gb-dir-search-head';
 $listings_btn_2  = trim((string) get_post_meta(get_the_ID(), '_gb_listings_btn_2', true));
-$listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '/how-it-works';
+$listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '/what-cleaners-do';
 
 /*
  * Sales sections below the results. Paid traffic that does not search straight
@@ -249,7 +249,7 @@ $why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom');
 $why_cards = array();
 $why_defaults = array(
     array('Properly vetted', 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.'),
-    array('Genuinely eco', 'Plant-based, non-toxic products supplied. Safer for your home, your children and your pets.'),
+    array('Genuinely eco', 'Plant-based, non-toxic products. Safer for your home, your children and your pets.'),
     array('Fair to cleaners', 'Independent local cleaners set their own rates and keep the bulk of what you pay. Better paid people do better work.'),
     array('No contracts', 'Book a one-off clean or a regular slot. Change it or cancel it whenever you need to.'),
 );
@@ -536,6 +536,22 @@ if ($verified_body === '') {
         <div class="gb-dir-trust"><span><?php echo esc_html($listings_trust); ?></span></div>
     <?php endif; ?>
 
+    <?php
+    /*
+     * Membership pricing, above the search at the client's request.
+     *
+     * It sat below the results until now, on the reasoning that browsing is not
+     * gated so the offer should come after somebody has found a cleaner they
+     * like. The client wants the offer made first; it is their call, and it is
+     * one edit to move back.
+     *
+     * Same panel and same stored figures as the homepage.
+     */
+    if ( function_exists( 'gb_render_pricing_panel' ) ) {
+        gb_render_pricing_panel( 'customer' );
+    }
+    ?>
+
     <section class="gb-dir-search" aria-labelledby="gb-dir-search-head">
         <h2 id="gb-dir-search-head" class="gb-dir-search-head"><?php echo esc_html($listings_search_head); ?></h2>
         <form class="gb-search-wrapper" action="<?php echo home_url('/cleaner-listings'); ?>" method="get">
@@ -697,17 +713,6 @@ if ($verified_body === '') {
     </div>
 
     <?php
-    /*
-     * Membership pricing, below the results rather than above them. Browsing is
-     * not gated, so putting the offer in front of cleaners a visitor can already
-     * see would be claiming a wall that is not there. Here it lands at the point
-     * they have found somebody they like.
-     *
-     * Same panel and same stored figures as the homepage.
-     */
-    if ( function_exists( 'gb_render_pricing_panel' ) ) {
-        gb_render_pricing_panel( 'customer' );
-    }
     ?>
 
     <?php if ($reviews_head !== '' && !empty($reviews)): ?>

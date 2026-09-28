@@ -13,7 +13,7 @@ $hero_sub   = get_post_meta(get_the_ID(), '_gb_join_hero_sub', true)   ?: 'Set y
 $hero_btn   = get_post_meta(get_the_ID(), '_gb_join_hero_btn', true)   ?: 'Create Your Free Profile';
 $hero_link  = get_post_meta(get_the_ID(), '_gb_join_hero_link', true)  ?: '/register';
 $hero_btn2  = get_post_meta(get_the_ID(), '_gb_join_hero_btn2', true)  ?: 'See How It Works';
-$hero_link2 = get_post_meta(get_the_ID(), '_gb_join_hero_link2', true) ?: '/how-it-works';
+$hero_link2 = get_post_meta(get_the_ID(), '_gb_join_hero_link2', true) ?: '/what-cleaners-do';
 
 // Trust Bar
 $trust_banner = get_post_meta(get_the_ID(), '_gb_trust_banner', true);

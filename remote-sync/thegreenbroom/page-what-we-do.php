@@ -57,15 +57,6 @@ $gb_svc_defaults = [
         'link'  => '/cleaner-listings/?service=deep-clean',
         'style' => 'gb-btn-primary',
     ],
-    4 => [
-        'icon'  => '📦',
-        'title' => 'House Move & End of Tenancy',
-        'desc'  => 'An intensive clean for an empty property, to help secure your deposit.',
-        'list'  => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
-        'btn'   => 'Find Move Cleaners',
-        'link'  => '/cleaner-listings/?service=house-move',
-        'style' => 'gb-btn-outline',
-    ],
 ];
 
 $gb_svc_cards = [];

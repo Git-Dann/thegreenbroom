@@ -11,7 +11,7 @@ if ($action === 'edit' && $selected_page_id) {
 }
 
 $invalid_edit_target = ($action === 'edit' && $selected_page_id && !$edit_page);
-$gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'booking-success', 'book-now'];
+$gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'booking-success', 'book-now'];
 ?>
 
 <style>
@@ -99,17 +99,21 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_step3_title'   => 'Relax & Enjoy',
             '_gb_step3_text'    => "Come home to a spotless house knowing you've made a green choice.",
             '_gb_feat_head'     => 'Why The Green Broom?',
-            '_gb_feat1_title'   => 'Eco-Friendly',
-            '_gb_feat1_text'    => 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.',
-            '_gb_feat2_title'   => 'Fully Vetted',
-            '_gb_feat2_text'    => 'We check IDs and references personally. Safety is our #1 priority.',
-            '_gb_feat3_title'   => 'Direct Chat',
-            '_gb_feat3_text'    => 'Message your cleaner directly to discuss specific needs or access details.',
+            '_gb_feat1_title'   => 'Fully Verified',
+            '_gb_feat1_text'    => 'We check IDs and references personally. Safety is our #1 priority.',
+            '_gb_feat2_title'   => 'Direct Chat',
+            '_gb_feat2_text'    => 'Message your cleaner directly to discuss specific needs or access details.',
+            '_gb_feat3_title'   => 'Eco-Friendly',
+            '_gb_feat3_text'    => 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.',
+            '_gb_diff_head'     => 'Why The Green Broom Is Different',
+            '_gb_diff_1_head'   => 'Traditional Agency',
+            '_gb_diff_1_list'   => "Agency commissions with every clean\nAgency controls the relationship\nLess flexibility\nCleaner receives less money on every clean",
+            '_gb_diff_2_head'   => 'The Green Broom',
+            '_gb_diff_2_list'   => "Small subscription fee\nDirect relationship with your cleaner\nNo ongoing commissions",
             '_gb_cta_heading'   => 'Ready to make money cleaning?',
             '_gb_cta_sub'       => 'Join The Green Broom today.',
             '_gb_cta_btn_1'     => 'Get Started Now',
             '_gb_cta_link_1'    => '/register',
-            '_gb_mid_img'       => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/rectangle-1000x500-1.png',
         ];
     } elseif ($slug === 'how-it-works') {
         $gb_page_defaults = [
@@ -180,7 +184,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_about_btn2_text'  => 'Become a Cleaner',
             '_gb_about_btn2_link'  => '/join',
         ];
-    } elseif ($slug === 'what-we-do') {
+    } elseif ($slug === 'what-cleaners-do') {
         $gb_page_defaults = [
             '_gb_svc_hero_title' => 'More Than Just a Clean Home',
             '_gb_svc_hero_sub'   => 'Professional, reliable, and 100% eco-friendly services tailored to your lifestyle.',
@@ -201,11 +205,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_svc_3_list'     => "Everything in a regular clean\nInside oven & fridge\nSkirting boards\nLimescale removal\nBehind furniture",
             '_gb_svc_3_btn'      => 'Find Deep Cleaners',
             '_gb_svc_3_link'     => '/cleaner-listings/?service=deep-clean',
-            '_gb_svc_4_title'    => 'House Move & End of Tenancy',
-            '_gb_svc_4_desc'     => 'An intensive clean for an empty property, to help secure your deposit.',
-            '_gb_svc_4_list'     => "Deep clean of all rooms\nInside cupboards\nWindow cleaning (interior)\nAppliance deep cleans\nSpot wall cleaning",
-            '_gb_svc_4_btn'      => 'Find Move Cleaners',
-            '_gb_svc_4_link'     => '/cleaner-listings/?service=house-move',
             '_gb_svc_mis_img'    => 'https://thegreenbroom.uk/wp-content/uploads/2025/12/square-500x500-1.png',
             '_gb_svc_mis_title'  => 'A cleaner home, a greener choice',
             '_gb_svc_mis_sub'    => "We believe a clean home shouldn't come at the cost of the environment.",
@@ -239,7 +238,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_listings_btn_1'  => '',
             '_gb_listings_link_1' => '#gb-dir-search-head',
             '_gb_listings_btn_2'  => '',
-            '_gb_listings_link_2' => '/how-it-works',
+            '_gb_listings_link_2' => '/what-cleaners-do',
             '_gb_listings_hiw_head'     => 'Booking a cleaner takes two minutes',
             '_gb_listings_why_head'     => 'Why book through The Green Broom',
             '_gb_listings_reviews_head' => 'What customers say',
@@ -255,8 +254,8 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_join_hero_sub'   => 'Set your own rates, choose your own hours, and keep more of what you earn. The Green Broom connects you directly with vetted local customers — no agency taking the biggest cut.',
             '_gb_join_hero_btn'   => 'Create Your Free Profile',
             '_gb_join_hero_link'  => '/register',
-            '_gb_join_hero_btn2'  => 'See How It Works',
-            '_gb_join_hero_link2' => '/how-it-works',
+            '_gb_join_hero_btn2'  => 'See What Cleaners Do',
+            '_gb_join_hero_link2' => '/what-cleaners-do',
             '_gb_join_ben_head'   => 'Why cleaners choose The Green Broom',
             '_gb_join_ben_sub'    => 'We built this platform for cleaners, not agencies. Here is what that means for you.',
             '_gb_join_b1_title'   => 'Keep more of what you earn',
@@ -295,7 +294,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $gb_page_defaults = [
             '_gb_contact_title'         => 'Contact',
             '_gb_contact_sub'           => 'Send a message directly to our management team.',
-            '_gb_contact_phone_label'   => 'Phone support:',
+            '_gb_contact_phone_label'   => 'Phone:',
             '_gb_contact_hours'         => 'Monday to Friday, 9 am to 5 pm',
             '_gb_contact_label_name'    => 'Your Name',
             '_gb_contact_label_email'   => 'Email Address',
@@ -311,7 +310,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
             '_gb_csup_back'          => 'Back to Dashboard',
             '_gb_csup_title'         => 'Contact Support',
             '_gb_csup_sub'           => 'Having trouble? Our team in Liverpool is here to help.',
-            '_gb_csup_phone_label'   => 'Phone support:',
+            '_gb_csup_phone_label'   => 'Phone:',
             '_gb_csup_hours'         => 'Monday to Friday, 9 am to 5 pm',
             '_gb_csup_btn'           => 'Send Message',
             '_gb_csup_success_title' => 'Message sent!',
@@ -430,14 +429,14 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                     <div class="gb-editor-header"><span class="dashicons dashicons-format-image"></span> Hero Header</div>
                     <div class="gb-editor-body">
                         <?php 
-                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-we-do' ? '_gb_svc_hero_bg' : ($slug == 'join' ? '_gb_join_hero_bg' : ($slug == 'cleaner-listings' ? '_gb_listings_hero_bg' : ''))));
+                            $h_bg_k = $is_front ? '_gb_hero_bg' : ($slug == 'how-we-do-it' ? '_gb_about_hero_bg' : ($slug == 'what-cleaners-do' ? '_gb_svc_hero_bg' : ($slug == 'join' ? '_gb_join_hero_bg' : ($slug == 'cleaner-listings' ? '_gb_listings_hero_bg' : ''))));
                             $h_title_k = $is_front
                                 ? '_gb_hero_headline'
                                 : ($slug == 'how-it-works'
                                     ? '_gb_hiw_hero_title'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_hero_title'
-                                        : ($slug == 'what-we-do'
+                                        : ($slug == 'what-cleaners-do'
                                             ? '_gb_svc_hero_title'
                                             : ($slug == 'cleaner-listings' ? '_gb_listings_title'
                                                 : ($slug == 'join' ? '_gb_join_hero_title' : '')))));
@@ -447,14 +446,14 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     ? '_gb_hiw_hero_sub'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_hero_sub'
-                                        : ($slug == 'what-we-do'
+                                        : ($slug == 'what-cleaners-do'
                                             ? '_gb_svc_hero_sub'
                                             : ($slug == 'cleaner-listings' ? '_gb_listings_sub'
                                                 : ($slug == 'join' ? '_gb_join_hero_sub' : '')))));
                         ?>
                         <?php if ($h_bg_k): ?>
                             <?php $gb_render_media_field($h_bg_k, 'Background image', $gb_field_value($h_bg_k)); ?>
-                            <?php if ($slug === 'what-we-do' || $slug === 'cleaner-listings'): ?>
+                            <?php if ($slug === 'what-cleaners-do' || $slug === 'cleaner-listings'): ?>
                                 <p style="margin:-10px 0 18px; color:#94a3b8; font-size:12px;">Leave this blank for the solid green header.</p>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -536,13 +535,31 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     <label class="gb-label">Features Section Heading</label>
                                     <input type="text" name="_gb_feat_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_feat_head')); ?>">
                                 </div>
+                                <?php $gb_feat_slots = [1 => 'Feature 1 (left)', 2 => 'Feature 2 (middle)', 3 => 'Feature 3 (right)']; ?>
                                 <?php for($i=1;$i<=3;$i++): ?>
-                                    <div class="gb-sub-head">Feature <?php echo $i; ?></div>
+                                    <div class="gb-sub-head"><?php echo esc_html($gb_feat_slots[$i]); ?></div>
                                     <div class="gb-form-row">
                                         <input type="text" name="_gb_feat<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_feat{$i}_title")); ?>">
                                         <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
+                                <div class="gb-sub-head">Why We Are Different</div>
+                                <p class="gb-media-help" style="margin:0 0 14px;">Two columns comparing a traditional agency with The Green Broom. One point per line. Clear the heading to hide the whole section.</p>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Section heading</label>
+                                    <input type="text" name="_gb_diff_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_diff_head')); ?>">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Left column heading</label>
+                                    <input type="text" name="_gb_diff_1_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_diff_1_head')); ?>">
+                                    <textarea name="_gb_diff_1_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value('_gb_diff_1_list')); ?></textarea>
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Right column heading</label>
+                                    <input type="text" name="_gb_diff_2_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_diff_2_head')); ?>">
+                                    <textarea name="_gb_diff_2_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value('_gb_diff_2_list')); ?></textarea>
+                                </div>
+
                                 <div class="gb-sub-head">Cleaner Showcase</div>
                                 <p class="gb-media-help" style="margin:0 0 14px;">The homepage shows your four newest published cleaners here automatically, with their photo, location and rate. There is nothing to type in per cleaner — add or edit them under Cleaners. The whole section hides itself while there are no cleaners.</p>
                                 <div class="gb-form-row">
@@ -561,7 +578,6 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     <label class="gb-label">Button link</label>
                                     <input type="text" name="_gb_testi_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_testi_link')); ?>">
                                 </div>
-                                <?php $gb_render_media_field('_gb_mid_img', 'Middle showcase image', $gb_field_value('_gb_mid_img')); ?>
                             </div>
                         </div>
 
@@ -627,7 +643,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                             </div>
                         </div>
 
-                    <?php elseif ($slug == 'what-we-do'): ?>
+                    <?php elseif ($slug == 'what-cleaners-do'): ?>
                         <div class="gb-editor-section">
                             <div class="gb-editor-header"><span class="dashicons dashicons-forms"></span> Service Packages & Mission</div>
                             <div class="gb-editor-body">
@@ -720,7 +736,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     ? '_gb_hiw_cta_title'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_cta_head'
-                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_title'
+                                        : ($slug == 'what-cleaners-do' ? '_gb_svc_cta_title'
                                             : ($slug == 'join' ? '_gb_join_cta_title' : ''))));
                             $c_sub_k = $is_front
                                 ? '_gb_cta_sub'
@@ -728,7 +744,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     ? '_gb_hiw_cta_desc'
                                     : ($slug == 'how-we-do-it'
                                         ? '_gb_about_cta_sub'
-                                        : ($slug == 'what-we-do' ? '_gb_svc_cta_sub'
+                                        : ($slug == 'what-cleaners-do' ? '_gb_svc_cta_sub'
                                             : ($slug == 'join' ? '_gb_join_cta_sub' : ''))));
                         ?>
                         <?php if ($c_title_k && $c_sub_k): ?>
@@ -757,7 +773,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
                                     <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Text</label><input type="text" name="_gb_about_btn2_text" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn2_text')); ?>"></div>
                                     <div class="gb-form-row"><label class="gb-label">Secondary CTA Button Link</label><input type="text" name="_gb_about_btn2_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_about_btn2_link')); ?>"></div>
                                 </div>
-                            <?php elseif ($slug === 'what-we-do'): ?>
+                            <?php elseif ($slug === 'what-cleaners-do'): ?>
                                 <div class="gb-link-row">
                                     <div class="gb-form-row"><label class="gb-label">CTA Button Text</label><input type="text" name="_gb_svc_cta_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_btn')); ?>"></div>
                                     <div class="gb-form-row"><label class="gb-label">CTA Button Link</label><input type="text" name="_gb_svc_cta_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_cta_link')); ?>"></div>
@@ -1076,7 +1092,7 @@ $gb_structured_core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do
         $pages_by_slug[$page_obj->post_name] = $page_obj;
     }
 
-    $core_slugs = ['home', 'how-it-works', 'how-we-do-it', 'what-we-do', 'cleaner-listings', 'join', 'eco-products'];
+    $core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleaner-listings', 'join', 'eco-products'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr', 'subscribers-terms-of-association'];
     // Customer-facing pages whose wording is editable but which are not part of
     // the marketing core. Previously these sat in the collapsed "Other Pages"
