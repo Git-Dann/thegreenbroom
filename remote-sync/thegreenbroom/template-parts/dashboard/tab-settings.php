@@ -446,7 +446,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <div class="gb-form-row" style="margin-bottom:28px;">
                         <label class="gb-label">Small print under the button</label>
                         <textarea name="_gb_price_cust_foot" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_cust_foot')); ?></textarea>
-                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">This is where you say nothing is being charged yet. Clear it once Stripe is live.</p>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Shown while the panel is not selling &mdash; this is where you say nothing is being charged yet.</p>
+                    </div>
+                    <div class="gb-form-row" style="margin-bottom:28px;">
+                        <label class="gb-label">Small print once payments are live</label>
+                        <textarea name="_gb_price_cust_foot_live" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_cust_foot_live')); ?></textarea>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Swaps in automatically when the buy buttons appear, so the wording and the buttons can never disagree.</p>
                     </div>
 
                     <div class="gb-sub-head">Cleaner membership &mdash; Become a Cleaner</div>
@@ -475,6 +480,10 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <div class="gb-form-row">
                         <label class="gb-label">Small print under the button</label>
                         <textarea name="_gb_price_clean_foot" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_clean_foot')); ?></textarea>
+                    </div>
+                    <div class="gb-form-row">
+                        <label class="gb-label">Small print once payments are live</label>
+                        <textarea name="_gb_price_clean_foot_live" class="gb-textarea"><?php echo esc_textarea($gb_price('_gb_price_clean_foot_live')); ?></textarea>
                     </div>
                 </div>
             </div>

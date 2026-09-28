@@ -182,6 +182,22 @@ function gb_membership_create_checkout_session( $user_id, $plan_key ) {
     }
 
     $plan     = $catalogue[ $plan_key ];
+
+    /*
+     * Never sell somebody a second copy of what they already have.
+     *
+     * Stripe will happily create a parallel subscription and bill both, and
+     * the member would have no idea until two charges landed. Someone who
+     * wants a different plan, or wants to stop, goes to the billing portal
+     * instead - that is what it is for.
+     */
+    if ( gb_membership_is_active_for( $user_id, $plan['audience'] ) ) {
+        return new WP_Error(
+            'gb_membership_already_active',
+            'You already have an active membership. You can change or cancel it from your account.'
+        );
+    }
+
     $price_id = gb_get_subscription_price_id( $plan_key );
 
     if ( $price_id === '' ) {
@@ -254,6 +270,13 @@ function gb_membership_handle_checkout_request() {
     }
 
     $url = gb_membership_create_checkout_session( get_current_user_id(), $plan_key );
+
+    // Already a member: their account is where they change or stop it, and
+    // sending them back to the price they cannot buy again explains nothing.
+    if ( is_wp_error( $url ) && $url->get_error_code() === 'gb_membership_already_active' ) {
+        wp_safe_redirect( add_query_arg( 'gb_billing', 'already', home_url( '/my-account' ) ) );
+        exit;
+    }
 
     if ( is_wp_error( $url ) ) {
         wp_safe_redirect( add_query_arg(
@@ -440,6 +463,11 @@ function gb_membership_apply_subscription( array $subscription ) {
 
     $subscription_id = sanitize_text_field( (string) $subscription['id'] );
 
+    // Whatever they picked before they had an account, they have now bought.
+    if ( $status === 'active' ) {
+        gb_membership_clear_pending_plan( $user_id );
+    }
+
     update_user_meta( $user_id, '_gb_stripe_subscription_id', $subscription_id );
     update_user_meta( $user_id, '_gb_stripe_subscription_status', sanitize_text_field( (string) $subscription['status'] ) );
 
@@ -572,3 +600,150 @@ function gb_membership_return_notice() {
 
     return '<div class="gb-membership-notice gb-membership-notice-' . esc_attr( $tone ) . '">' . esc_html( $text ) . '</div>';
 }
+
+/* --------------------------------------------------------------------------
+   WHAT SOMEBODY ALREADY HAS
+   -------------------------------------------------------------------------- */
+
+/**
+ * Is this user already paying for this side of the platform?
+ *
+ * Customers and cleaners are recorded separately - a cleaner's listing is not
+ * a customer membership - so the answer depends on which one is being asked
+ * about, and a cleaner buying customer access is a legitimate thing to do.
+ */
+function gb_membership_is_active_for( $user_id, $audience ) {
+    $user_id = (int) $user_id;
+
+    if ( $user_id < 1 ) {
+        return false;
+    }
+
+    if ( $audience === 'cleaner' ) {
+        return (string) get_user_meta( $user_id, '_gb_listing_status', true ) === 'active';
+    }
+
+    if ( ! function_exists( 'gb_get_membership' ) ) {
+        return false;
+    }
+
+    $membership = gb_get_membership( $user_id );
+
+    return $membership['status'] === 'active';
+}
+
+/**
+ * The plan somebody picked before they had an account.
+ *
+ * Clicking a price while logged out sent them to registration and lost the
+ * choice entirely: they signed up and were shown nothing about the thing they
+ * had just tried to buy. It is remembered here and offered back on their
+ * account page once they are in.
+ *
+ * Deliberately not resumed by redirecting them straight to Stripe after they
+ * confirm their email - being thrown at a payment page by an email link is
+ * alarming, and there is no way back from it.
+ */
+function gb_membership_set_pending_plan( $user_id, $plan_key ) {
+    $catalogue = gb_subscription_catalogue();
+    $plan_key  = sanitize_key( $plan_key );
+
+    if ( ! isset( $catalogue[ $plan_key ] ) ) {
+        return false;
+    }
+
+    return (bool) update_user_meta( (int) $user_id, '_gb_pending_plan', $plan_key );
+}
+
+function gb_membership_get_pending_plan( $user_id ) {
+    $stored    = (string) get_user_meta( (int) $user_id, '_gb_pending_plan', true );
+    $catalogue = gb_subscription_catalogue();
+
+    return isset( $catalogue[ $stored ] ) ? $stored : '';
+}
+
+function gb_membership_clear_pending_plan( $user_id ) {
+    delete_user_meta( (int) $user_id, '_gb_pending_plan' );
+}
+
+/* --------------------------------------------------------------------------
+   MANAGING A MEMBERSHIP AFTERWARDS
+   -------------------------------------------------------------------------- */
+
+/**
+ * A link into Stripe's billing portal.
+ *
+ * This is where somebody updates a card, changes plan, downloads an invoice or
+ * cancels. Building those four screens here would be re-implementing something
+ * Stripe already does properly, and getting cancellation wrong is the kind of
+ * mistake that ends up in a complaint rather than a bug report.
+ *
+ * @return string|WP_Error
+ */
+function gb_membership_create_portal_session( $user_id, $return_url = '' ) {
+    $customer_id = (string) get_user_meta( (int) $user_id, gb_membership_customer_meta_key(), true );
+
+    if ( $customer_id === '' ) {
+        return new WP_Error( 'gb_membership_no_customer', 'We have no billing record for this account yet.' );
+    }
+
+    if ( $return_url === '' ) {
+        $return_url = home_url( '/my-account' );
+    }
+
+    $response = gb_stripe_api_request( 'billing_portal/sessions', array(
+        'customer'   => $customer_id,
+        'return_url' => $return_url,
+    ) );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    if ( empty( $response['url'] ) ) {
+        return new WP_Error( 'gb_membership_no_portal', 'Stripe did not return a billing page.' );
+    }
+
+    return (string) $response['url'];
+}
+
+/**
+ * Front-end handler for "manage my membership". Not admin-post.php, for the
+ * same reason nothing else here is.
+ */
+function gb_membership_handle_portal_request() {
+    if ( empty( $_POST['gb_membership_action'] ) ) {
+        return;
+    }
+
+    if ( sanitize_key( wp_unslash( $_POST['gb_membership_action'] ) ) !== 'portal' ) {
+        return;
+    }
+
+    if (
+        empty( $_POST['gb_membership_nonce'] ) ||
+        ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['gb_membership_nonce'] ) ), 'gb_membership_portal' )
+    ) {
+        wp_safe_redirect( add_query_arg( 'gb_billing', 'expired', home_url( '/my-account' ) ) );
+        exit;
+    }
+
+    if ( ! is_user_logged_in() ) {
+        wp_safe_redirect( home_url( '/login' ) );
+        exit;
+    }
+
+    $url = gb_membership_create_portal_session( get_current_user_id(), home_url( '/my-account' ) );
+
+    if ( is_wp_error( $url ) ) {
+        wp_safe_redirect( add_query_arg(
+            array( 'gb_billing' => 'error', 'gb_billing_msg' => rawurlencode( $url->get_error_message() ) ),
+            home_url( '/my-account' )
+        ) );
+        exit;
+    }
+
+    wp_redirect( $url );
+    exit;
+}
+add_action( 'init', 'gb_membership_handle_portal_request' );
