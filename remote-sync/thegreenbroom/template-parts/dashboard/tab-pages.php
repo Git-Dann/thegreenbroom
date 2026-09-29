@@ -538,6 +538,48 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             </div>
                         </div>
 
+                    <?php elseif ($slug == 'the-green-broom-standard'): ?>
+                        <div class="gb-editor-section">
+                            <div class="gb-editor-header"><span class="dashicons dashicons-format-image"></span> Images &amp; Layout</div>
+                            <div class="gb-editor-body">
+                                <p style="margin:0 0 18px; color:#64748b; font-size:13px; line-height:1.6;">
+                                    The wording lives in <strong>Body Text Content</strong> below and each heading in it becomes a
+                                    section on the page. Attaching an image to a section lays it out in two columns, with the
+                                    image alternating sides down the page. Leave one empty and that section keeps its own layout &mdash;
+                                    a list becomes a grid of cards, and plain copy sits centred.
+                                </p>
+
+                                <?php $gb_render_media_field('_gb_std_hero_img', 'Hero background image (optional)', $gb_field_value('_gb_std_hero_img')); ?>
+                                <p class="gb-media-help" style="margin-bottom:22px;">Sits behind the green header. The green wash is kept over it so the heading stays readable.</p>
+
+                                <?php
+                                /*
+                                 * One image field per section, labelled with the heading it will
+                                 * appear beside. Read from the page's own content through the same
+                                 * splitter the template uses, so the labels cannot drift out of step
+                                 * with the copy - rename a heading and this list renames with it.
+                                 */
+                                $gb_std_headings = [];
+                                if (function_exists('gb_standard_split_sections')) {
+                                    list($gb_std_ignored_intro, $gb_std_found) = gb_standard_split_sections((string) $p_obj->post_content);
+                                    foreach ($gb_std_found as $gb_std_found_section) {
+                                        $gb_std_headings[] = $gb_std_found_section['title'];
+                                    }
+                                }
+                                ?>
+
+                                <?php if (empty($gb_std_headings)): ?>
+                                    <p style="margin:0; color:#94a3b8; font-size:13px;">No headings found in the content yet. Add a heading in Body Text Content and save, and an image field will appear here for it.</p>
+                                <?php else: ?>
+                                    <div class="gb-sub-head">A picture for each section</div>
+                                    <?php foreach ($gb_std_headings as $gb_std_n => $gb_std_heading): ?>
+                                        <?php $gb_std_key = '_gb_std_img_' . ($gb_std_n + 1); ?>
+                                        <?php $gb_render_media_field($gb_std_key, ($gb_std_heading !== '' ? $gb_std_heading : 'Section ' . ($gb_std_n + 1)), $gb_field_value($gb_std_key)); ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                     <?php elseif ($slug == 'how-we-do-it'): ?>
                         <div class="gb-editor-section">
                             <div class="gb-editor-header"><span class="dashicons dashicons-book-alt"></span> Story & Vetting</div>
