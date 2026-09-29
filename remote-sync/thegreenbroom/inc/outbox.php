@@ -709,6 +709,99 @@ function gb_backup_smtp_check() {
     }
 }
 
+/**
+ * Why will the backup mailbox not sign in? Tries the saved settings and the
+ * usual alternatives, and records what the mail server actually said.
+ *
+ * Never records the password, or anything it could be recovered from: only
+ * the server's side of each conversation (which never echoes credentials),
+ * and the password's length and whether it has spaces at either end - the
+ * two things a person can check against what they meant to type.
+ *
+ * @return array
+ */
+function gb_backup_smtp_diagnose() {
+    $cfg = gb_get_backup_smtp_settings();
+
+    $report = array(
+        'username'        => $cfg['username'],
+        'host'            => $cfg['host'],
+        'saved'           => array( 'port' => $cfg['port'], 'secure' => $cfg['secure'] ),
+        'password_length' => strlen( $cfg['password'] ),
+        'password_spaces' => $cfg['password'] !== trim( $cfg['password'] ),
+        'attempts'        => array(),
+    );
+
+    if ( ! gb_backup_smtp_configured( $cfg ) ) {
+        $report['error'] = 'Not set up.';
+
+        return $report;
+    }
+
+    if ( ! class_exists( '\PHPMailer\PHPMailer\PHPMailer' ) ) {
+        require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+        require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+        require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+    }
+
+    $tries = array(
+        array( 'port' => 587, 'secure' => 'tls', 'auth' => '' ),
+        array( 'port' => 465, 'secure' => 'ssl', 'auth' => '' ),
+        array( 'port' => 587, 'secure' => 'tls', 'auth' => 'LOGIN' ),
+        array( 'port' => 587, 'secure' => 'tls', 'auth' => 'PLAIN' ),
+    );
+
+    // Also with the spaces trimmed, if there are any: the likeliest paste slip.
+    $passwords = array( 'as saved' => $cfg['password'] );
+    if ( $report['password_spaces'] ) {
+        $passwords['trimmed'] = trim( $cfg['password'] );
+    }
+
+    foreach ( $passwords as $which => $password ) {
+        foreach ( $tries as $try ) {
+            $server = array();
+            $mail   = new \PHPMailer\PHPMailer\PHPMailer( true );
+            gb_backup_smtp_apply( $mail, array_merge( $cfg, $try, array( 'password' => $password ) ) );
+            $mail->Timeout     = 10;
+            $mail->AuthType    = $try['auth'];
+            $mail->SMTPDebug   = 2;
+            $mail->Debugoutput = function ( $line ) use ( &$server ) {
+                // Only the server's replies. The client lines carry the credentials.
+                if ( strpos( $line, 'SERVER -> CLIENT:' ) === 0 ) {
+                    $server[] = trim( substr( $line, 17 ) );
+                }
+            };
+
+            try {
+                $ok = $mail->smtpConnect();
+                $mail->smtpClose();
+                $error = '';
+            } catch ( \Exception $e ) {
+                $ok    = false;
+                $error = sanitize_text_field( $e->getMessage() );
+            }
+
+            $report['attempts'][] = array(
+                'password' => $which,
+                'port'     => $try['port'],
+                'secure'   => $try['secure'],
+                'auth'     => $try['auth'] !== '' ? $try['auth'] : 'auto',
+                'ok'       => (bool) $ok,
+                'error'    => $error,
+                'server'   => array_slice( $server, -6 ),
+            );
+
+            if ( $ok ) {
+                $report['works_with'] = end( $report['attempts'] );
+
+                return $report;
+            }
+        }
+    }
+
+    return $report;
+}
+
 /* --------------------------------------------------------------------------
    RETRYING
    -------------------------------------------------------------------------- */

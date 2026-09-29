@@ -74,6 +74,10 @@ function gb_email_selftest_handle() {
         'tests'  => array(),
     );
 
+    if ( gb_backup_smtp_configured() && empty( $report['health']['backup']['ok'] ) ) {
+        $report['backup_diagnosis'] = gb_backup_smtp_diagnose();
+    }
+
     $stamp = wp_date( 'j M Y, H:i' );
 
     /*
