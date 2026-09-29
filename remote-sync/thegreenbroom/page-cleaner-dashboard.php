@@ -126,7 +126,50 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
         </div>
     </div>
 
-    <div class="gb-container" style="margin-top:-50px; position:relative; z-index:10;">
+    <?php
+    /*
+     * A cleaner who cannot be booked has to be told, on the screen they
+     * actually open.
+     *
+     * The listing says "Not taking bookings" to customers and the manager
+     * dashboard shows the Connect status, so everybody could see this except
+     * the one person who can fix it. A cleaner signs up, completes their
+     * profile, gets verified, and then waits for work that cannot reach them,
+     * with nothing anywhere telling them why.
+     *
+     * Only shown while it is true, and it names the next action rather than
+     * the internal reason - "Stripe onboarding incomplete" is our vocabulary,
+     * not theirs.
+     */
+    $gb_block = function_exists('gb_cleaner_booking_block_reason')
+        ? gb_cleaner_booking_block_reason($cleaner_id)
+        : true;
+    ?>
+    <?php if ($gb_block !== true): ?>
+        <div class="gb-container" style="margin-top:-50px; position:relative; z-index:10;">
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:20px 22px; margin-bottom:20px;">
+                <div style="font-weight:800; color:#92400e; font-size:16px; margin-bottom:6px;">
+                    Customers cannot book you yet
+                </div>
+                <p style="margin:0 0 14px; color:#92400e; font-size:14px; line-height:1.65;">
+                    <?php if ($gb_block === 'not_connected'): ?>
+                        Your profile is live, but we have no way to pay you, so the Book Now button is hidden on your
+                        listing. Setting up payouts takes a few minutes and is done securely with Stripe, who handle
+                        the payments &mdash; we never see your bank details.
+                    <?php else: ?>
+                        You have started setting up payouts but Stripe still needs something from you. Until that is
+                        finished we cannot pay you, so the Book Now button stays hidden on your listing. Picking up
+                        where you left off usually takes a couple of minutes.
+                    <?php endif; ?>
+                </p>
+                <a href="<?php echo esc_url(home_url('/settings/')); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none;">
+                    <?php echo $gb_block === 'not_connected' ? 'Set up payouts' : 'Finish setting up payouts'; ?>
+                </a>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="gb-container" style="margin-top:<?php echo $gb_block !== true ? '0' : '-50px'; ?>; position:relative; z-index:10;">
         <div class="gb-grid-4 mb-20">
             <div class="gb-card text-center">
                 <span style="font-size:2rem; font-weight:800; color:var(--color-primary); display:block;">£<?php echo $earnings; ?></span>

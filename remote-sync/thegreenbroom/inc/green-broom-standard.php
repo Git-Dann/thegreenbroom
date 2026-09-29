@@ -187,3 +187,37 @@ function gb_standard_extract_list( $body ) {
         trim( substr( $body, $end ) )
     );
 }
+
+/**
+ * Is this eco product's public URL actually served by a page instead?
+ *
+ * The Standard exists twice: as a gb_eco_product, which is what puts a card on
+ * the Eco Products screen, and as the page the menu points at. Its
+ * eco-product permalinks 301 to that page, so the page is what the public
+ * reads - but the eco product is still fully editable under Manager OS >
+ * Eco Products, where rewriting it changes nothing anybody will ever see.
+ *
+ * Matching on the slug rather than naming the Standard specifically, because
+ * the trap is the shape, not the page: any eco product that gets superseded
+ * this way later has the same problem, and would otherwise sit there waiting
+ * to waste somebody's afternoon.
+ *
+ * @return WP_Post|null The page that supersedes it, if there is one.
+ */
+function gb_eco_product_superseded_by_page( $post ) {
+    if ( ! $post instanceof WP_Post || $post->post_type !== 'gb_eco_product' ) {
+        return null;
+    }
+
+    if ( $post->post_name === '' ) {
+        return null;
+    }
+
+    $page = get_page_by_path( $post->post_name );
+
+    if ( $page instanceof WP_Post && $page->post_status === 'publish' ) {
+        return $page;
+    }
+
+    return null;
+}

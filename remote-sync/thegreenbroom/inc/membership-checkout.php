@@ -631,6 +631,67 @@ function gb_membership_sync_subscription( $subscription_id ) {
 }
 
 /**
+ * Re-pull every membership Stripe knows about.
+ *
+ * One button for the screen rather than one on every row. A manager wanting
+ * "is this list current?" is asking about the list, not about a person, and
+ * thirty rows each carrying their own status line and their own button is
+ * noise on a screen whose whole job is to be read quickly.
+ *
+ * Capped so that a very long list cannot hang the request indefinitely - one
+ * Stripe call per member - and the cap is reported rather than silently
+ * truncating, so nobody is told the list is current when part of it was not
+ * looked at.
+ *
+ * @return array{checked: int, failed: int, capped: bool}
+ */
+function gb_membership_resync_all( $limit = 200 ) {
+    $limit = max( 1, (int) $limit );
+
+    $user_ids = get_users( array(
+        'meta_key'     => '_gb_stripe_subscription_id',
+        'meta_compare' => 'EXISTS',
+        'number'       => $limit + 1,
+        'fields'       => 'ID',
+    ) );
+
+    $capped = count( $user_ids ) > $limit;
+    $user_ids = array_slice( $user_ids, 0, $limit );
+
+    $checked = 0;
+    $failed  = 0;
+
+    foreach ( $user_ids as $user_id ) {
+        $result = gb_membership_resync_user( (int) $user_id );
+
+        if ( is_wp_error( $result ) ) {
+            $failed++;
+            continue;
+        }
+
+        $checked++;
+    }
+
+    update_option( 'gb_members_last_sync', array(
+        'at'      => time(),
+        'checked' => $checked,
+        'failed'  => $failed,
+        'by'      => get_current_user_id(),
+    ), false );
+
+    return array( 'checked' => $checked, 'failed' => $failed, 'capped' => $capped );
+}
+
+/**
+ * When the list was last checked against Stripe, or null if it never has been.
+ */
+function gb_membership_last_sync() {
+    $stored = get_option( 'gb_members_last_sync' );
+
+    return is_array( $stored ) && ! empty( $stored['at'] ) ? $stored : null;
+}
+
+/**
  * Pull a member's subscription from Stripe again and re-apply it.
  *
  * The webhook is what normally keeps this current, and when it is working

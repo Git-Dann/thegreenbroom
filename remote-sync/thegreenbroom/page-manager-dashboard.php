@@ -228,6 +228,19 @@ if (isset($_POST['gb_save_action'])) {
                 home_url('/manager-dashboard/')
             ));
             exit;
+        case 'sync_all_memberships':
+            if ( ! function_exists('gb_membership_resync_all') ) {
+                wp_die('Membership handling unavailable.');
+            }
+            $gb_sync_all = gb_membership_resync_all();
+            wp_redirect(add_query_arg([
+                'tab'     => 'members',
+                'msg'     => 'synced_all',
+                'checked' => (int) $gb_sync_all['checked'],
+                'failed'  => (int) $gb_sync_all['failed'],
+                'capped'  => $gb_sync_all['capped'] ? 1 : 0,
+            ], home_url('/manager-dashboard/')));
+            exit;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -505,12 +518,25 @@ if (isset($_POST['gb_save_action'])) {
         $post_data = [
             'ID'           => $pid,
             'post_title'   => isset($_POST['post_title']) ? sanitize_text_field(wp_unslash($_POST['post_title'])) : '',
-            'post_content' => isset($_POST['post_content']) ? wp_kses_post(wp_unslash($_POST['post_content'])) : '',
             'post_excerpt' => isset($_POST['post_excerpt']) ? sanitize_textarea_field(wp_unslash($_POST['post_excerpt'])) : '',
             'post_status'  => $eco_status,
             'post_type'    => 'gb_eco_product',
             'menu_order'   => isset($_POST['menu_order']) ? intval(wp_unslash($_POST['menu_order'])) : 0,
         ];
+
+        /*
+         * Absent is not empty.
+         *
+         * The editor hides the body for an eco product that is superseded by a
+         * page of the same slug, because editing it there changes nothing the
+         * public sees. Writing an unconditional '' would then have destroyed
+         * the stored copy on the first save of the title or the card
+         * description - the same shape as the write-only secrets on Settings,
+         * where a blank submission has to mean "unchanged".
+         */
+        if (isset($_POST['post_content'])) {
+            $post_data['post_content'] = wp_kses_post(wp_unslash($_POST['post_content']));
+        }
         if ($pid === 0) {
             unset($post_data['ID']);
             $pid = wp_insert_post($post_data);
@@ -887,6 +913,20 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
+        <?php if($msg == 'synced_all'):
+            $gb_n_checked = isset($_GET['checked']) ? absint($_GET['checked']) : 0;
+            $gb_n_failed  = isset($_GET['failed']) ? absint($_GET['failed']) : 0;
+            $gb_n_capped  = !empty($_GET['capped']); ?>
+            <div class="gb-card" style="margin-bottom: 20px; padding:15px; <?php echo $gb_n_failed ? 'background:#fffbeb; border-color:#fde68a; color:#92400e;' : 'background:#f0fdf4; border-color:#dcfce7; color:#166534;'; ?>">
+                Checked <strong><?php echo (int) $gb_n_checked; ?></strong> <?php echo $gb_n_checked === 1 ? 'membership' : 'memberships'; ?> against Stripe.
+                <?php if ($gb_n_failed): ?>
+                    <strong><?php echo (int) $gb_n_failed; ?></strong> could not be read &mdash; those rows still show what we had before.
+                <?php endif; ?>
+                <?php if ($gb_n_capped): ?>
+                    More were found than one run checks; press it again to continue.
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
         <?php if($msg == 'synced'): ?>
             <div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">
                 ✅ Asked Stripe again, and applied what it said.

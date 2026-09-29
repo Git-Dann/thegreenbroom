@@ -109,6 +109,38 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                 <textarea name="post_excerpt" class="gb-textarea" rows="3" style="height:auto;" placeholder="One or two lines, shown on the card on the Eco Products page."><?php echo esc_textarea($excerpt); ?></textarea>
             </div>
 
+            <?php
+            /*
+             * Some eco products are superseded by a page of the same slug - the
+             * Standard is - and their permalink redirects to it. Editing the copy
+             * here would change nothing anybody can see, so the editor says so and
+             * sends them to the thing that is actually published rather than
+             * quietly accepting the work.
+             */
+            $gb_eco_superseded = function_exists('gb_eco_product_superseded_by_page')
+                ? gb_eco_product_superseded_by_page($post)
+                : null;
+            ?>
+
+            <?php if ($gb_eco_superseded): ?>
+                <div class="gb-form-row">
+                    <label class="gb-label">Full guide</label>
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:16px 18px; color:#92400e; font-size:13px; line-height:1.65;">
+                        <strong>This one is written as a page, not here.</strong><br>
+                        <?php echo esc_html($post->post_title); ?> has its own page, and
+                        <?php echo esc_html(home_url('/' . $post->post_name . '/')); ?> shows that page rather than
+                        anything typed into this box. Wording changed here would not appear on the site.
+                        <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+                            <a class="gb-btn-small-os" href="<?php echo esc_url(add_query_arg(['tab' => 'pages', 'action' => 'edit', 'id' => (int) $gb_eco_superseded->ID], home_url('/manager-dashboard/'))); ?>">Edit the page instead</a>
+                            <a class="gb-btn-small-os" href="<?php echo esc_url(get_permalink($gb_eco_superseded)); ?>" target="_blank" rel="noopener">View it on the site</a>
+                        </div>
+                    </div>
+                    <p style="color:#94a3b8; font-size:12px; margin-top:8px;">
+                        The title and card description above still matter &mdash; they are what the card on the
+                        Eco Products screen shows, and the card links through to the page.
+                    </p>
+                </div>
+            <?php else: ?>
             <div class="gb-form-row">
                 <label class="gb-label">Full guide (optional)</label>
                 <?php
@@ -125,6 +157,7 @@ $action = isset($_GET['action']) ? sanitize_key(wp_unslash($_GET['action'])) : '
                     Leave this blank and the card links straight to the file or link instead.
                 </p>
             </div>
+            <?php endif; ?>
 
             <div class="gb-form-row" id="gb-eco-file">
                 <label class="gb-label">Document / file</label>
