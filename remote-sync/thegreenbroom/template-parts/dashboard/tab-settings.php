@@ -392,6 +392,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                         </span>
                                     </div>
                                 <?php endif; ?>
+                                <?php if (($gb_caps['designs'] ?? '') === 'site'): ?>
+                                    <div class="gb-mail-cap">
+                                        <span class="gb-mail-pill is-good">Site designs</span>
+                                        <span><strong>Email designs.</strong> The site fills in all seven branded designs itself (<code>email-templates/</code> in the theme) and Brevo delivers them, so every route sends exactly the same email. Brevo's stored templates are not used.</span>
+                                    </div>
+                                <?php endif; ?>
                                 <?php foreach ((array) ($gb_caps['templates'] ?? []) as $gb_tkey => $gb_t): ?>
                                     <div class="gb-mail-cap">
                                         <span class="gb-mail-pill is-<?php echo !empty($gb_t['ok']) ? 'good' : 'warn'; ?>"><?php echo !empty($gb_t['ok']) ? 'Ready' : 'Using site copy'; ?></span>

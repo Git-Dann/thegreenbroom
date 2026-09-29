@@ -967,9 +967,12 @@ function gb_brevo_capability_check( $account = null ) {
         }
     }
 
-    // Each template.
+    // Each template - only while Brevo's stored copies are the ones used.
     $caps['templates'] = array();
-    foreach ( gb_get_brevo_template_ids() as $key => $id ) {
+    $caps['designs']   = gb_email_use_brevo_templates()
+        ? 'brevo'
+        : 'site';
+    foreach ( gb_email_use_brevo_templates() ? gb_get_brevo_template_ids() : array() as $key => $id ) {
         $needs = function_exists( 'gb_email_template_required_params' ) ? gb_email_template_required_params( $key ) : array();
         $tpl   = gb_brevo_api_request( 'smtp/templates/' . absint( $id ) );
 

@@ -630,6 +630,12 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
         $template_id = 0;
     }
 
+    // The normal case now: the site's own copy of the design, delivered by
+    // Brevo as HTML. See gb_email_use_brevo_templates() for why.
+    if ( $local_html !== '' && ! gb_email_use_brevo_templates() ) {
+        $template_id = 0;
+    }
+
     if ( ! gb_is_brevo_configured() || empty( $recipients ) || absint( $template_id ) < 1 ) {
         gb_outbox_hand_to_wp_mail( 0, $kind, [
             'to'      => $to,
@@ -958,13 +964,15 @@ function gb_handle_brevo_test_connection() {
         ];
         $all_ok = ! empty( $health['brevo']['ok'] ) && ( ! empty( $health['backup']['ok'] ) || empty( $health['backup']['configured'] ) );
 
-        if ( isset( $health['caps'] ) ) {
+        if ( isset( $health['caps'] ) && ! empty( $health['caps']['templates'] ) ) {
             $bad_templates = array_filter( (array) $health['caps']['templates'], function ( $t ) {
                 return empty( $t['ok'] );
             } );
             $lines[] = $bad_templates
                 ? count( $bad_templates ) . ' of ' . count( $health['caps']['templates'] ) . ' Brevo templates need attention; the site sends its own copy of those.'
                 : 'All ' . count( $health['caps']['templates'] ) . ' Brevo templates ready.';
+        }
+        if ( isset( $health['caps'] ) ) {
             if ( empty( $health['caps']['domain']['ok'] ) ) {
                 $lines[] = $health['caps']['domain']['message'];
                 $all_ok  = false;

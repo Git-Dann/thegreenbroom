@@ -1,19 +1,23 @@
 # Branded email templates
 
 One file per kind of email, named after its key in `gb_get_brevo_template_ids()`
-(`inc/cleaner-profiles.php`). They are used twice:
+(`inc/cleaner-profiles.php`).
 
-1. **In Brevo**, pasted into Brevo's HTML editor as templates. The site sends
-   Brevo the template id and the parameters, and Brevo fills them in.
-2. **By the site itself** (`inc/email-render.php`), whenever Brevo is not the
-   one sending: Brevo refusing the site, a template missing in Brevo, or the
-   backup mailbox and the web server doing the work. The same parameters are
-   filled in here, so an email looks the same whichever route it takes.
+**These files are the emails.** The site fills them in itself
+(`inc/email-render.php`) and hands the finished HTML to whichever route is
+sending: Brevo, the backup mailbox or the web server. So every route sends
+exactly the same email, and changing a design means changing it here, once.
 
-Because of (2), **keep these files and Brevo's copies in step.** Change the
-wording here, then paste the file into the matching Brevo template.
-Settings → Email & delivery checks each Brevo template exists, is active and
-uses the link parameter the site sends.
+Brevo's stored templates are no longer used (see
+`gb_email_use_brevo_templates()`). Its template engine escaped its own
+`linebreaksbr` filter, so multi-paragraph support replies arrived with
+`<br /><br />` printed in them, and its copies drifted from these. The ids in
+the table are kept so they can be switched back on with that filter.
+
+The logo is `uploads/2026/09/tgb-email-logo.png` (from `deploy-extras/`): the
+wordmark on its own white card, because Gmail's dark mode recolours
+backgrounds and text but not images, and the plain transparent logo turned
+into dark grey on black.
 
 | File | Brevo id | Parameters |
 | --- | --- | --- |
@@ -25,7 +29,7 @@ uses the link parameter the site sends.
 | `manager_message.html` | 6 | `context`, `sender_name`, `sender_email`, `subject`, `message`, `dashboard_url` |
 | `subscription_expired.html` | 7 | `first_name`, `support_url` |
 
-Only this much of Brevo's template language is understood locally:
+Only this much of Brevo's template language is understood:
 `{{ params.name }}`, `{{ params.name|default:"text" }}` and
 `{{ params.name|linebreaksbr }}`. Blank parameters are not sent, so the
 `default` text shows instead of a gap.

@@ -32,6 +32,23 @@ function gb_email_template_dir() {
 }
 
 /**
+ * Send Brevo's stored copy of each template, or the site's own?
+ *
+ * The site's own, since 29 September. Brevo's template engine escapes the
+ * output of its own linebreaksbr filter, so every support reply and manager
+ * message with more than one paragraph arrived with "<br /><br />" printed in
+ * the middle of it. Its copies also drift: they hold whatever was pasted in
+ * last, and have to be re-pasted by hand whenever a design changes. With the
+ * site rendering every design, there is one copy of each, in the theme, and
+ * every route sends exactly the same email. Brevo still delivers them.
+ *
+ * Return true from this filter to go back to Brevo's stored templates.
+ */
+function gb_email_use_brevo_templates() {
+    return (bool) apply_filters( 'gb_email_use_brevo_templates', false );
+}
+
+/**
  * @return string The finished HTML, or '' if there is no local copy of this one.
  */
 function gb_render_local_email_template( $key, array $params = array() ) {
@@ -73,11 +90,18 @@ function gb_render_local_email_template( $key, array $params = array() ) {
                 return esc_url( $value );
             }
 
+            /*
+             * Braces as entities: the finished HTML goes to Brevo, whose
+             * template engine would otherwise treat somebody typing "{{" in a
+             * message as the start of a placeholder and blank it out.
+             */
+            $text = str_replace( array( '{', '}' ), array( '&#123;', '&#125;' ), esc_html( $value ) );
+
             if ( strpos( $filters, 'linebreaksbr' ) !== false ) {
-                return nl2br( esc_html( $value ) );
+                return nl2br( $text );
             }
 
-            return esc_html( $value );
+            return $text;
         },
         $html
     );
