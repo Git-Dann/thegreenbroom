@@ -115,7 +115,26 @@ if (isset($_POST['gb_manager_action']) && sanitize_key(wp_unslash($_POST['gb_man
     exit;
 }
 
-if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
+/*
+ * Every save on this screen comes through here.
+ *
+ * This used to also require post_id, which every editor form on the dashboard
+ * happens to send because it is editing a post. The two membership actions are
+ * not: a membership is user meta, so they send gb_member_user and no post_id,
+ * and the condition was false for both. The handler never ran. Pressing Save
+ * or Sync from Stripe on the Members tab re-rendered the page and did nothing
+ * whatsoever - no error, no message, no change.
+ *
+ * I added save_membership without ever pressing the button, and then built
+ * Sync from Stripe on top of the same broken door and spent an afternoon
+ * looking for the fault inside Stripe.
+ *
+ * The action alone is the trigger now. The nonce is still checked first, and
+ * each case still validates its own target: the post-based ones reject a
+ * missing or wrong-typed post exactly as before, and the user-meta ones return
+ * before reaching that check.
+ */
+if (isset($_POST['gb_save_action'])) {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
         $redirect_args = [
             'tab'    => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview',
@@ -129,7 +148,9 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
         exit;
     }
 
-    $pid = intval($_POST['post_id']);
+    // Absent for the membership actions, which is now allowed; the cases that
+    // need a real post still refuse a zero.
+    $pid = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
     $save_action = sanitize_key(wp_unslash($_POST['gb_save_action']));
 
     switch ($save_action) {
