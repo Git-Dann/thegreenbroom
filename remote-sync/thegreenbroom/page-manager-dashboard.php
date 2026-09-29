@@ -269,6 +269,49 @@ if (isset($_POST['gb_save_action'])) {
                 'capped'  => $gb_sync_all['capped'] ? 1 : 0,
             ], home_url('/manager-dashboard/')));
             exit;
+        case 'resend_email':
+        case 'dismiss_email':
+        case 'unblock_email':
+            /*
+             * The email log on Settings -> Email. Nothing here is post meta,
+             * so it returns before the post-target validation, like the
+             * membership actions.
+             */
+            if ( ! function_exists('gb_outbox_retry_one') ) {
+                wp_die('Email log unavailable.');
+            }
+            $gb_log_id = isset($_POST['gb_email_log_id']) ? absint($_POST['gb_email_log_id']) : 0;
+            if ($save_action === 'unblock_email') {
+                /*
+                 * Brevo keeps a list of addresses it will never send to again
+                 * after one bounce or complaint. Take this one off it, and if
+                 * the email has not already gone another way, send it now.
+                 */
+                $gb_row = gb_outbox_get($gb_log_id);
+                $gb_unblocked = $gb_row ? gb_brevo_unblock($gb_row->to_email) : new WP_Error('gb_no_row', 'That email is no longer in the log.');
+                if (is_wp_error($gb_unblocked)) {
+                    $gb_notice = ['error', 'Brevo would not unblock it: ' . $gb_unblocked->get_error_message()];
+                } else {
+                    gb_outbox_update($gb_log_id, ['delivery' => '']);
+                    $gb_resent = ($gb_row->status !== 'sent' || $gb_row->route === 'brevo') && !empty($gb_row->payload) ? gb_outbox_retry_one($gb_log_id) : false;
+                    $gb_notice = ['ok', $gb_row->to_email . ' is off Brevo\'s block list' . ($gb_resent ? ' and the email has been sent again.' : '. Future emails to it will go through Brevo as normal.')];
+                }
+            } elseif ($save_action === 'dismiss_email') {
+                gb_outbox_update($gb_log_id, ['status' => 'dismissed', 'payload' => null, 'next_attempt_at' => null]);
+                $gb_notice = ['ok', 'Cleared from the list.'];
+            } else {
+                $gb_resent = gb_outbox_retry_one($gb_log_id);
+                $gb_row    = gb_outbox_get($gb_log_id);
+                $gb_notice = $gb_resent
+                    ? ['ok', 'Sent again' . ($gb_row && $gb_row->route ? ' by ' . gb_outbox_route_label($gb_row->route) : '') . '.']
+                    : ['error', 'Still could not send it. It stays in the queue; the reason is in the log below.'];
+            }
+            wp_safe_redirect(gb_get_manager_settings_url([
+                'section'      => 'email',
+                'brevo_notice' => $gb_notice[0],
+                'brevo_msg'    => $gb_notice[1],
+            ]));
+            exit;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -301,6 +344,7 @@ if (isset($_POST['gb_save_action'])) {
             // submission means "unchanged", never "clear it".
             $gb_write_only_secrets = [
                 '_gb_brevo_api_key',
+                '_gb_backup_smtp_pass',
                 '_gb_stripe_test_secret_key',
                 '_gb_stripe_test_webhook_secret',
                 '_gb_stripe_test_connect_webhook_secret',
@@ -314,6 +358,22 @@ if (isset($_POST['gb_save_action'])) {
                 '_gb_stripe_connect_webhook_secret',
             ];
             if (in_array($key, $gb_write_only_secrets, true) && trim((string) wp_unslash($value)) === '') {
+                continue;
+            }
+            /*
+             * Secrets are stored exactly as typed.
+             *
+             * Everything else here goes through wp_kses_post, which is right
+             * for page content and wrong for a password: it turns "&" into
+             * "&amp;", deletes anything between < and >, and update_post_meta
+             * then strips backslashes. A mailbox password with any of those
+             * in it was saved as a different password, and the backup
+             * mailbox could never sign in. wp_slash() so update_post_meta's
+             * own unslash hands back the original. They are only ever sent
+             * to the service they belong to, never printed on a page.
+             */
+            if (in_array($key, $gb_write_only_secrets, true)) {
+                update_post_meta($pid, $key, wp_slash((string) wp_unslash($value)));
                 continue;
             }
             update_post_meta($pid, $key, gb_manager_sanitize_meta_value($value));
@@ -940,6 +1000,26 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
     </nav>
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
+        <?php
+        /*
+         * Email trouble is shown on every screen, not just Settings. The
+         * outage on 29 September was only found because the person it
+         * happened to said so; this is here so a manager sees it first.
+         */
+        $gb_mail_flag = function_exists('gb_outbox_needs_attention') ? gb_outbox_needs_attention() : ['any' => false];
+        if (!empty($gb_mail_flag['any'])):
+            $gb_mail_bits = [];
+            if (!empty($gb_mail_flag['brevo_down'])) { $gb_mail_bits[] = 'Brevo is refusing the site'; }
+            if (!empty($gb_mail_flag['backup_down'])) { $gb_mail_bits[] = 'the backup mailbox will not sign in'; }
+            if (!empty($gb_mail_flag['brevo_limited'])) { $gb_mail_bits[] = 'Brevo cannot send everything it should'; }
+            if (!empty($gb_mail_flag['dead'])) { $gb_mail_bits[] = (int) $gb_mail_flag['dead'] . ' email' . ((int) $gb_mail_flag['dead'] === 1 ? '' : 's') . ' not delivered'; }
+            if (!empty($gb_mail_flag['retrying'])) { $gb_mail_bits[] = (int) $gb_mail_flag['retrying'] . ' waiting to retry'; }
+            ?>
+            <div class="gb-card" style="margin-bottom:20px; padding:14px 16px; background:#fffbeb; border-color:#fde68a; color:#92400e; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+                <span><strong>Email needs a look:</strong> <?php echo esc_html(ucfirst(implode(', ', $gb_mail_bits))); ?>.</span>
+                <a href="<?php echo esc_url(function_exists('gb_get_manager_settings_url') ? gb_get_manager_settings_url(['section' => 'email']) : home_url('/manager-dashboard/?tab=settings&section=email')); ?>" class="gb-btn-small-os">Open email health</a>
+            </div>
+        <?php endif; ?>
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
         <?php if($msg == 'verified_by_hand'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Account verified by hand. They can sign in and carry on now.</div><?php endif; ?>
         <?php if($msg == 'synced_all'):

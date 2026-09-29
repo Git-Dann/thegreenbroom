@@ -26,6 +26,10 @@ on:
         description: "Temporary FastHosts SSH password (blank = use key auth via SSH_PRIVATE_KEY)"
         required: false
         default: ""
+      email_test_to:
+        description: "Optional: after deploying, send test emails to this address and print what each route did"
+        required: false
+        default: ""
 
 jobs:
   deploy:
@@ -125,3 +129,37 @@ jobs:
               remote-sync/greenbroom-core/ \
               "$SSH_LOGIN@$HOST:plugins/greenbroom-core/"
           fi
+
+      # Optional email self-test, after everything is deployed.
+      #
+      # Sends real test emails to email_test_to through the live delivery
+      # chain and prints what happened on each route. Locked by these same SSH
+      # credentials: a one-time random token is left on the server over SSH and
+      # posted to the site, which deletes it on first use and refuses it after
+      # ten minutes (see inc/email-selftest.php).
+      - name: Email self-test
+        if: inputs.email_test_to != ''
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+          HOST: ${{ steps.conn.outputs.host }}
+          SSH_LOGIN: ${{ steps.conn.outputs.user }}
+          TO: ${{ inputs.email_test_to }}
+        run: |
+          TOKEN="$(openssl rand -hex 24)"
+          echo "::add-mask::$TOKEN"
+          printf "<?php return array( 'token' => '%s' );\n" "$TOKEN" > .gb-selftest-token.php
+          if [ "${{ steps.conn.outputs.use_password }}" = "true" ]; then
+            sshpass -e rsync -az -e "ssh -p 22 -o StrictHostKeyChecking=no" \
+              .gb-selftest-token.php "$SSH_LOGIN@$HOST:themes/thegreenbroom/.gb-selftest-token.php"
+          else
+            rsync -az -e "ssh -i ~/.ssh/greenbroom -p 22" \
+              .gb-selftest-token.php "$SSH_LOGIN@$HOST:themes/thegreenbroom/.gb-selftest-token.php"
+          fi
+          rm -f .gb-selftest-token.php
+          code=$(curl -sS -o result.json -w '%{http_code}' -X POST \
+            --data-urlencode "token=$TOKEN" --data-urlencode "to=$TO" \
+            "https://thegreenbroom.uk/?gb_email_selftest=1")
+          echo "HTTP $code"
+          cat result.json
+          echo
+          [ "$code" = "200" ]
