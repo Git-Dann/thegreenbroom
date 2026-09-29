@@ -815,7 +815,23 @@ add_filter( 'pre_wp_mail', 'gb_send_wp_mail_through_brevo', 10, 2 );
 function gb_redirect_manager_settings_with_brevo_notice( $status, $message ) {
     $status = $status === 'ok' ? 'ok' : 'error';
     $message = sanitize_text_field( (string) $message );
-    wp_safe_redirect( gb_get_manager_settings_url( [ 'brevo_notice' => $status, 'brevo_msg' => $message ] ) );
+
+    /*
+     * Back to the Email section, not wherever Settings happens to open.
+     *
+     * This asked for tab=settings and no section, so testing the email
+     * connection landed you on Stripe credentials, which says nothing about
+     * email, with the result rendered on a screen you were not looking at.
+     * The test may well have passed and told you nothing either way.
+     *
+     * Exactly the same mistake as the plan provisioning button, which used to
+     * land on Stripe credentials too.
+     */
+    wp_safe_redirect( gb_get_manager_settings_url( [
+        'section'      => 'email',
+        'brevo_notice' => $status,
+        'brevo_msg'    => $message,
+    ] ) );
     exit;
 }
 
@@ -863,6 +879,49 @@ function gb_handle_brevo_test_connection() {
     gb_redirect_manager_settings_with_brevo_notice( 'ok', 'Brevo connection verified for ' . $account_name . '.' );
 }
 add_action( 'admin_post_gb_brevo_test', 'gb_handle_brevo_test_connection' );
+
+/**
+ * The same handler, reachable without going through /wp-admin/.
+ *
+ * This site redirects anybody who is not a full administrator away from
+ * /wp-admin/, so a manager pressing Test Brevo Connection or Send Test Email
+ * was bounced back to their dashboard before the handler ran: silently, with
+ * no error and nothing happening. Only an administrator could ever test email.
+ *
+ * Same fix as the Connect buttons and plan provisioning, which had the same
+ * fault for the same reason. The wp-admin lockout is untouched; the handler
+ * still checks login, capability and its own nonce. Only the door has changed,
+ * and the admin_post hook stays registered so any link already in circulation
+ * keeps working.
+ */
+function gb_brevo_test_url( $mode ) {
+    return wp_nonce_url(
+        add_query_arg(
+            [
+                'gb_brevo_action' => 'test',
+                'mode'            => sanitize_key( $mode ),
+            ],
+            home_url( '/' )
+        ),
+        'gb_brevo_test'
+    );
+}
+
+function gb_handle_brevo_test_front_end_request() {
+    if ( empty( $_GET['gb_brevo_action'] ) ) {
+        return;
+    }
+
+    if ( sanitize_key( wp_unslash( $_GET['gb_brevo_action'] ) ) !== 'test' ) {
+        return;
+    }
+
+    // Ends in a redirect carrying a result; never serve it from a page cache.
+    nocache_headers();
+
+    gb_handle_brevo_test_connection();
+}
+add_action( 'init', 'gb_handle_brevo_test_front_end_request' );
 
 function gb_is_email_verification_enabled() {
     $settings = gb_get_email_settings();
