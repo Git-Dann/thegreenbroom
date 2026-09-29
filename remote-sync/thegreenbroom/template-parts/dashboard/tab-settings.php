@@ -631,7 +631,9 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <?php else: ?>
                         <?php if (!empty($stripe_connect_missing)): ?>
                             <div style="margin:0 0 14px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:12.5px; line-height:1.6;">
-                                The Connect webhook secret is not set. Nothing needs it yet &mdash; it is only read once cleaners are being paid out through Connect, and it comes from a second webhook endpoint in Stripe, not the one above.
+                                The Connect webhook secret is not set. It is only read once cleaners are being paid out, and it comes from a second webhook endpoint in Stripe rather than the one above.
+                                <br><br>
+                                There are three because Stripe will not let one endpoint carry both its old and new event formats. The main endpoint takes payments and subscriptions, a second takes connected-account events, and a third takes the Accounts v2 events. Each has its own signing secret, and the site tries all three against every message it receives.
                             </div>
                         <?php endif; ?>
                         <div style="margin:0 0 14px; padding:10px 12px; border:1px solid #dcfce7; border-radius:8px; background:#f0fdf4; color:#166534; font-size:13px;">
@@ -671,6 +673,10 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                 <label class="gb-label">Test Connect Webhook Secret</label>
                                 <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
+                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                                <label class="gb-label">Test Accounts v2 Webhook Secret</label>
+                                <input type="password" name="_gb_stripe_test_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                            </div>
                         </div>
 
                         <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
@@ -690,6 +696,10 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
                                 <label class="gb-label">Live Connect Webhook Secret</label>
                                 <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                            </div>
+                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                                <label class="gb-label">Live Accounts v2 Webhook Secret</label>
+                                <input type="password" name="_gb_stripe_live_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
                             </div>
                         </div>
                     </div>
