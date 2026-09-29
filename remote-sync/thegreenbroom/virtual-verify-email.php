@@ -174,7 +174,28 @@ get_header();
                     <button type="submit" name="gb_resend_email_verification" value="1" class="gb-verify-btn gb-verify-btn-primary">Resend verification email</button>
                     <a href="<?php echo esc_url( wp_logout_url( home_url( '/login' ) ) ); ?>" class="gb-verify-btn">Log out</a>
                 </form>
-                <p class="gb-verify-footnote">No message yet? Check spam, promotions, or corporate filters. Resend is rate-limited to avoid abuse.</p>
+                <p class="gb-verify-footnote">
+                    No message yet? Check spam, promotions, or corporate filters. Resend is rate-limited to avoid abuse.
+                </p>
+                <?php
+                /*
+                 * A resend button is no use to somebody whose last send failed
+                 * outright - pressing it again is the one thing they have
+                 * already tried. Give them a way through that does not depend
+                 * on email working at all, because a signup that dead-ends is
+                 * a lost cleaner or a lost customer.
+                 */
+                $gb_verify_failed = is_user_logged_in()
+                    ? (string) get_user_meta( get_current_user_id(), 'gb_email_verification_last_error', true )
+                    : '';
+                ?>
+                <?php if ( $gb_verify_failed !== '' ) : ?>
+                    <p class="gb-verify-footnote" style="margin-top:14px;">
+                        Still nothing after a resend? That is our end, not yours.
+                        <a href="<?php echo esc_url( $contact_url ); ?>">Tell us</a> and we will confirm your account by
+                        hand so you can get on with it.
+                    </p>
+                <?php endif; ?>
             <?php else : ?>
                 <div class="gb-verify-actions">
                     <a href="<?php echo esc_url( $continue_url ); ?>" class="gb-verify-btn gb-verify-btn-primary"><?php echo esc_html( $continue_label ); ?></a>

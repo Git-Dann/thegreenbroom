@@ -232,6 +232,31 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <?php if ($brevo_enabled && $brevo_key_present): ?>Enabled and ready to test.<?php elseif ($brevo_enabled): ?>Enabled, but the API key is missing.<?php else: ?>Not connected yet. Add the API key and enable Brevo below.<?php endif; ?>
                         Verification, support, booking, password reset, and other site emails will use Brevo when it is enabled.
                     </div>
+                    <?php
+                    /*
+                     * The last thing Brevo actually refused, if anything.
+                     *
+                     * A bad API key, a template that does not exist in the
+                     * account, and an unverified sender address all look the
+                     * same from outside and need completely different fixes.
+                     * Brevo's own message is the diagnosis, and it was being
+                     * thrown away.
+                     */
+                    $gb_brevo_fail = get_option('gb_brevo_last_error');
+                    if (is_array($gb_brevo_fail) && !empty($gb_brevo_fail['message'])): ?>
+                        <div style="margin:0 0 18px; padding:12px 14px; border:1px solid #fecaca; border-radius:8px; background:#fef2f2; color:#991b1b; font-size:13px; line-height:1.6;">
+                            <strong>Brevo last refused to send an email.</strong><br>
+                            <span style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px;"><?php echo esc_html($gb_brevo_fail['message']); ?></span>
+                            <?php if (!empty($gb_brevo_fail['at'])): ?>
+                                <br><span style="color:#b45309;"><?php echo esc_html(date_i18n('j M Y, H:i', (int) $gb_brevo_fail['at'])); ?></span>
+                            <?php endif; ?>
+                            <br><br>
+                            Emails are still going out &mdash; the site sends them itself when Brevo will not &mdash; but they
+                            are plain rather than branded until this is sorted. Press <strong>Send test email</strong> once
+                            you have fixed it and this will clear.
+                        </div>
+                    <?php endif; ?>
+
                     <?php if ($brevo_notice !== '' && $brevo_msg !== ''): ?>
                         <div style="margin:0 0 18px; padding:10px 12px; border:1px solid <?php echo $brevo_notice === 'ok' ? '#dcfce7' : '#fecaca'; ?>; border-radius:8px; background:<?php echo $brevo_notice === 'ok' ? '#f0fdf4' : '#fef2f2'; ?>; color:<?php echo $brevo_notice === 'ok' ? '#166534' : '#991b1b'; ?>; font-size:13px;">
                             <?php echo esc_html($brevo_msg); ?>
