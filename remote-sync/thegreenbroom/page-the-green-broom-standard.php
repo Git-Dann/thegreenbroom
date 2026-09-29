@@ -29,21 +29,39 @@ $gb_std_lead  = $gb_std_post ? trim( (string) $gb_std_post->post_excerpt ) : '';
 // and paragraph wrapping behave exactly as they would anywhere else.
 $gb_std_html = apply_filters( 'the_content', $gb_std_body );
 
-/*
- * Split on the writer's own <h2>s. PREG_SPLIT_DELIM_CAPTURE keeps the heading
- * text, so the result is: [intro, heading, body, heading, body, ...]. Anything
- * before the first heading is the intro and is shown as the lead paragraph.
- */
-$gb_std_parts = preg_split( '/<h2[^>]*>(.*?)<\/h2>/is', $gb_std_html, -1, PREG_SPLIT_DELIM_CAPTURE );
-$gb_std_intro = trim( (string) array_shift( $gb_std_parts ) );
+// Split by the shared helper, so the image a manager attaches to the third
+// section in Manager OS is the one that renders beside the third section here.
+list( $gb_std_intro, $gb_std_sections ) = gb_standard_split_sections( $gb_std_html );
 
-$gb_std_sections = array();
-for ( $i = 0; $i < count( $gb_std_parts ); $i += 2 ) {
-    $gb_std_sections[] = array(
-        'title' => isset( $gb_std_parts[ $i ] ) ? wp_strip_all_tags( $gb_std_parts[ $i ] ) : '',
-        'body'  => isset( $gb_std_parts[ $i + 1 ] ) ? trim( (string) $gb_std_parts[ $i + 1 ] ) : '',
-    );
+/*
+ * Each section is laid out from what it actually contains, rather than every
+ * one of them getting an identical box:
+ *
+ *   - an image attached to it  -> two columns, sides alternating down the page
+ *   - a list and no image      -> the list as a grid of cards, full width
+ *   - neither                  -> a centred prose band
+ *
+ * So the page has a rhythm without anyone having to choose a layout, and
+ * attaching an image is the one control that changes it.
+ */
+foreach ( $gb_std_sections as $gb_i => $gb_section ) {
+    $gb_img = (string) get_post_meta( get_the_ID(), '_gb_std_img_' . ( $gb_i + 1 ), true );
+    list( $gb_rest, $gb_items ) = gb_standard_extract_list( $gb_section['body'] );
+
+    $gb_std_sections[ $gb_i ]['image'] = $gb_img;
+    $gb_std_sections[ $gb_i ]['rest']  = $gb_rest;
+    $gb_std_sections[ $gb_i ]['items'] = $gb_items;
+
+    if ( $gb_img !== '' ) {
+        $gb_std_sections[ $gb_i ]['layout'] = 'split';
+    } elseif ( ! empty( $gb_items ) ) {
+        $gb_std_sections[ $gb_i ]['layout'] = 'grid';
+    } else {
+        $gb_std_sections[ $gb_i ]['layout'] = 'prose';
+    }
 }
+
+$gb_std_hero_img = (string) get_post_meta( get_the_ID(), '_gb_std_hero_img', true );
 
 // No excerpt: promote the opening paragraph into the hero rather than leaving
 // the hero bare.
@@ -123,6 +141,29 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-card ol li { margin-bottom:10px; line-height:1.7; }
     #gb-standard .gb-std-card strong { color:#0f172a; }
 
+    /* Two columns, image one side, copy the other. */
+    #gb-standard .gb-std-split { display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+    #gb-standard .gb-std-split.is-flipped .gb-std-split-media { order:-1; }
+    #gb-standard .gb-std-split-media img { width:100%; display:block; border-radius:16px; box-shadow:0 18px 40px -12px rgba(15,23,42,.28); object-fit:cover; aspect-ratio:4 / 3; }
+    #gb-standard .gb-std-split h2 { text-align:left; margin-left:0; }
+    #gb-standard .gb-std-split h2::after { margin-left:0; }
+    #gb-standard .gb-std-split .gb-std-copy > *:first-child { margin-top:0; }
+
+    /* A list of checks reads better as a grid of small cards. */
+    #gb-standard .gb-std-tiles { display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; margin-top:26px; }
+    #gb-standard .gb-std-tile { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:24px 24px 24px 58px; position:relative; box-shadow:0 6px 20px rgba(15,23,42,.04); line-height:1.65; }
+    #gb-standard .gb-std-tile::before { content:"✓"; position:absolute; left:22px; top:22px; width:24px; height:24px; border-radius:50%; background:#e8f5e9; color:#1b5e20; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; }
+    #gb-standard .gb-std-tile strong { display:block; color:#0f172a; margin-bottom:4px; }
+
+    /* Nothing to sit beside: centred prose on a tinted band. */
+    #gb-standard .gb-std-prose { max-width:760px; margin:0 auto; text-align:center; }
+    #gb-standard .gb-std-prose p { margin:0 0 16px; line-height:1.8; font-size:1.05rem; }
+    #gb-standard .gb-std-prose p:last-child { margin-bottom:0; }
+
+    #gb-standard .gb-std-hero.has-image { background-size:cover; background-position:center; position:relative; }
+    #gb-standard .gb-std-hero.has-image::before { content:""; position:absolute; inset:0; background:linear-gradient(135deg, rgba(27,94,32,.92) 0%, rgba(46,125,50,.88) 100%); }
+    #gb-standard .gb-std-hero.has-image .gb-std-container { position:relative; z-index:1; }
+
     #gb-standard .gb-std-cta { padding:70px 20px; text-align:center; }
     #gb-standard .gb-std-cta-inner { background:#1b5e20; color:#fff; border-radius:24px; padding:64px 40px; max-width:1000px; margin:0 auto; box-shadow:0 20px 40px -10px rgba(27,94,32,.2); }
     #gb-standard .gb-std-cta h2 { color:#fff; font-size:clamp(1.7rem, 4vw, 2.6rem); margin:0 0 14px; font-weight:800; }
@@ -131,17 +172,27 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-btn-white { background:#fff; color:#1b5e20 !important; }
     #gb-standard .gb-std-btn-ghost { border:2px solid rgba(255,255,255,.7); color:#fff !important; }
 
+    @media (max-width:900px) {
+        #gb-standard .gb-std-split { grid-template-columns:1fr; gap:32px; }
+        /* Image above the copy on every one of them, rather than leapfrogging
+           depending on which side it was on. */
+        #gb-standard .gb-std-split.is-flipped .gb-std-split-media { order:0; }
+        #gb-standard .gb-std-split h2, #gb-standard .gb-std-split h2::after { text-align:center; margin-left:auto; margin-right:auto; }
+        #gb-standard .gb-std-tiles { grid-template-columns:1fr; gap:16px; }
+    }
+
     @media (max-width:640px) {
         #gb-standard .gb-std-hero { padding:56px 0; }
         #gb-standard .gb-std-section { padding:44px 0; }
         #gb-standard .gb-std-card { padding:24px 20px; }
+        #gb-standard .gb-std-tile { padding:20px 20px 20px 52px; }
         #gb-standard .gb-std-cta-inner { padding:44px 22px; }
     }
 </style>
 
 <main id="gb-standard">
 
-    <section class="gb-std-hero">
+    <section class="gb-std-hero<?php echo $gb_std_hero_img !== '' ? ' has-image' : ''; ?>"<?php echo $gb_std_hero_img !== '' ? ' style="background-image:url(' . esc_url( $gb_std_hero_img ) . ')"' : ''; ?>>
         <div class="gb-std-container">
             <h1><?php the_title(); ?></h1>
             <?php if ( $gb_std_lead !== '' ) : ?>
@@ -164,11 +215,47 @@ $gb_std_join     = get_page_by_path( 'join' );
             </div>
         </section>
     <?php else : ?>
-        <?php foreach ( $gb_std_sections as $gb_std_section ) : ?>
+        <?php foreach ( $gb_std_sections as $gb_idx => $gb_std_section ) : ?>
             <section class="gb-std-section">
                 <div class="gb-std-container">
-                    <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
-                    <div class="gb-std-card"><?php echo wp_kses_post( $gb_std_section['body'] ); ?></div>
+
+                    <?php if ( $gb_std_section['layout'] === 'split' ) : ?>
+                        <?php // Sides alternate down the page so two in a row never match. ?>
+                        <div class="gb-std-split<?php echo $gb_idx % 2 ? ' is-flipped' : ''; ?>">
+                            <div>
+                                <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
+                                <div class="gb-std-card gb-std-copy">
+                                    <?php echo wp_kses_post( $gb_std_section['rest'] ); ?>
+                                    <?php if ( ! empty( $gb_std_section['items'] ) ) : ?>
+                                        <ul>
+                                            <?php foreach ( $gb_std_section['items'] as $gb_item ) : ?>
+                                                <li><?php echo wp_kses_post( $gb_item ); ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="gb-std-split-media">
+                                <img src="<?php echo esc_url( $gb_std_section['image'] ); ?>" alt="" loading="lazy">
+                            </div>
+                        </div>
+
+                    <?php elseif ( $gb_std_section['layout'] === 'grid' ) : ?>
+                        <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
+                        <?php if ( $gb_std_section['rest'] !== '' ) : ?>
+                            <div class="gb-std-prose"><?php echo wp_kses_post( $gb_std_section['rest'] ); ?></div>
+                        <?php endif; ?>
+                        <div class="gb-std-tiles">
+                            <?php foreach ( $gb_std_section['items'] as $gb_item ) : ?>
+                                <div class="gb-std-tile"><?php echo wp_kses_post( $gb_item ); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+
+                    <?php else : ?>
+                        <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
+                        <div class="gb-std-prose"><?php echo wp_kses_post( $gb_std_section['body'] ); ?></div>
+                    <?php endif; ?>
+
                 </div>
             </section>
         <?php endforeach; ?>

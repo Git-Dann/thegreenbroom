@@ -123,3 +123,57 @@ function gb_ensure_green_broom_standard_page() {
 
     update_option( 'gb_green_broom_standard_created', 1, false );
 }
+
+/**
+ * Split the Standard's copy into its sections, on the writer's own <h2>s.
+ *
+ * Shared by the template and by the Manager OS editor, so the image field a
+ * manager fills in is labelled with the heading it will actually sit beside.
+ * If the two split differently, the fourth image would appear against the
+ * third section and nobody would be able to work out why.
+ *
+ * @return array{0: string, 1: array<int, array{title: string, body: string}>}
+ *         The copy before the first heading, then the sections.
+ */
+function gb_standard_split_sections( $html ) {
+    $html  = (string) $html;
+    $parts = preg_split( '/<h2[^>]*>(.*?)<\/h2>/is', $html, -1, PREG_SPLIT_DELIM_CAPTURE );
+    $intro = trim( (string) array_shift( $parts ) );
+
+    $sections = array();
+
+    for ( $i = 0; $i < count( $parts ); $i += 2 ) {
+        $sections[] = array(
+            'title' => isset( $parts[ $i ] ) ? trim( wp_strip_all_tags( $parts[ $i ] ) ) : '',
+            'body'  => isset( $parts[ $i + 1 ] ) ? trim( (string) $parts[ $i + 1 ] ) : '',
+        );
+    }
+
+    return array( $intro, $sections );
+}
+
+/**
+ * Pull the first list out of a section's body.
+ *
+ * A section that is mostly a list reads far better as a grid of small cards
+ * than as one long column of ticks, but only the list should move - the
+ * paragraphs around it stay where the writer put them.
+ *
+ * @return array{0: string, 1: array<int, string>} The body without that list,
+ *         and its items as raw HTML.
+ */
+function gb_standard_extract_list( $body ) {
+    $body = (string) $body;
+
+    if ( ! preg_match( '/<ul[^>]*>(.*?)<\/ul>/is', $body, $match ) ) {
+        return array( $body, array() );
+    }
+
+    if ( ! preg_match_all( '/<li[^>]*>(.*?)<\/li>/is', $match[1], $items ) ) {
+        return array( $body, array() );
+    }
+
+    $rest = trim( str_replace( $match[0], '', $body ) );
+
+    return array( $rest, array_map( 'trim', $items[1] ) );
+}
