@@ -194,6 +194,60 @@ if (!array_key_exists($gb_filter, $gb_counts)) {
     </p>
 <?php endif; ?>
 
+<?php
+/*
+ * Anybody stuck at the front door.
+ *
+ * A new account cannot get past the verification screen until it has clicked
+ * a link in an email, so if email is not arriving they are simply stuck, with
+ * no way in and nothing a manager can do about it. That is what happened to a
+ * real signup today.
+ *
+ * Any role, not just customers: a cleaner signing up hits the same wall, and
+ * this is the only screen where anybody was looking.
+ */
+$gb_unverified = get_users([
+    'meta_key'     => 'gb_email_verified',
+    'meta_value'   => '0',
+    'number'       => 50,
+    'orderby'      => 'registered',
+    'order'        => 'DESC',
+]);
+?>
+<?php if (!empty($gb_unverified)): ?>
+    <div class="gb-card" style="padding:20px 22px; margin-bottom:24px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px;">
+        <div style="font-weight:800; color:#92400e; font-size:15px; margin-bottom:6px;">
+            Waiting on email verification (<?php echo count($gb_unverified); ?>)
+        </div>
+        <p style="margin:0 0 16px; color:#92400e; font-size:13px; line-height:1.6;">
+            These accounts cannot get in until they click the link in their verification email. If that email is not
+            reaching them, verify them here and they can carry on straight away. Only do it for somebody you know is
+            who they say they are.
+        </p>
+        <?php foreach ($gb_unverified as $gb_uv):
+            $gb_uv_err = (string) get_user_meta($gb_uv->ID, 'gb_email_verification_last_error', true); ?>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:12px 0; border-top:1px solid #fde68a;">
+                <div style="min-width:0;">
+                    <strong style="font-size:14px; color:#0f172a;"><?php echo esc_html($gb_uv->display_name); ?></strong>
+                    <div style="font-size:11.5px; color:#92400e;"><?php echo esc_html($gb_uv->user_email); ?></div>
+                    <?php if ($gb_uv_err !== ''): ?>
+                        <div style="font-size:11px; color:#991b1b; margin-top:3px;">Last attempt: <?php echo esc_html($gb_uv_err); ?></div>
+                    <?php endif; ?>
+                </div>
+                <form method="post" style="margin:0;">
+                    <input type="hidden" name="gb_save_action" value="verify_email_by_hand">
+                    <input type="hidden" name="gb_member_user" value="<?php echo (int) $gb_uv->ID; ?>">
+                    <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
+                    <button type="submit" class="gb-btn-small-os"
+                            onclick="return confirm('Verify <?php echo esc_attr($gb_uv->user_email); ?> by hand? Only do this if you know who they are.');">
+                        Verify by hand
+                    </button>
+                </form>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
 <div class="gb-card" style="padding:0; overflow:hidden; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
     <div class="gb-table-scroll">
         <table class="gb-booking-table gb-members-table">

@@ -228,6 +228,34 @@ if (isset($_POST['gb_save_action'])) {
                 home_url('/manager-dashboard/')
             ));
             exit;
+        case 'verify_email_by_hand':
+            /*
+             * The backstop for when email is not working at all.
+             *
+             * Verification exists to prove somebody owns the address they
+             * signed up with. A manager who has just spoken to that person
+             * knows it at least as well as an email does, and a signup that
+             * cannot proceed because a third-party mail provider is refusing
+             * is not a security posture, it is a locked door.
+             *
+             * Recorded against the user with who did it, so it is an audited
+             * decision rather than an invisible one.
+             */
+            if ( ! function_exists('gb_mark_user_email_verified') ) {
+                wp_die('Verification handling unavailable.');
+            }
+            $gb_verify_user = isset($_POST['gb_member_user']) ? (int) $_POST['gb_member_user'] : 0;
+            if ( $gb_verify_user < 1 || ! get_userdata($gb_verify_user) ) {
+                wp_die('Invalid account.');
+            }
+            gb_mark_user_email_verified($gb_verify_user);
+            $gb_actor = wp_get_current_user();
+            update_user_meta($gb_verify_user, 'gb_email_verified_by_hand', [
+                'at' => current_time('mysql'),
+                'by' => $gb_actor && $gb_actor->exists() ? $gb_actor->user_email : 'unknown',
+            ]);
+            wp_redirect(add_query_arg(['tab' => 'members', 'msg' => 'verified_by_hand'], home_url('/manager-dashboard/')));
+            exit;
         case 'sync_all_memberships':
             if ( ! function_exists('gb_membership_resync_all') ) {
                 wp_die('Membership handling unavailable.');
@@ -913,6 +941,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
+        <?php if($msg == 'verified_by_hand'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Account verified by hand. They can sign in and carry on now.</div><?php endif; ?>
         <?php if($msg == 'synced_all'):
             $gb_n_checked = isset($_GET['checked']) ? absint($_GET['checked']) : 0;
             $gb_n_failed  = isset($_GET['failed']) ? absint($_GET['failed']) : 0;
