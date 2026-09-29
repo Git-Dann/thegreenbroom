@@ -252,11 +252,11 @@ function gb_membership_handle_checkout_request() {
         return;
     }
 
-    if ( sanitize_key( wp_unslash( $_POST['gb_membership_action'] ) ) !== 'checkout' ) {
+    if ( sanitize_key( (string) wp_unslash( $_POST['gb_membership_action'] ) ) !== 'checkout' ) {
         return;
     }
 
-    $plan_key = isset( $_POST['gb_plan'] ) ? sanitize_key( wp_unslash( $_POST['gb_plan'] ) ) : '';
+    $plan_key = isset( $_POST['gb_plan'] ) ? sanitize_key( (string) wp_unslash( $_POST['gb_plan'] ) ) : '';
 
     if ( empty( $_POST['gb_membership_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['gb_membership_nonce'] ) ), 'gb_membership_checkout' ) ) {
         wp_safe_redirect( gb_membership_return_url( $plan_key, 'expired' ) );
@@ -526,6 +526,20 @@ function gb_membership_apply_subscription( array $subscription ) {
 function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array $subscription, $cancels_at = '' ) {
     $stripe_status = sanitize_text_field( (string) ( isset( $subscription['status'] ) ? $subscription['status'] : '' ) );
 
+    /*
+     * Every screen a human looks at - the cleaner's own settings, their
+     * dashboard, the manager's cleaner record, the Overview subscription
+     * count - reads _gb_subscription_status and _gb_sub_renewal, which until
+     * now only a manager could set by hand. Stripe wrote _gb_listing_* and
+     * nothing read it, so a cleaner could pay and still be shown as being on
+     * a free trial everywhere, indefinitely.
+     *
+     * Rather than repoint four templates at a second pair of keys, the payment
+     * now writes the pair they already read. A manager can still override by
+     * hand; the next event from Stripe wins, which is the right way round.
+     */
+    $legacy_status = $stripe_status === 'trialing' ? 'trial' : $status;
+
     update_user_meta( $user_id, '_gb_listing_status', $status );
     update_user_meta( $user_id, '_gb_listing_renews', $expires );
     update_user_meta( $user_id, '_gb_listing_stripe_status', $stripe_status );
@@ -544,6 +558,14 @@ function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array
         update_post_meta( $cleaner_id, '_gb_listing_renews', $expires );
         update_post_meta( $cleaner_id, '_gb_listing_stripe_status', $stripe_status );
         update_post_meta( $cleaner_id, '_gb_listing_cancels_at', $cancels_at );
+
+        update_post_meta( $cleaner_id, '_gb_subscription_status', $legacy_status );
+
+        // Only when Stripe gave a date. Blanking a manager's hand-entered
+        // renewal because an event arrived without one would lose information.
+        if ( $expires !== '' ) {
+            update_post_meta( $cleaner_id, '_gb_sub_renewal', $expires );
+        }
     }
 }
 
@@ -746,6 +768,31 @@ function gb_membership_create_portal_session( $user_id, $return_url = '' ) {
 }
 
 /**
+ * Has this account got a Stripe billing record at all?
+ *
+ * Cheap and local - no API call - because it decides whether a button is even
+ * drawn. Offering "manage your billing" to somebody Stripe has never heard of
+ * is a button that can only disappoint.
+ */
+function gb_membership_has_billing_account( $user_id ) {
+    return (string) get_user_meta( (int) $user_id, gb_membership_customer_meta_key(), true ) !== '';
+}
+
+/**
+ * Where to send somebody back to.
+ *
+ * Customers manage billing from My Account and cleaners from Settings, and
+ * being returned to the other one is disorienting. The posted value is a key
+ * matched against a fixed list, never a URL: a redirect target taken from a
+ * form is an open redirect however carefully it is escaped.
+ */
+function gb_membership_portal_return_url() {
+    $key = isset( $_POST['gb_return'] ) ? sanitize_key( (string) wp_unslash( $_POST['gb_return'] ) ) : '';
+
+    return $key === 'settings' ? home_url( '/settings/' ) : home_url( '/my-account/' );
+}
+
+/**
  * Front-end handler for "manage my membership". Not admin-post.php, for the
  * same reason nothing else here is.
  */
@@ -754,7 +801,7 @@ function gb_membership_handle_portal_request() {
         return;
     }
 
-    if ( sanitize_key( wp_unslash( $_POST['gb_membership_action'] ) ) !== 'portal' ) {
+    if ( sanitize_key( (string) wp_unslash( $_POST['gb_membership_action'] ) ) !== 'portal' ) {
         return;
     }
 
@@ -770,7 +817,7 @@ function gb_membership_handle_portal_request() {
         exit;
     }
 
-    $url = gb_membership_create_portal_session( get_current_user_id(), home_url( '/my-account/' ) );
+    $url = gb_membership_create_portal_session( get_current_user_id(), gb_membership_portal_return_url() );
 
     if ( is_wp_error( $url ) ) {
         /*
@@ -809,7 +856,7 @@ function gb_membership_portal_bail( $notice, $detail = '' ) {
         $args['gb_billing_msg'] = rawurlencode( $detail );
     }
 
-    wp_safe_redirect( add_query_arg( $args, home_url( '/my-account/' ) ) . '#gb-billing' );
+    wp_safe_redirect( add_query_arg( $args, gb_membership_portal_return_url() ) . '#gb-billing' );
     exit;
 }
 add_action( 'init', 'gb_membership_handle_portal_request' );

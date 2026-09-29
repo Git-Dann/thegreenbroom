@@ -152,6 +152,9 @@
                             <select name="_gb_subscription_status" class="gb-os-input">
                                 <option value="trial" <?php selected($sub_st, 'trial'); ?>>Free Trial</option>
                                 <option value="active" <?php selected($sub_st, 'active'); ?>>Active Member</option>
+                                <?php // Stripe can now set this, and without the option a cancelled
+                                      // cleaner would silently revert to Free Trial on the next save. ?>
+                                <option value="cancelled" <?php selected($sub_st, 'cancelled'); ?>>Cancelled</option>
                             </select>
                         </div>
                         <label class="gb-os-label">Next Renewal</label>

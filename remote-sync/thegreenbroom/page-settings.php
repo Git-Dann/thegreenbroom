@@ -60,6 +60,38 @@ if ( $cleaner_query->have_posts() ) {
 }
 
 $settings_page_url = get_permalink() ?: home_url('/settings/');
+
+/*
+ * Billing, as opposed to Connect. Connect is money coming IN to the cleaner;
+ * this is the listing subscription going out. They are two different Stripe
+ * relationships and were being shown as one thing ("Membership & Billing")
+ * with no way to act on either.
+ */
+$gb_billing_cancels_raw = $cleaner_id ? (string) get_post_meta($cleaner_id, '_gb_listing_cancels_at', true) : '';
+$gb_billing_cancels     = $gb_billing_cancels_raw !== '' && strtotime($gb_billing_cancels_raw)
+    ? date_i18n('j F Y', strtotime($gb_billing_cancels_raw))
+    : '';
+$gb_billing_ending      = $gb_billing_cancels !== '' && $sub_status !== 'cancelled';
+$gb_billing_manageable  = function_exists('gb_membership_has_billing_account')
+    && gb_membership_has_billing_account($current_user->ID);
+
+$gb_billing_renewal = $renewal_date !== '' && $renewal_date !== 'N/A' && strtotime($renewal_date)
+    ? date_i18n('j F Y', strtotime($renewal_date))
+    : $renewal_date;
+
+$gb_billing_labels = ['trial' => 'Free trial', 'active' => 'Active', 'cancelled' => 'Cancelled'];
+$gb_billing_label  = $gb_billing_ending ? 'Ending' : ($gb_billing_labels[$sub_status] ?? $sub_status);
+$gb_billing_tone   = $gb_billing_ending || $sub_status === 'trial'
+    ? 'background:#fffbeb; color:#92400e;'
+    : ($sub_status === 'cancelled' ? 'background:#f1f5f9; color:#475569;' : 'background:#f0fdf4; color:#166534;');
+
+$gb_billing_notice = isset($_GET['gb_billing']) ? sanitize_key(wp_unslash($_GET['gb_billing'])) : '';
+$gb_billing_detail = isset($_GET['gb_billing_msg']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['gb_billing_msg']))) : '';
+$gb_billing_copy   = [
+    'expired' => 'That page had been open a while, so we stopped before anything was changed. Please try again.',
+    'error'   => $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page.',
+    'already' => 'You already have an active membership.',
+];
 $connect_notice = isset($_GET['connect']) ? sanitize_key(wp_unslash($_GET['connect'])) : '';
 $connect_notice_msg = isset($_GET['connect_msg']) ? sanitize_text_field(wp_unslash($_GET['connect_msg'])) : '';
 
@@ -138,23 +170,64 @@ $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
         <div class="gb-card mb-20" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
             <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 20px;">Membership & Billing</h3>
             
+            <?php if (isset($gb_billing_copy[$gb_billing_notice])): ?>
+                <div id="gb-billing" style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:12px 14px; font-size:13px; line-height:1.5; margin-bottom:20px;">
+                    <?php echo esc_html($gb_billing_copy[$gb_billing_notice]); ?>
+                    <?php if ($gb_billing_notice === 'error'): ?>
+                        <br><strong>Nothing has been charged or changed.</strong>
+                        Try again, and if it keeps happening
+                        <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" style="color:inherit; text-decoration:underline;">tell us</a>
+                        and we will sort your membership out for you.
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Current Status</span>
-                    <span style="background: #fffbeb; color: #92400e; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
-                        <?php echo esc_html($sub_status); ?>
+                    <span style="<?php echo esc_attr($gb_billing_tone); ?> padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                        <?php echo esc_html($gb_billing_label); ?>
                     </span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Renewal Date</span>
-                    <span style="font-size: 14px; font-weight: 700; color: #0f172a;"><?php echo esc_html($renewal_date); ?></span>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap:12px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <?php echo $gb_billing_ending ? 'Ends' : 'Renewal Date'; ?>
+                    </span>
+                    <span style="font-size: 14px; font-weight: 700; color: #0f172a; text-align:right;">
+                        <?php echo esc_html($gb_billing_ending && $gb_billing_cancels !== '' ? $gb_billing_cancels : $gb_billing_renewal); ?>
+                    </span>
                 </div>
             </div>
 
-            <a href="<?php echo esc_url(home_url('/contact-support')); ?>" class="gb-btn-auth" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box; background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
-                Contact the Team About Your Plan
-            </a>
-            <p style="margin:12px 0 0; color:#64748b; font-size:12px; line-height:1.5;">Membership plan changes are managed by the Green Broom team. Contact support to upgrade, downgrade or pause your membership; self-service billing is coming soon.</p>
+            <?php if ($gb_billing_ending): ?>
+                <p style="margin:0 0 20px; color:#475569; font-size:13px; line-height:1.6;">
+                    You have cancelled your listing, so it will <strong>not</strong> renew. It stays live until
+                    <strong><?php echo esc_html($gb_billing_cancels); ?></strong> and stops then. You can turn
+                    renewal back on any time before that.
+                </p>
+            <?php endif; ?>
+
+            <?php if ($gb_billing_manageable): ?>
+                <form method="post" action="<?php echo esc_url($settings_page_url); ?>" style="margin:0;">
+                    <input type="hidden" name="gb_membership_action" value="portal">
+                    <input type="hidden" name="gb_return" value="settings">
+                    <?php wp_nonce_field('gb_membership_portal', 'gb_membership_nonce'); ?>
+                    <button type="submit" class="gb-btn-auth" style="display:block; text-align:center; box-sizing:border-box; background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
+                        <?php echo $gb_billing_ending ? 'Restart or manage your listing' : 'Manage or cancel your listing'; ?>
+                    </button>
+                </form>
+                <p style="margin:12px 0 0; color:#64748b; font-size:12px; line-height:1.5;">
+                    Opens your billing page with Stripe, where you can change your card, download a receipt
+                    <?php echo $gb_billing_ending ? 'or turn renewal back on' : 'or stop your listing'; ?>.
+                    <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" style="color:#2e7d32; font-weight:700;">Ask us</a>
+                    if you would rather we did it for you.
+                </p>
+            <?php else: ?>
+                <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" class="gb-btn-auth" style="display:block; text-align:center; text-decoration:none; box-sizing:border-box; background: #2e7d32; border: none; color: #fff; padding: 14px; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">
+                    Contact the Team About Your Plan
+                </a>
+                <p style="margin:12px 0 0; color:#64748b; font-size:12px; line-height:1.5;">You have not set up a paid listing yet, so there is no billing to manage. Contact support about upgrading, pausing or anything else to do with your plan.</p>
+            <?php endif; ?>
         </div>
 
         <div class="gb-card mb-20" style="padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
