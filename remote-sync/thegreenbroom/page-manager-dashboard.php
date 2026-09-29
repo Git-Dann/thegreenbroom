@@ -505,12 +505,25 @@ if (isset($_POST['gb_save_action'])) {
         $post_data = [
             'ID'           => $pid,
             'post_title'   => isset($_POST['post_title']) ? sanitize_text_field(wp_unslash($_POST['post_title'])) : '',
-            'post_content' => isset($_POST['post_content']) ? wp_kses_post(wp_unslash($_POST['post_content'])) : '',
             'post_excerpt' => isset($_POST['post_excerpt']) ? sanitize_textarea_field(wp_unslash($_POST['post_excerpt'])) : '',
             'post_status'  => $eco_status,
             'post_type'    => 'gb_eco_product',
             'menu_order'   => isset($_POST['menu_order']) ? intval(wp_unslash($_POST['menu_order'])) : 0,
         ];
+
+        /*
+         * Absent is not empty.
+         *
+         * The editor hides the body for an eco product that is superseded by a
+         * page of the same slug, because editing it there changes nothing the
+         * public sees. Writing an unconditional '' would then have destroyed
+         * the stored copy on the first save of the title or the card
+         * description - the same shape as the write-only secrets on Settings,
+         * where a blank submission has to mean "unchanged".
+         */
+        if (isset($_POST['post_content'])) {
+            $post_data['post_content'] = wp_kses_post(wp_unslash($_POST['post_content']));
+        }
         if ($pid === 0) {
             unset($post_data['ID']);
             $pid = wp_insert_post($post_data);
