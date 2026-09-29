@@ -228,6 +228,19 @@ if (isset($_POST['gb_save_action'])) {
                 home_url('/manager-dashboard/')
             ));
             exit;
+        case 'sync_all_memberships':
+            if ( ! function_exists('gb_membership_resync_all') ) {
+                wp_die('Membership handling unavailable.');
+            }
+            $gb_sync_all = gb_membership_resync_all();
+            wp_redirect(add_query_arg([
+                'tab'     => 'members',
+                'msg'     => 'synced_all',
+                'checked' => (int) $gb_sync_all['checked'],
+                'failed'  => (int) $gb_sync_all['failed'],
+                'capped'  => $gb_sync_all['capped'] ? 1 : 0,
+            ], home_url('/manager-dashboard/')));
+            exit;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -900,6 +913,20 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
+        <?php if($msg == 'synced_all'):
+            $gb_n_checked = isset($_GET['checked']) ? absint($_GET['checked']) : 0;
+            $gb_n_failed  = isset($_GET['failed']) ? absint($_GET['failed']) : 0;
+            $gb_n_capped  = !empty($_GET['capped']); ?>
+            <div class="gb-card" style="margin-bottom: 20px; padding:15px; <?php echo $gb_n_failed ? 'background:#fffbeb; border-color:#fde68a; color:#92400e;' : 'background:#f0fdf4; border-color:#dcfce7; color:#166534;'; ?>">
+                Checked <strong><?php echo (int) $gb_n_checked; ?></strong> <?php echo $gb_n_checked === 1 ? 'membership' : 'memberships'; ?> against Stripe.
+                <?php if ($gb_n_failed): ?>
+                    <strong><?php echo (int) $gb_n_failed; ?></strong> could not be read &mdash; those rows still show what we had before.
+                <?php endif; ?>
+                <?php if ($gb_n_capped): ?>
+                    More were found than one run checks; press it again to continue.
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
         <?php if($msg == 'synced'): ?>
             <div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">
                 ✅ Asked Stripe again, and applied what it said.

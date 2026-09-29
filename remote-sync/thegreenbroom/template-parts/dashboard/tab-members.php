@@ -67,12 +67,74 @@ foreach ($gb_customers as $gb_u) {
 }
 ?>
 
-<div class="booking-controls">
+<div class="booking-controls" style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:flex-start;">
     <div>
         <h1 class="gb-title" style="font-size:28px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">Customer Memberships</h1>
         <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Who has paid for access to the cleaner database.</p>
     </div>
+
+    <?php
+    /*
+     * One sync for the screen, not one per row.
+     *
+     * "Is this list current?" is a question about the list. Thirty rows each
+     * carrying their own status line and their own button is noise on a screen
+     * whose whole job is to be read quickly.
+     */
+    $gb_last_sync = function_exists('gb_membership_last_sync') ? gb_membership_last_sync() : null;
+    ?>
+    <form method="post" style="text-align:right; margin:0;">
+        <input type="hidden" name="gb_save_action" value="sync_all_memberships">
+        <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
+        <button type="submit" class="gb-btn-small-os" style="height:38px; padding:0 16px;">Sync from Stripe</button>
+        <div style="margin-top:6px; font-size:11.5px; color:#94a3b8;">
+            <?php if ($gb_last_sync): ?>
+                Last synced
+                <?php // The real time as the written value, so it is right with no JavaScript;
+                      // the script below replaces it with "2 minutes ago" and keeps that current. ?>
+                <time class="gb-since" datetime="<?php echo esc_attr(gmdate('c', (int) $gb_last_sync['at'])); ?>"
+                      title="<?php echo esc_attr(date_i18n('j M Y, H:i', (int) $gb_last_sync['at'])); ?>"><?php echo esc_html(date_i18n('j M, H:i', (int) $gb_last_sync['at'])); ?></time>
+            <?php else: ?>
+                Never synced by hand &mdash; Stripe updates this on its own.
+            <?php endif; ?>
+        </div>
+    </form>
 </div>
+
+<script>
+/*
+ * Keeps "last synced" honest without reloading the page. A timestamp that
+ * says "2 minutes ago" and still says it an hour later is worse than no
+ * timestamp, because it is believed.
+ */
+(function () {
+    var els = document.querySelectorAll('.gb-since');
+    if (!els.length) { return; }
+
+    function phrase(seconds) {
+        if (seconds < 10)   { return 'just now'; }
+        if (seconds < 60)   { return Math.floor(seconds) + ' seconds ago'; }
+        var m = Math.floor(seconds / 60);
+        if (m < 60)         { return m === 1 ? 'a minute ago' : m + ' minutes ago'; }
+        var h = Math.floor(m / 60);
+        if (h < 24)         { return h === 1 ? 'an hour ago' : h + ' hours ago'; }
+        var d = Math.floor(h / 24);
+        return d === 1 ? 'yesterday' : d + ' days ago';
+    }
+
+    function tick() {
+        var now = Date.now();
+        els.forEach(function (el) {
+            var then = Date.parse(el.getAttribute('datetime'));
+            if (isNaN(then)) { return; }
+            el.textContent = phrase(Math.max(0, (now - then) / 1000));
+        });
+    }
+
+    tick();
+    setInterval(tick, 15000);
+}());
+</script>
 
 <div style="margin:0 0 24px; padding:13px 15px; border-radius:10px; font-size:13px; line-height:1.6; <?php echo $gb_gate_on
     ? 'background:#fffbeb; border:1px solid #fde68a; color:#92400e;'
@@ -208,33 +270,6 @@ if (!array_key_exists($gb_filter, $gb_counts)) {
                             <input type="date" name="gb_member_expires" class="gb-input gb-input-sm" value="<?php echo esc_attr($gb_m['expires']); ?>" title="Leave blank to set automatically from the plan">
                             <button type="submit" class="gb-btn-small-os">Save</button>
                         </form>
-                        <?php
-                        /*
-                         * Ask Stripe again.
-                         *
-                         * The webhook normally keeps this current and when it
-                         * is working this is never needed. It is for when it
-                         * is not: a delivery that failed, an event type never
-                         * subscribed to, or a change made in Stripe before the
-                         * site was listening. Without it the only correction
-                         * available is to type the right answer in by hand,
-                         * which records a manual override rather than the
-                         * truth, and tells nobody which of those it was.
-                         */
-                        $gb_sub_id = (string) get_user_meta($gb_u->ID, '_gb_stripe_subscription_id', true);
-                        if ($gb_sub_id !== ''):
-                            $gb_sub_status = (string) get_user_meta($gb_u->ID, '_gb_stripe_subscription_status', true);
-                        ?>
-                            <form method="post" style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-                                <input type="hidden" name="gb_save_action" value="sync_membership">
-                                <input type="hidden" name="gb_member_user" value="<?php echo (int) $gb_u->ID; ?>">
-                                <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
-                                <span style="font-size:10.5px; color:#94a3b8;" title="<?php echo esc_attr($gb_sub_id); ?>">
-                                    Stripe says <strong><?php echo esc_html($gb_sub_status !== '' ? $gb_sub_status : 'unknown'); ?></strong>
-                                </span>
-                                <button type="submit" class="gb-btn-small-os">Sync from Stripe</button>
-                            </form>
-                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
