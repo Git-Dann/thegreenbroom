@@ -753,3 +753,76 @@ function gb_noindex_membership_success( $robots ) {
     return $robots;
 }
 add_filter( 'wp_robots', 'gb_noindex_membership_success' );
+
+/**
+ * The Green Broom provides the insurance, so stop asking cleaners for it.
+ *
+ * The platform already had a setting for this - "Insurance Provided by The
+ * Green Broom" - it had simply never been chosen, so the profile badge read
+ * "Proof of insurance provided" and a cleaner was told to send theirs in.
+ * Setting it flips the badge to "Covered by The Green Broom's insurance
+ * policy", which is both the truth and a better thing for a customer to read.
+ *
+ * Only set where nobody has chosen anything. A manager who has deliberately
+ * picked "Mandatory" or "Optional" keeps their choice.
+ */
+function gb_set_insurance_provided_by_platform() {
+    if ( get_option( 'gb_insurance_provided_2026_09' ) ) {
+        return;
+    }
+
+    $settings_id = function_exists( 'gb_get_site_settings_id' )
+        ? (int) gb_get_site_settings_id()
+        : (int) get_option( 'page_on_front' );
+
+    if ( $settings_id ) {
+        $current = (string) get_post_meta( $settings_id, '_gb_require_insurance', true );
+
+        if ( $current === '' || $current === 'yes' ) {
+            update_post_meta( $settings_id, '_gb_require_insurance', 'provided' );
+        }
+    }
+
+    /*
+     * The pricing panel's button, at the client's request, while payments are
+     * not yet public. Conditional on the wording it shipped with, so an edit
+     * of their own is not overwritten.
+     */
+    if ( $settings_id && (string) get_post_meta( $settings_id, '_gb_price_cust_btn', true ) === 'Create your account' ) {
+        update_post_meta( $settings_id, '_gb_price_cust_btn', 'Create an account now' );
+    }
+
+    /*
+     * The Green Broom Standard page says cleaners evidence their own cover,
+     * which is the opposite of how it works. The client is rewriting this page
+     * himself, so this only touches copy that is still word for word the
+     * placeholder that was seeded - if he has started, his version stands.
+     */
+    $standard = get_page_by_path( 'the-green-broom-standard' );
+
+    if ( $standard instanceof WP_Post ) {
+        $replacements = array(
+            '<li><strong>Insured</strong> &mdash; public liability cover in place and evidenced.</li>'
+                => '<li><strong>Insured</strong> &mdash; covered by The Green Broom&rsquo;s own insurance policy, which we provide.</li>',
+            'until all four of these are complete and on file:'
+                => 'until these are complete and on file:',
+            'has been referenced and is insured.'
+                => 'has been referenced, and is covered by our insurance.',
+        );
+
+        $content = (string) $standard->post_content;
+        $updated = $content;
+
+        foreach ( $replacements as $was => $now ) {
+            if ( strpos( $updated, $was ) !== false ) {
+                $updated = str_replace( $was, $now, $updated );
+            }
+        }
+
+        if ( $updated !== $content ) {
+            wp_update_post( array( 'ID' => $standard->ID, 'post_content' => $updated ) );
+        }
+    }
+
+    update_option( 'gb_insurance_provided_2026_09', 1, false );
+}

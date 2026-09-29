@@ -58,7 +58,7 @@ if ( $gb_audience === 'cleaner' ) {
     );
     $gb_next = array(
         'Complete your profile — a photo, your areas and your hourly rate.',
-        'Send us your ID, DBS certificate, two references and your insurance. The Verified badge appears once all four are on file.',
+        'Send us your ID, DBS certificate and two references. The Verified badge appears once all three are on file.',
         'Your profile goes live to customers as soon as those checks are done.',
     );
 } else {

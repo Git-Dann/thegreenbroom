@@ -43,7 +43,7 @@ function gb_pricing_panel_defaults() {
         '_gb_price_cust_p2_period' => 'per year',
         '_gb_price_cust_p2_flag'   => 'Best value',
         '_gb_price_cust_benefits'  => "Verified local cleaners, ID and reference checked\nSecure bookings through the platform\nCashless payment\nReal reviews from real bookings\nMember benefits and offers",
-        '_gb_price_cust_btn'       => 'Create your account',
+        '_gb_price_cust_btn'       => 'Create an account now',
         '_gb_price_cust_link'      => '/register',
         '_gb_price_cust_foot'      => 'Browsing is free while we finish setting up payments. Create an account now and we will be in touch before anything is charged.',
         '_gb_price_cust_foot_live' => 'Cancel any time from your account. We will remind you before each renewal.',
