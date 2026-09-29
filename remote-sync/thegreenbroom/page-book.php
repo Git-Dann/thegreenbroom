@@ -206,11 +206,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
 
             if ($cleaner_id > 0) {
                 $destination_account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
-                $charges_enabled = get_post_meta($cleaner_id, '_gb_stripe_charges_enabled', true) === '1';
-                if ($destination_account_id === '') {
-                    $error_messages[] = 'This cleaner is not connected to Stripe yet. Please choose another cleaner or ask support.';
-                } elseif (!$charges_enabled) {
-                    $error_messages[] = 'This cleaner has not completed Stripe onboarding. Please choose another cleaner or try again shortly.';
+
+                // Same test the page ran before showing the form, so the last
+                // word and the first agree.
+                if (!gb_cleaner_can_take_bookings($cleaner_id)) {
+                    $error_messages[] = gb_cleaner_booking_block_message($cleaner_id);
                 }
             }
         }
@@ -259,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
             $cancel_url = add_query_arg([
                 'cleaner' => $cleaner_id,
                 'payment' => 'cancelled',
-            ], home_url('/book'));
+            ], home_url('/book-now/'));
 
             $session_args = [
                 'mode'            => 'payment',
@@ -361,6 +361,22 @@ get_header();
     <?php if (!empty($info_message)) : ?>
         <div role="status" style="background:#e0f2fe; color:#075985; max-width:980px; margin:0 auto 20px; border-radius:10px; border:1px solid #bae6fd; padding:14px 16px;">
             <?php echo esc_html($info_message); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php
+    /*
+     * A cleaner who cannot be paid cannot be booked. Asked here, on the way in,
+     * rather than only at the end - filling in a whole form and being turned
+     * away at the payment step is the worst possible place to find out.
+     */
+    $gb_book_blocked = $cleaner_id > 0 && ! gb_cleaner_can_take_bookings($cleaner_id);
+    ?>
+    <?php if ($gb_book_blocked) : ?>
+        <div class="gb-book-blocked">
+            <strong><?php echo esc_html($cleaner_name); ?> is not taking online bookings yet</strong>
+            <p><?php echo esc_html(gb_cleaner_booking_block_message($cleaner_id)); ?></p>
+            <a class="gb-btn gb-btn-primary" href="<?php echo esc_url(home_url('/cleaner-listings')); ?>">Find another cleaner</a>
         </div>
     <?php endif; ?>
 
@@ -491,7 +507,7 @@ $bk_note    = gb_page_text( '_gb_bk_note', 'You will be redirected to Stripe to 
             <p class="gb-summary-meta"><strong>Estimated Finish:</strong> <span id="summary-end">-</span></p>
 
             <div class="gb-total-row"><span>Total Est.</span><span>£<span id="total-display">0</span></span></div>
-            <button type="submit" class="gb-btn-submit" id="gb-submit-btn"><?php echo esc_html($bk_submit); ?></button>
+            <button type="submit" class="gb-btn-submit" id="gb-submit-btn"<?php echo $gb_book_blocked ? ' disabled' : ''; ?>><?php echo esc_html($gb_book_blocked ? 'Not available' : $bk_submit); ?></button>
             <p class="gb-summary-note"><?php echo esc_html($bk_note); ?></p>
         </aside>
     </form>

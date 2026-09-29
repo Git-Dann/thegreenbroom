@@ -353,7 +353,12 @@ if ( ! empty( $gb_selected_services ) ) {
                     <span class="gb-price-sub">per hour</span>
                 </div>
 
-                <a href="<?php echo esc_url(home_url('/book?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                <?php if ( function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings($cleaner_id) ) : ?>
+                    <?php /* No payout account means no booking, so do not offer one. Messaging still works. */ ?>
+                    <span class="gb-btn-book gb-btn-book-off" aria-disabled="true">Not taking bookings yet</span>
+                <?php else : ?>
+                    <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                <?php endif; ?>
                 <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 
                 <?php

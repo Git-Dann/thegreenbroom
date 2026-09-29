@@ -296,6 +296,60 @@ function gb_create_connect_account_for_cleaner($cleaner_id) {
     return $account;
 }
 
+/**
+ * Can this cleaner actually be paid, and therefore booked?
+ *
+ * A booking takes the customer's money and routes it to the cleaner's own
+ * Stripe account, so without a connected account that can accept charges there
+ * is nowhere for the money to go and the booking cannot complete.
+ *
+ * This was being asked only at the end of the booking form, which meant a
+ * customer filled in their name, address, phone, date and duration, pressed
+ * pay, and was only then told this cleaner could not be booked. One definition
+ * here, so the profile page and the booking form can say so up front and the
+ * final check still agrees with them.
+ *
+ * @return true|string true, or the reason it cannot
+ */
+function gb_cleaner_booking_block_reason($cleaner_id) {
+    $cleaner_id = absint($cleaner_id);
+
+    if (!$cleaner_id || get_post_type($cleaner_id) !== 'gb_cleaner') {
+        return true; // "Any professional" - nothing to check yet.
+    }
+
+    $account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
+
+    if ($account_id === '') {
+        return 'not_connected';
+    }
+
+    if (get_post_meta($cleaner_id, '_gb_stripe_charges_enabled', true) !== '1') {
+        return 'onboarding_incomplete';
+    }
+
+    return true;
+}
+
+function gb_cleaner_can_take_bookings($cleaner_id) {
+    return gb_cleaner_booking_block_reason($cleaner_id) === true;
+}
+
+/**
+ * What to tell a customer. Deliberately not "this cleaner has not completed
+ * Stripe onboarding": that is our problem described in our words, and it tells
+ * them nothing they can act on.
+ */
+function gb_cleaner_booking_block_message($cleaner_id) {
+    $reason = gb_cleaner_booking_block_reason($cleaner_id);
+
+    if ($reason === true) {
+        return '';
+    }
+
+    return 'This cleaner is not set up to take bookings online just yet. Browse other cleaners in your area, or get in touch and we will help.';
+}
+
 function gb_connect_user_can_manage_cleaner($cleaner_id, $user) {
     $cleaner_id = absint($cleaner_id);
     if (!$cleaner_id || get_post_type($cleaner_id) !== 'gb_cleaner') {

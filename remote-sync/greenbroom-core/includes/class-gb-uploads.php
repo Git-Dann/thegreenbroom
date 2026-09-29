@@ -324,6 +324,30 @@ class GB_Uploads {
         return ! empty( $posts[0] ) ? (int) $posts[0] : 0;
     }
 
+    /**
+     * Where verification documents are actually stored, and whether any are
+     * still in the old place.
+     *
+     * The migration above is careful and appears to work, but nothing anywhere
+     * showed whether it had - the result went into an option nobody reads. For
+     * ID documents and DBS certificates on a host that ignores .htaccess deny
+     * rules, "we think it worked" is not good enough to leave unexamined.
+     *
+     * @return array{secure:bool, store:string, kept:int, checked:string}
+     */
+    public static function get_storage_status() {
+        $private = self::get_private_dir();
+        $report  = get_option( 'gb_secure_docs_cleanup_report' );
+        $report  = is_array( $report ) ? $report : array();
+
+        return array(
+            'secure'  => $private !== '',
+            'store'   => $private !== '' ? 'above the web root' : 'inside wp-content/uploads',
+            'kept'    => isset( $report['kept'] ) ? (int) $report['kept'] : -1,
+            'checked' => isset( $report['at'] ) ? (string) $report['at'] : '',
+        );
+    }
+
     public static function ensure_secure_dir() {
         foreach ( array_filter( array( self::get_private_dir(), self::get_legacy_dir() ) ) as $gb_target ) {
             self::write_dir_guards( $gb_target );
