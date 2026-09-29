@@ -596,8 +596,17 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
 
     $settings = gb_get_brevo_settings();
     $recipients = gb_brevo_recipients( $to );
+
+    /*
+     * No usable template means Brevo cannot send this one, but the email still
+     * has to go. Falling through to wp_mail rather than returning false: the
+     * plain-text version is already built and passed in, so the person gets a
+     * working link in a plain email instead of nothing at all.
+     */
     if ( empty( $recipients ) || absint( $template_id ) < 1 ) {
-        return false;
+        gb_record_brevo_failure( 'No Brevo template is configured for this email, so it was sent as plain text.' );
+
+        return wp_mail( $to, $subject, $plain_message, $headers );
     }
 
     $parsed_headers = gb_brevo_parse_headers( $headers );
@@ -626,7 +635,43 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
     }
 
     $result = gb_brevo_api_request( 'smtp/email', $payload, 'POST' );
-    return ! is_wp_error( $result );
+
+    if ( is_wp_error( $result ) ) {
+        /*
+         * Brevo refused it. Say why somewhere a human can find, then send it
+         * the ordinary way anyway.
+         *
+         * Being configured used to make this LESS reliable than not being
+         * configured: with no API key the site falls back to wp_mail and the
+         * email arrives, but with a key that Brevo rejects it gave up
+         * entirely. A signup that dead-ends because a third party is having a
+         * bad afternoon is the worst possible failure for a page whose whole
+         * job is to let somebody in.
+         */
+        gb_record_brevo_failure( $result->get_error_message() );
+
+        return wp_mail( $to, $subject, $plain_message, $headers );
+    }
+
+    delete_option( 'gb_brevo_last_error' );
+
+    return true;
+}
+
+/**
+ * Keep the last reason Brevo would not send, for the Settings screen.
+ *
+ * The reason was being thrown away - the caller recorded "wp_mail returned
+ * false", which was not even true, since wp_mail had not been called. A bad
+ * API key, a template that does not exist in the account, and an unverified
+ * sender address all look identical from the outside and need completely
+ * different fixes, so the message Brevo gives is the whole diagnosis.
+ */
+function gb_record_brevo_failure( $message ) {
+    update_option( 'gb_brevo_last_error', array(
+        'at'      => time(),
+        'message' => sanitize_text_field( (string) $message ),
+    ), false );
 }
 
 /**
@@ -659,6 +704,12 @@ add_filter( 'retrieve_password_message', function ( $message, $key, $user_login,
 function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
     if ( $pre_wp_mail !== null || ! gb_is_brevo_configured() ) {
         return $pre_wp_mail;
+    }
+
+    // Already refused once on this request. Asking again just adds a 20 second
+    // timeout to every subsequent email while Brevo is unwell.
+    if ( ! empty( $GLOBALS['gb_brevo_failed_this_request'] ) ) {
+        return null;
     }
 
     $settings = gb_get_brevo_settings();
@@ -730,7 +781,34 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
 
     $result = gb_brevo_api_request( 'smtp/email', $payload, 'POST' );
 
-    return is_wp_error( $result ) ? false : true;
+    if ( is_wp_error( $result ) ) {
+        /*
+         * Null, not false.
+         *
+         * This filter short-circuits wp_mail: returning false tells WordPress
+         * the send failed and to stop, returning null tells it to carry on and
+         * send the message itself. It returned false, so ONE bad response from
+         * Brevo silently killed every email the site sends - verification,
+         * password resets, booking confirmations, support replies, all of it.
+         * Nothing was queued and nothing was retried; the message was simply
+         * gone.
+         *
+         * That is what stopped a real signup: the page said it could not send
+         * the verification email, and it could not, because a third party said
+         * no and the site took that as final.
+         *
+         * Now the reason is recorded and WordPress sends it the ordinary way.
+         * A plain email that arrives beats a branded one that does not.
+         */
+        gb_record_brevo_failure( $result->get_error_message() );
+        $GLOBALS['gb_brevo_failed_this_request'] = true;
+
+        return null;
+    }
+
+    delete_option( 'gb_brevo_last_error' );
+
+    return true;
 }
 add_filter( 'pre_wp_mail', 'gb_send_wp_mail_through_brevo', 10, 2 );
 
@@ -1026,7 +1104,14 @@ function gb_send_email_verification( $user_id, $respect_rate_limit = false ) {
     update_user_meta( $user->ID, 'gb_email_verification_last_sent_at', current_time( 'mysql' ) );
 
     if ( ! $sent ) {
-        update_user_meta( $user->ID, 'gb_email_verification_last_error', 'wp_mail returned false.' );
+        $gb_last = get_option( 'gb_brevo_last_error' );
+        update_user_meta(
+            $user->ID,
+            'gb_email_verification_last_error',
+            is_array( $gb_last ) && ! empty( $gb_last['message'] )
+                ? $gb_last['message']
+                : 'The email could not be handed to the mail server.'
+        );
 
         return new WP_Error( 'gb_email_send_failed', 'We could not send the verification email right now.' );
     }
