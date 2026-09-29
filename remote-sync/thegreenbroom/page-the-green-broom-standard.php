@@ -101,7 +101,11 @@ $gb_std_join     = get_page_by_path( 'join' );
 
     #gb-standard .gb-std-section { padding:66px 0; }
     #gb-standard .gb-std-section:nth-child(even) { background:#f8fafc; }
-    #gb-standard .gb-std-section h2 { margin:0 0 22px; color:#1b5e20; font-size:clamp(1.5rem, 3vw, 2rem); line-height:1.2; font-weight:800; letter-spacing:-.5px; }
+    /* Centred over the card beneath it. Left-aligned headings above a centred
+       card left the section looking off-axis. The body copy stays left: a
+       centred paragraph is harder to read down. */
+    #gb-standard .gb-std-section h2 { margin:0 auto 24px; max-width:820px; text-align:center; color:#1b5e20; font-size:clamp(1.5rem, 3vw, 2rem); line-height:1.2; font-weight:800; letter-spacing:-.5px; }
+    #gb-standard .gb-std-section h2::after { content:""; display:block; width:54px; height:3px; border-radius:2px; background:#2e7d32; margin:16px auto 0; }
 
     #gb-standard .gb-std-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:34px; box-shadow:0 6px 20px rgba(15,23,42,.04); }
     #gb-standard .gb-std-section:nth-child(even) .gb-std-card { background:#fff; }
