@@ -727,7 +727,11 @@ function gb_backup_smtp_diagnose() {
         'username'        => $cfg['username'],
         'host'            => $cfg['host'],
         'saved'           => array( 'port' => $cfg['port'], 'secure' => $cfg['secure'] ),
-        'password_length' => strlen( $cfg['password'] ),
+        // Characters, as a person would count them; bytes differ from that
+        // only when there is a character such as a pound sign in it.
+        'password_length' => function_exists( 'mb_strlen' ) ? mb_strlen( $cfg['password'], 'UTF-8' ) : strlen( $cfg['password'] ),
+        'password_bytes'  => strlen( $cfg['password'] ),
+        'password_ascii'  => ! preg_match( '/[^\x20-\x7E]/', $cfg['password'] ),
         'password_spaces' => $cfg['password'] !== trim( $cfg['password'] ),
         'attempts'        => array(),
     );
