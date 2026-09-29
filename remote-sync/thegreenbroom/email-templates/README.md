@@ -30,4 +30,7 @@ Only this much of Brevo's template language is understood locally:
 `{{ params.name|linebreaksbr }}`. Blank parameters are not sent, so the
 `default` text shows instead of a gap.
 
-The `.htaccess` stops these files being served over the web.
+These files can be fetched over the web. That is harmless: they hold only
+the design and placeholders, the same HTML every recipient already receives,
+never anybody's details or links. Do not put anything private in them.
+(A folder `.htaccess` deny was tried and this host does not honour it.)
