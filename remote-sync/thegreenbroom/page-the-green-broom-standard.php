@@ -45,11 +45,42 @@ for ( $i = 0; $i < count( $gb_std_parts ); $i += 2 ) {
     );
 }
 
-// No excerpt: promote the opening paragraph into the hero rather than printing
-// it twice or leaving the hero bare.
+// No excerpt: promote the opening paragraph into the hero rather than leaving
+// the hero bare.
 if ( $gb_std_lead === '' && $gb_std_intro !== '' ) {
     $gb_std_lead  = trim( wp_strip_all_tags( $gb_std_intro ) );
     $gb_std_intro = '';
+}
+
+/*
+ * An excerpt is usually a rewrite of the opening paragraph, which is fine
+ * everywhere it is normally used and absurd here: the hero and the band
+ * directly beneath it end up saying the same sentence twice in a row. When
+ * they are effectively the same thing, only the hero keeps it.
+ */
+if ( $gb_std_lead !== '' && $gb_std_intro !== '' ) {
+    $gb_std_norm = static function ( $text ) {
+        $text = strtolower( wp_strip_all_tags( (string) $text ) );
+        $text = preg_replace( '/[^a-z0-9 ]+/', '', $text );
+
+        return trim( preg_replace( '/\s+/', ' ', (string) $text ) );
+    };
+
+    $gb_a = $gb_std_norm( $gb_std_lead );
+    $gb_b = $gb_std_norm( $gb_std_intro );
+
+    if ( $gb_a !== '' && $gb_b !== '' ) {
+        $gb_same = strpos( $gb_b, $gb_a ) !== false || strpos( $gb_a, $gb_b ) !== false;
+
+        if ( ! $gb_same ) {
+            similar_text( $gb_a, $gb_b, $gb_pct );
+            $gb_same = $gb_pct >= 80;
+        }
+
+        if ( $gb_same ) {
+            $gb_std_intro = '';
+        }
+    }
 }
 
 $gb_std_listings = get_page_by_path( 'cleaner-listings' );
