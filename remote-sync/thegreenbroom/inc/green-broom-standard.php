@@ -159,21 +159,31 @@ function gb_standard_split_sections( $html ) {
  * than as one long column of ticks, but only the list should move - the
  * paragraphs around it stay where the writer put them.
  *
- * @return array{0: string, 1: array<int, string>} The body without that list,
- *         and its items as raw HTML.
+ * The copy on either side is kept apart, not glued together. The first draft
+ * concatenated it, which silently moved the closing line of a section above
+ * the list it was written to follow - "We also confirm a contact number" ended
+ * up introducing the checks rather than rounding them off.
+ *
+ * @return array{0: string, 1: array<int, string>, 2: string} What came before
+ *         the list, its items as raw HTML, and what came after.
  */
 function gb_standard_extract_list( $body ) {
     $body = (string) $body;
 
-    if ( ! preg_match( '/<ul[^>]*>(.*?)<\/ul>/is', $body, $match ) ) {
-        return array( $body, array() );
+    if ( ! preg_match( '/<ul[^>]*>(.*?)<\/ul>/is', $body, $match, PREG_OFFSET_CAPTURE ) ) {
+        return array( $body, array(), '' );
     }
 
-    if ( ! preg_match_all( '/<li[^>]*>(.*?)<\/li>/is', $match[1], $items ) ) {
-        return array( $body, array() );
+    if ( ! preg_match_all( '/<li[^>]*>(.*?)<\/li>/is', $match[1][0], $items ) ) {
+        return array( $body, array(), '' );
     }
 
-    $rest = trim( str_replace( $match[0], '', $body ) );
+    $start = (int) $match[0][1];
+    $end   = $start + strlen( $match[0][0] );
 
-    return array( $rest, array_map( 'trim', $items[1] ) );
+    return array(
+        trim( substr( $body, 0, $start ) ),
+        array_map( 'trim', $items[1] ),
+        trim( substr( $body, $end ) )
+    );
 }

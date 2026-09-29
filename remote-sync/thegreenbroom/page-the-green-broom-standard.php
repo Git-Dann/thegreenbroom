@@ -46,11 +46,12 @@ list( $gb_std_intro, $gb_std_sections ) = gb_standard_split_sections( $gb_std_ht
  */
 foreach ( $gb_std_sections as $gb_i => $gb_section ) {
     $gb_img = (string) get_post_meta( get_the_ID(), '_gb_std_img_' . ( $gb_i + 1 ), true );
-    list( $gb_rest, $gb_items ) = gb_standard_extract_list( $gb_section['body'] );
+    list( $gb_before, $gb_items, $gb_after ) = gb_standard_extract_list( $gb_section['body'] );
 
-    $gb_std_sections[ $gb_i ]['image'] = $gb_img;
-    $gb_std_sections[ $gb_i ]['rest']  = $gb_rest;
-    $gb_std_sections[ $gb_i ]['items'] = $gb_items;
+    $gb_std_sections[ $gb_i ]['image']  = $gb_img;
+    $gb_std_sections[ $gb_i ]['before'] = $gb_before;
+    $gb_std_sections[ $gb_i ]['items']  = $gb_items;
+    $gb_std_sections[ $gb_i ]['after']  = $gb_after;
 
     if ( $gb_img !== '' ) {
         $gb_std_sections[ $gb_i ]['layout'] = 'split';
@@ -118,7 +119,7 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-intro p:last-child { margin-bottom:0; }
 
     #gb-standard .gb-std-section { padding:66px 0; }
-    #gb-standard .gb-std-section:nth-child(even) { background:#f8fafc; }
+    #gb-standard .gb-std-section.is-banded { background:#f1f6f2; }
     /* Centred over the card beneath it. Left-aligned headings above a centred
        card left the section looking off-axis. The body copy stays left: a
        centred paragraph is harder to read down. */
@@ -126,7 +127,6 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-section h2::after { content:""; display:block; width:54px; height:3px; border-radius:2px; background:#2e7d32; margin:16px auto 0; }
 
     #gb-standard .gb-std-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:34px; box-shadow:0 6px 20px rgba(15,23,42,.04); }
-    #gb-standard .gb-std-section:nth-child(even) .gb-std-card { background:#fff; }
     #gb-standard .gb-std-card > *:first-child { margin-top:0; }
     #gb-standard .gb-std-card > *:last-child { margin-bottom:0; }
     #gb-standard .gb-std-card p { margin:0 0 16px; line-height:1.75; font-size:1rem; }
@@ -216,7 +216,7 @@ $gb_std_join     = get_page_by_path( 'join' );
         </section>
     <?php else : ?>
         <?php foreach ( $gb_std_sections as $gb_idx => $gb_std_section ) : ?>
-            <section class="gb-std-section">
+            <section class="gb-std-section<?php echo $gb_idx % 2 ? ' is-banded' : ''; ?>">
                 <div class="gb-std-container">
 
                     <?php if ( $gb_std_section['layout'] === 'split' ) : ?>
@@ -224,16 +224,8 @@ $gb_std_join     = get_page_by_path( 'join' );
                         <div class="gb-std-split<?php echo $gb_idx % 2 ? ' is-flipped' : ''; ?>">
                             <div>
                                 <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
-                                <div class="gb-std-card gb-std-copy">
-                                    <?php echo wp_kses_post( $gb_std_section['rest'] ); ?>
-                                    <?php if ( ! empty( $gb_std_section['items'] ) ) : ?>
-                                        <ul>
-                                            <?php foreach ( $gb_std_section['items'] as $gb_item ) : ?>
-                                                <li><?php echo wp_kses_post( $gb_item ); ?></li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    <?php endif; ?>
-                                </div>
+                                <?php // The copy exactly as written; only the column around it changes. ?>
+                                <div class="gb-std-card gb-std-copy"><?php echo wp_kses_post( $gb_std_section['body'] ); ?></div>
                             </div>
                             <div class="gb-std-split-media">
                                 <img src="<?php echo esc_url( $gb_std_section['image'] ); ?>" alt="" loading="lazy">
@@ -242,14 +234,18 @@ $gb_std_join     = get_page_by_path( 'join' );
 
                     <?php elseif ( $gb_std_section['layout'] === 'grid' ) : ?>
                         <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
-                        <?php if ( $gb_std_section['rest'] !== '' ) : ?>
-                            <div class="gb-std-prose"><?php echo wp_kses_post( $gb_std_section['rest'] ); ?></div>
+                        <?php if ( $gb_std_section['before'] !== '' ) : ?>
+                            <div class="gb-std-prose"><?php echo wp_kses_post( $gb_std_section['before'] ); ?></div>
                         <?php endif; ?>
                         <div class="gb-std-tiles">
                             <?php foreach ( $gb_std_section['items'] as $gb_item ) : ?>
                                 <div class="gb-std-tile"><?php echo wp_kses_post( $gb_item ); ?></div>
                             <?php endforeach; ?>
                         </div>
+                        <?php // Whatever the writer put after the list stays after it. ?>
+                        <?php if ( $gb_std_section['after'] !== '' ) : ?>
+                            <div class="gb-std-prose" style="margin-top:28px;"><?php echo wp_kses_post( $gb_std_section['after'] ); ?></div>
+                        <?php endif; ?>
 
                     <?php else : ?>
                         <h2><?php echo esc_html( $gb_std_section['title'] ); ?></h2>
