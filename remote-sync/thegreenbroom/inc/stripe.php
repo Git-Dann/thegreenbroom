@@ -407,7 +407,7 @@ function gb_handle_connect_onboarding() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_onboarding_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect onboarding.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $account = gb_create_connect_account_for_cleaner($cleaner_id);
@@ -536,7 +536,7 @@ function gb_handle_connect_login_link() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_login_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect dashboard access.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
@@ -576,7 +576,7 @@ function gb_handle_connect_sync() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_sync_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect sync.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $synced = gb_sync_cleaner_connect_account($cleaner_id);
@@ -633,6 +633,7 @@ function gb_require_stripe_config($required_fields = ['secret_key']) {
             'secret_key' => 'secret key',
             'webhook_secret' => 'webhook secret',
             'connect_webhook_secret' => 'Connect webhook secret',
+            'v2_webhook_secret' => 'Accounts v2 webhook secret',
         ];
         $missing = [];
         foreach ($issues as $issue) {
@@ -685,12 +686,26 @@ function gb_get_stripe_config() {
         $connect_webhook_secret = get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true);
     }
 
+    /*
+     * A third secret, for the Accounts v2 endpoint.
+     *
+     * Stripe will not let one destination carry both v1 snapshot events and v2
+     * thin events, so the v2 account events have to live on a destination of
+     * their own - which means a third signing secret. Two fields were not
+     * enough, and the checkbox for that event is simply greyed out on any
+     * destination already carrying v1 events.
+     */
+    $v2_webhook_secret = $mode === 'live'
+        ? get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true)
+        : get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true);
+
     return [
         'mode'            => $mode,
         'publishable_key' => trim((string) $publishable_key),
         'secret_key'      => trim((string) $secret_key),
         'webhook_secret'  => trim((string) $webhook_secret),
         'connect_webhook_secret' => trim((string) $connect_webhook_secret),
+        'v2_webhook_secret'      => trim((string) $v2_webhook_secret),
         'platform_fee'    => get_post_meta($settings_id, '_gb_platform_fee', true) !== '' ? get_post_meta($settings_id, '_gb_platform_fee', true) : '0',
         'webhook_url'     => gb_get_stripe_webhook_url(),
     ];
@@ -1251,11 +1266,13 @@ function gb_handle_stripe_sample_create_product() {
         wp_die('You do not have permission to create Stripe products.');
     }
 
+    // Same reasoning as the plan provisioning button: an expired nonce is not
+    // the user's mistake, and a blank page is not a useful answer to it.
     if (
         empty($_POST['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'gb_stripe_sample_create_product')
     ) {
-        wp_die('Security check failed.');
+        gb_redirect_manager_settings_with_stripe_notice('error', 'That page had been open a while, so we stopped before doing anything. Reload and try again.');
     }
 
     $config = gb_require_stripe_config(['secret_key']);
@@ -1551,6 +1568,7 @@ function gb_handle_stripe_webhook() {
     $secrets = array_filter([
         isset($config['webhook_secret']) ? $config['webhook_secret'] : '',
         isset($config['connect_webhook_secret']) ? $config['connect_webhook_secret'] : '',
+        isset($config['v2_webhook_secret']) ? $config['v2_webhook_secret'] : '',
     ], function ($secret) {
         return !gb_stripe_value_is_placeholder($secret);
     });

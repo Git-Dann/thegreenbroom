@@ -406,11 +406,18 @@ function gb_handle_stripe_provision_subscriptions() {
         wp_die('You do not have permission to set up Stripe products.', '', array('response' => 403));
     }
 
+    /*
+     * A nonce lasts 24 hours. A Settings tab left open overnight - or a
+     * re-login since the page was loaded - fails here through no fault of the
+     * person pressing the button, and wp_die() left them on a blank page with
+     * the word "Security" on it and no way back. Send them to the plans panel
+     * with something they can act on instead.
+     */
     if (
         empty($_POST['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'gb_stripe_provision_subscriptions')
     ) {
-        wp_die('Security check failed.', '', array('response' => 403));
+        gb_redirect_to_subscription_plans('error', 'That page had been open a while, so we stopped before doing anything. Reload and press the button again.');
     }
 
     $report = gb_stripe_provision_membership_products();
