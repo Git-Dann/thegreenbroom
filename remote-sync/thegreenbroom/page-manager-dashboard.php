@@ -203,8 +203,8 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             wp_redirect(add_query_arg(
                 is_wp_error($gb_synced)
                     ? ['tab' => 'members', 'msg' => 'sync_failed', 'detail' => rawurlencode($gb_synced->get_error_message())]
-                    : ['tab' => 'members', 'msg' => 'synced'],
-                home_url('/manager-dashboard')
+                    : ['tab' => 'members', 'msg' => 'synced', 'detail' => rawurlencode(is_string($gb_synced) ? $gb_synced : '')],
+                home_url('/manager-dashboard/')
             ));
             exit;
         case 'save_settings':
@@ -866,7 +866,15 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
-        <?php if($msg == 'synced'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Asked Stripe again. Whatever it said is now on the row below &mdash; if nothing changed, Stripe and this site already agreed.</div><?php endif; ?>
+        <?php if($msg == 'synced'): ?>
+            <div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">
+                ✅ Asked Stripe again, and applied what it said.
+                <?php $gb_sync_detail = isset($_GET['detail']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['detail']))) : ''; ?>
+                <?php if ($gb_sync_detail !== ''): ?>
+                    <br><span style="font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; color:#166534;">Stripe returned: <?php echo esc_html($gb_sync_detail); ?></span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
         <?php if($msg == 'sync_failed'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fecaca; color:#991b1b; padding:15px;">Could not read that subscription from Stripe: <?php echo esc_html(isset($_GET['detail']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['detail']))) : 'no reason given'); ?></div><?php endif; ?>
         <?php if($msg == 'approved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Cleaner approved.</div><?php endif; ?>
         <?php if($msg == 'deleted'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">🗑️ Item deleted.</div><?php endif; ?>
