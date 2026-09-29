@@ -407,7 +407,7 @@ function gb_handle_connect_onboarding() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_onboarding_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect onboarding.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $account = gb_create_connect_account_for_cleaner($cleaner_id);
@@ -536,7 +536,7 @@ function gb_handle_connect_login_link() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_login_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect dashboard access.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
@@ -576,7 +576,7 @@ function gb_handle_connect_sync() {
         empty($_GET['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), 'gb_connect_sync_' . $cleaner_id)
     ) {
-        gb_connect_redirect_with_notice($redirect_to, 'error', 'Security check failed for Stripe Connect sync.');
+        gb_connect_redirect_with_notice($redirect_to, 'error', 'That page had been open a while, so we stopped. Please try again.');
     }
 
     $synced = gb_sync_cleaner_connect_account($cleaner_id);
@@ -1251,11 +1251,13 @@ function gb_handle_stripe_sample_create_product() {
         wp_die('You do not have permission to create Stripe products.');
     }
 
+    // Same reasoning as the plan provisioning button: an expired nonce is not
+    // the user's mistake, and a blank page is not a useful answer to it.
     if (
         empty($_POST['_wpnonce']) ||
         !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'gb_stripe_sample_create_product')
     ) {
-        wp_die('Security check failed.');
+        gb_redirect_manager_settings_with_stripe_notice('error', 'That page had been open a while, so we stopped before doing anything. Reload and try again.');
     }
 
     $config = gb_require_stripe_config(['secret_key']);
