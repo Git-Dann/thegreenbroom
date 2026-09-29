@@ -555,8 +555,12 @@ function gb_membership_handle_stripe_event( $event_type, $event_object ) {
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted':
+            gb_membership_apply_subscription( $event_object );
+            break;
+
         case 'customer.subscription.trial_will_end':
             gb_membership_apply_subscription( $event_object );
+            gb_membership_send_trial_ending_email( $event_object );
             break;
 
         case 'invoice.paid':
@@ -747,3 +751,88 @@ function gb_membership_handle_portal_request() {
     exit;
 }
 add_action( 'init', 'gb_membership_handle_portal_request' );
+
+/* --------------------------------------------------------------------------
+   THE REMINDER THE PANEL PROMISES
+   -------------------------------------------------------------------------- */
+
+/**
+ * Tell a cleaner their free months are nearly up.
+ *
+ * "We will remind you before your free three months are up" is printed on
+ * Become a Cleaner, and nothing was sending that reminder. Stripe fires
+ * trial_will_end three days out, which is the hook for keeping the promise.
+ *
+ * Sent once per subscription. Stripe retries a webhook it thinks failed, and
+ * the same event can arrive more than once; a duplicate here is not a
+ * duplicate row in a table, it is the same person emailed twice about their
+ * money, so the guard matters more than usual.
+ */
+function gb_membership_send_trial_ending_email( array $subscription ) {
+    if ( empty( $subscription['id'] ) ) {
+        return false;
+    }
+
+    $user_id = gb_membership_user_from_subscription( $subscription );
+
+    if ( $user_id < 1 ) {
+        return false;
+    }
+
+    $user = get_userdata( $user_id );
+
+    if ( ! $user || ! is_email( $user->user_email ) ) {
+        return false;
+    }
+
+    $subscription_id = sanitize_text_field( (string) $subscription['id'] );
+    $already         = (string) get_user_meta( $user_id, '_gb_trial_reminder_sent', true );
+
+    if ( $already === $subscription_id ) {
+        return false;
+    }
+
+    $ends = ! empty( $subscription['trial_end'] )
+        ? date_i18n( 'j F Y', (int) $subscription['trial_end'] )
+        : '';
+
+    $amount = '';
+
+    if ( function_exists( 'gb_subscription_plan_amount' ) ) {
+        $minor = gb_subscription_plan_amount( 'cleaner_monthly' );
+
+        if ( ! is_wp_error( $minor ) && function_exists( 'gb_format_minor_amount' ) ) {
+            $amount = wp_strip_all_tags( gb_format_minor_amount( $minor ) );
+        }
+    }
+
+    $name = $user->first_name !== '' ? $user->first_name : $user->display_name;
+
+    $lines = array(
+        'Hi ' . $name . ',',
+        '',
+        $ends !== ''
+            ? 'Your free three months on The Green Broom end on ' . $ends . '.'
+            : 'Your free three months on The Green Broom are nearly up.',
+        $amount !== ''
+            ? 'After that your listing is ' . $amount . ' a month. Nothing changes on your profile and there is nothing you need to do.'
+            : 'Nothing changes on your profile and there is nothing you need to do.',
+        '',
+        'If you would rather stop, you can cancel any time from your account page: ' . home_url( '/my-account' ),
+        '',
+        'Thanks for being part of it.',
+        'The Green Broom',
+    );
+
+    $sent = gb_send_brevo_template_email(
+        $user->user_email,
+        'Your free three months are nearly up',
+        implode( "\n", $lines )
+    );
+
+    if ( $sent ) {
+        update_user_meta( $user_id, '_gb_trial_reminder_sent', $subscription_id );
+    }
+
+    return $sent;
+}
