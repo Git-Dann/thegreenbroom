@@ -826,3 +826,37 @@ function gb_set_insurance_provided_by_platform() {
 
     update_option( 'gb_insurance_provided_2026_09', 1, false );
 }
+
+/**
+ * Finish the insurance line on The Green Broom Standard.
+ *
+ * The previous pass matched the whole list item, entity and all - and the
+ * stored copy has a real em dash, because WordPress decoded &mdash; on the way
+ * into the database. Two of the three replacements landed and this one did
+ * not, which is what a live check found.
+ *
+ * Anchored on the part of the sentence that cannot be transformed on the way
+ * in: no entities, no punctuation that gets texturised. That is the general
+ * lesson - match the words, not the mark-up around them.
+ */
+function gb_finish_standard_insurance_line() {
+    if ( get_option( 'gb_standard_insurance_line_v2' ) ) {
+        return;
+    }
+
+    $standard = get_page_by_path( 'the-green-broom-standard' );
+
+    if ( $standard instanceof WP_Post ) {
+        $was = 'public liability cover in place and evidenced';
+        $now = 'covered by The Green Broom&rsquo;s own insurance policy, which we provide';
+
+        if ( strpos( (string) $standard->post_content, $was ) !== false ) {
+            wp_update_post( array(
+                'ID'           => $standard->ID,
+                'post_content' => str_replace( $was, $now, (string) $standard->post_content ),
+            ) );
+        }
+    }
+
+    update_option( 'gb_standard_insurance_line_v2', 1, false );
+}
