@@ -60,7 +60,7 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
                 } else {
                     $u->set_role('gb_customer');
                     wp_set_current_user($uid); wp_set_auth_cookie($uid);
-                    $verification_state = gb_prepare_new_user_email_verification($uid, home_url('/my-account'));
+                    $verification_state = gb_prepare_new_user_email_verification($uid, home_url('/my-account/'));
                     wp_safe_redirect($verification_state['redirect']); exit;
                 }
             }

@@ -93,7 +93,7 @@ if ($booking_id) {
                             
                             // Redirect to Dashboard
                             gb_reset_rate_limit('guest_account_create', $email);
-                            $verification_state = gb_prepare_new_user_email_verification($user_id, home_url('/my-account'));
+                            $verification_state = gb_prepare_new_user_email_verification($user_id, home_url('/my-account/'));
                             wp_safe_redirect($verification_state['redirect']);
                             exit;
                         }
