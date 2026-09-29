@@ -161,6 +161,39 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
             <div id="safeguarding" class="gb-editor-section gb-settings-panel">
                 <div class="gb-editor-header"><span class="dashicons dashicons-shield-alt"></span> Standards & Safeguarding</div>
                 <div class="gb-editor-body">
+                    <?php
+                    /*
+                     * Where ID documents and DBS certificates are kept.
+                     *
+                     * This host serves files out of wp-content/uploads even
+                     * where an .htaccess says not to, so the plugin moves them
+                     * above the web root, where no request can reach them at
+                     * all. That move used to happen silently, with the result
+                     * written to an option nobody could read.
+                     */
+                    $gb_docs = class_exists('GB_Uploads') && method_exists('GB_Uploads', 'get_storage_status')
+                        ? GB_Uploads::get_storage_status()
+                        : null;
+                    ?>
+                    <?php if (is_array($gb_docs)): ?>
+                        <?php
+                        $gb_docs_ok = !empty($gb_docs['secure']) && (int) $gb_docs['kept'] === 0;
+                        $gb_docs_warn = empty($gb_docs['secure']) || (int) $gb_docs['kept'] > 0;
+                        ?>
+                        <div style="margin:0 0 22px; padding:13px 15px; border-radius:9px; font-size:13px; line-height:1.6;
+                            background:<?php echo $gb_docs_ok ? '#f0fdf4' : ($gb_docs_warn ? '#fffbeb' : '#f8fafc'); ?>;
+                            border:1px solid <?php echo $gb_docs_ok ? '#bbf7d0' : ($gb_docs_warn ? '#fde68a' : '#e2e8f0'); ?>;
+                            color:<?php echo $gb_docs_ok ? '#166534' : ($gb_docs_warn ? '#92400e' : '#475569'); ?>;">
+                            <strong>Verification documents</strong> &mdash; stored <?php echo esc_html($gb_docs['store']); ?>.
+                            <?php if ((int) $gb_docs['kept'] > 0): ?>
+                                <br><?php echo (int) $gb_docs['kept']; ?> file<?php echo (int) $gb_docs['kept'] === 1 ? '' : 's'; ?> could not be moved out of the old location and may still be reachable by anyone who knows the address. Worth raising with your developer.
+                            <?php elseif ((int) $gb_docs['kept'] === 0): ?>
+                                <br>Nothing left in the old location<?php echo $gb_docs['checked'] !== '' ? ' as of ' . esc_html($gb_docs['checked']) : ''; ?>. ID and DBS files cannot be requested over the web.
+                            <?php else: ?>
+                                <br>The move has not run yet.
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                     <div class="gb-link-row" style="margin-bottom: 20px;">
                         <div class="gb-form-row">
                             <label class="gb-label">Min. Booking Lead Time (Hours)</label>
