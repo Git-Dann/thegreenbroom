@@ -108,6 +108,76 @@ if (!empty($booking_ids)) {
 }
 usort($upcoming, function($a, $b) { return $a['ts'] - $b['ts']; });
 usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
+
+/*
+ * Membership.
+ *
+ * Until now a paying member had nowhere to see what they were paying
+ * for, and no way to change a card or stop - which is not a reasonable
+ * position to take real money from somebody in. Managing it happens in
+ * Stripe's billing portal rather than in screens built here: cancelling
+ * is the one thing that must not be subtly wrong.
+ */
+$gb_acc_user_id = get_current_user_id();
+$gb_acc_member  = function_exists('gb_get_membership') ? gb_get_membership($gb_acc_user_id) : ['status' => 'none', 'plan' => '', 'expires' => ''];
+$gb_acc_active  = $gb_acc_member['status'] === 'active';
+$gb_acc_plans   = function_exists('gb_membership_plans') ? gb_membership_plans() : [];
+$gb_acc_plan    = isset($gb_acc_plans[$gb_acc_member['plan']]) ? $gb_acc_plans[$gb_acc_member['plan']]['label'] : '';
+$gb_acc_renews  = $gb_acc_member['expires'] !== '' && strtotime($gb_acc_member['expires'])
+    ? date_i18n('j F Y', strtotime($gb_acc_member['expires']))
+    : '';
+
+// Cancelled, but paid up until the period ends. Still active, and must
+// not be described as renewing.
+$gb_acc_cancels_raw = isset($gb_acc_member['cancels_at']) ? $gb_acc_member['cancels_at'] : '';
+$gb_acc_cancels     = $gb_acc_cancels_raw !== '' && strtotime($gb_acc_cancels_raw)
+    ? date_i18n('j F Y', strtotime($gb_acc_cancels_raw))
+    : '';
+$gb_acc_ending      = $gb_acc_active && $gb_acc_cancels !== '';
+$gb_acc_pending = function_exists('gb_membership_get_pending_plan') ? gb_membership_get_pending_plan($gb_acc_user_id) : '';
+$gb_acc_cat     = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : [];
+
+$gb_billing_notice = isset($_GET['gb_billing']) ? sanitize_key(wp_unslash($_GET['gb_billing'])) : '';
+$gb_billing_detail = isset($_GET['gb_billing_msg']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['gb_billing_msg']))) : '';
+$gb_billing_copy   = [
+    'already' => ['info',  'You already have an active membership. You can change or cancel it below.'],
+    'expired' => ['error', 'That page had been open a while, so we stopped before anything was changed. Please try again.'],
+    'error'   => ['error', $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page.'],
+];
+
+/*
+ * Notices are built before anything is drawn, because whether there are any
+ * decides the layout.
+ *
+ * The cards are deliberately pulled up 50px so the first one overlaps the
+ * green banner - that is the design. A notice landing in that slot inherits
+ * the overlap and ends up sitting half on the green and half off it, which is
+ * where "You already have an active membership" was appearing.
+ *
+ * So notices get their own row below the banner, and the overlap moves to
+ * whichever block is actually first.
+ */
+$gb_notices = trim(
+    (string) $msg
+    . (function_exists('gb_password_notice_html') ? gb_password_notice_html() : '')
+);
+
+if (isset($gb_billing_copy[$gb_billing_notice])) {
+    ob_start(); ?>
+    <div id="gb-billing" class="gb-membership-notice gb-membership-notice-<?php echo esc_attr($gb_billing_copy[$gb_billing_notice][0]); ?>" style="margin-bottom:0;">
+        <?php echo esc_html($gb_billing_copy[$gb_billing_notice][1]); ?>
+        <?php if ($gb_billing_notice === 'error'): ?>
+            <br><strong>Nothing has been charged or changed.</strong>
+            Try again, and if it keeps happening
+            <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" style="color:inherit; text-decoration:underline;">tell us</a>
+            and we will sort your membership out for you.
+        <?php endif; ?>
+    </div>
+    <?php
+    $gb_notices .= ob_get_clean();
+}
+
+$gb_has_notices = trim($gb_notices) !== '';
 ?>
 
 <div class="gb-page-wrapper" style="padding-top:0;">
@@ -118,60 +188,13 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
         </div>
     </div>
 
-    <div class="gb-container" style="margin-top:-50px; position:relative; z-index:10;">
-        <?php echo $msg; ?>
-        <?php echo function_exists('gb_password_notice_html') ? gb_password_notice_html() : ''; ?>
+    <?php if ($gb_has_notices): ?>
+        <div class="gb-container" style="margin-top:24px; position:relative; z-index:10;">
+            <?php echo $gb_notices; ?>
+        </div>
+    <?php endif; ?>
 
-        <?php
-        /*
-         * Membership.
-         *
-         * Until now a paying member had nowhere to see what they were paying
-         * for, and no way to change a card or stop - which is not a reasonable
-         * position to take real money from somebody in. Managing it happens in
-         * Stripe's billing portal rather than in screens built here: cancelling
-         * is the one thing that must not be subtly wrong.
-         */
-        $gb_acc_user_id = get_current_user_id();
-        $gb_acc_member  = function_exists('gb_get_membership') ? gb_get_membership($gb_acc_user_id) : ['status' => 'none', 'plan' => '', 'expires' => ''];
-        $gb_acc_active  = $gb_acc_member['status'] === 'active';
-        $gb_acc_plans   = function_exists('gb_membership_plans') ? gb_membership_plans() : [];
-        $gb_acc_plan    = isset($gb_acc_plans[$gb_acc_member['plan']]) ? $gb_acc_plans[$gb_acc_member['plan']]['label'] : '';
-        $gb_acc_renews  = $gb_acc_member['expires'] !== '' && strtotime($gb_acc_member['expires'])
-            ? date_i18n('j F Y', strtotime($gb_acc_member['expires']))
-            : '';
-
-        // Cancelled, but paid up until the period ends. Still active, and must
-        // not be described as renewing.
-        $gb_acc_cancels_raw = isset($gb_acc_member['cancels_at']) ? $gb_acc_member['cancels_at'] : '';
-        $gb_acc_cancels     = $gb_acc_cancels_raw !== '' && strtotime($gb_acc_cancels_raw)
-            ? date_i18n('j F Y', strtotime($gb_acc_cancels_raw))
-            : '';
-        $gb_acc_ending      = $gb_acc_active && $gb_acc_cancels !== '';
-        $gb_acc_pending = function_exists('gb_membership_get_pending_plan') ? gb_membership_get_pending_plan($gb_acc_user_id) : '';
-        $gb_acc_cat     = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : [];
-
-        $gb_billing_notice = isset($_GET['gb_billing']) ? sanitize_key(wp_unslash($_GET['gb_billing'])) : '';
-        $gb_billing_detail = isset($_GET['gb_billing_msg']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['gb_billing_msg']))) : '';
-        $gb_billing_copy   = [
-            'already' => ['info',  'You already have an active membership. You can change or cancel it below.'],
-            'expired' => ['error', 'That page had been open a while, so we stopped before anything was changed. Please try again.'],
-            'error'   => ['error', $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page.'],
-        ];
-        ?>
-
-        <?php if (isset($gb_billing_copy[$gb_billing_notice])): ?>
-            <div id="gb-billing" class="gb-membership-notice gb-membership-notice-<?php echo esc_attr($gb_billing_copy[$gb_billing_notice][0]); ?>" style="margin-bottom:20px;">
-                <?php echo esc_html($gb_billing_copy[$gb_billing_notice][1]); ?>
-                <?php if ($gb_billing_notice === 'error'): ?>
-                    <br><strong>Nothing has been charged or changed.</strong>
-                    Try again, and if it keeps happening
-                    <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" style="color:inherit; text-decoration:underline;">tell us</a>
-                    and we will sort your membership out for you.
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
+    <div class="gb-container" style="margin-top:<?php echo $gb_has_notices ? '24px' : '-50px'; ?>; position:relative; z-index:10;">
         <div class="gb-card mb-20">
             <div class="gb-card-head">
                 <span class="gb-card-title">Membership</span>
