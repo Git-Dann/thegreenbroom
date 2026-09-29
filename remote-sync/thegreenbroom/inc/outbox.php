@@ -697,7 +697,15 @@ function gb_backup_smtp_check() {
             ? array( 'ok' => true, 'configured' => true, 'message' => 'Signed in to ' . $cfg['host'] . ' as ' . $cfg['username'] . '.' )
             : array( 'ok' => false, 'configured' => true, 'message' => 'Could not sign in to ' . $cfg['host'] . '.' );
     } catch ( \Exception $e ) {
-        return array( 'ok' => false, 'configured' => true, 'message' => sanitize_text_field( $e->getMessage() ) );
+        $message = sanitize_text_field( $e->getMessage() );
+
+        // The one failure with an obvious next step; say what it is.
+        if ( stripos( $message, 'authenticate' ) !== false ) {
+            $message .= ' Check the password by signing in to webmail.fasthosts.co.uk as ' . $cfg['username']
+                . ' - if that works there, re-enter it here and save. A brand-new mailbox can take up to an hour to start accepting sign-ins.';
+        }
+
+        return array( 'ok' => false, 'configured' => true, 'message' => $message );
     }
 }
 

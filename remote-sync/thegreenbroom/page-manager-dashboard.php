@@ -360,6 +360,22 @@ if (isset($_POST['gb_save_action'])) {
             if (in_array($key, $gb_write_only_secrets, true) && trim((string) wp_unslash($value)) === '') {
                 continue;
             }
+            /*
+             * Secrets are stored exactly as typed.
+             *
+             * Everything else here goes through wp_kses_post, which is right
+             * for page content and wrong for a password: it turns "&" into
+             * "&amp;", deletes anything between < and >, and update_post_meta
+             * then strips backslashes. A mailbox password with any of those
+             * in it was saved as a different password, and the backup
+             * mailbox could never sign in. wp_slash() so update_post_meta's
+             * own unslash hands back the original. They are only ever sent
+             * to the service they belong to, never printed on a page.
+             */
+            if (in_array($key, $gb_write_only_secrets, true)) {
+                update_post_meta($pid, $key, wp_slash((string) wp_unslash($value)));
+                continue;
+            }
             update_post_meta($pid, $key, gb_manager_sanitize_meta_value($value));
         }
     }
