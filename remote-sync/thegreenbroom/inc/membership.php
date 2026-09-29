@@ -87,6 +87,66 @@ function gb_get_membership( $user_id ) {
 }
 
 /**
+ * The one state a membership should be described by.
+ *
+ * Stored status and "is it cancelling" are two facts, and the Members screen
+ * was printing both: a green ACTIVE pill with "Cancelled - not renewing" in
+ * amber underneath it. Two answers to one question, on every row. Fine while
+ * there are four people on the platform and unreadable at a hundred, which is
+ * the whole point of the screen.
+ *
+ * Ending is its own state rather than a footnote on Active: somebody who has
+ * cancelled and is running out their notice is neither staying nor gone, and
+ * it is the state a manager most wants to pick out of a list.
+ *
+ * Every counter, pill and date label reads from here, so they cannot drift
+ * apart or disagree with each other.
+ *
+ * @return array{key: string, label: string, colour: string, date_label: string}
+ */
+function gb_membership_display_state( array $membership ) {
+    $status = isset( $membership['status'] ) ? (string) $membership['status'] : 'none';
+    $ending = $status === 'active' && ! empty( $membership['cancels_at'] );
+
+    if ( $ending ) {
+        return array(
+            'key'        => 'ending',
+            'label'      => 'Ending',
+            'colour'     => '#d97706',
+            'date_label' => 'Ends',
+        );
+    }
+
+    switch ( $status ) {
+        case 'active':
+            return array( 'key' => 'active', 'label' => 'Active', 'colour' => '#16a34a', 'date_label' => 'Renews' );
+        case 'expired':
+            return array( 'key' => 'expired', 'label' => 'Expired', 'colour' => '#ea580c', 'date_label' => 'Ended' );
+        case 'cancelled':
+            return array( 'key' => 'cancelled', 'label' => 'Cancelled', 'colour' => '#64748b', 'date_label' => 'Ended' );
+    }
+
+    return array( 'key' => 'none', 'label' => 'Not a member', 'colour' => '#94a3b8', 'date_label' => '' );
+}
+
+/**
+ * The date that state is about, or '' when there is not one.
+ *
+ * A cancelling membership stops on its cancellation date, not on the renewal
+ * date it would have had, and showing the renewal date next to "Ends" would be
+ * the wrong day.
+ */
+function gb_membership_display_date( array $membership ) {
+    $state = gb_membership_display_state( $membership );
+
+    if ( $state['key'] === 'ending' ) {
+        return (string) $membership['cancels_at'];
+    }
+
+    return isset( $membership['expires'] ) ? (string) $membership['expires'] : '';
+}
+
+/**
  * Record that a membership is set to stop, or that it is not.
  *
  * Stripe's portal offers "cancel at the end of the billing period", which is
