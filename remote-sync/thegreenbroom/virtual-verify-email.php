@@ -21,8 +21,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['gb_resend_email_ver
     } else {
         $send_result = gb_send_email_verification( $current_user->ID, true );
         if ( is_wp_error( $send_result ) ) {
-            $email_status = $send_result->get_error_code() === 'gb_email_rate_limited' ? 'rate-limited' : 'send-error';
-            $status_tone = 'error';
+            $gb_code = $send_result->get_error_code();
+            $email_status = $gb_code === 'gb_email_rate_limited' ? 'rate-limited' : ( $gb_code === 'gb_email_queued' ? 'queued' : 'send-error' );
+            $status_tone = $email_status === 'queued' ? 'info' : 'error';
             $status_message = $send_result->get_error_message();
         } else {
             $email_status = 'resent';
@@ -97,7 +98,7 @@ if ( $status_message === '' ) {
             $status_tone = 'error';
             $status_message = 'That verification link has expired. Request a fresh one below.';
             break;
-            case 'rate-limited':
+        case 'rate-limited':
             $status_tone = 'error';
             $status_message = 'Too many resend attempts. Please wait a little before trying again.';
             break;
@@ -105,9 +106,13 @@ if ( $status_message === '' ) {
             $status_tone = 'error';
             $status_message = 'That verification link is invalid.';
             break;
+        case 'queued':
+            $status_tone = 'info';
+            $status_message = 'Your verification email is queued and will be sent automatically within a few minutes. There is no need to press Resend.';
+            break;
         case 'send-error':
             $status_tone = 'error';
-            $status_message = 'We could not send a verification email yet. Check your mail transport and try again.';
+            $status_message = 'We could not send your verification email just now. Please try Resend in a minute, or contact us and we will verify your account by hand.';
             break;
         default:
             $status_tone = 'info';

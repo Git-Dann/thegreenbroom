@@ -214,6 +214,35 @@ charging, or be clear in the sales copy about what the membership buys.
 
 ---
 
+## 12. Email: set up the backup mailbox
+
+**Manager OS → Settings → Email & delivery → Backup mailbox.**
+
+Every email the site sends now tries three routes in turn: Brevo, then a
+backup mailbox, then the web server's own mail. Anything that fails all
+three is kept and retried automatically (after 5 minutes, 30 minutes, 2 hours
+and 6 hours), shows on every Manager OS screen, and sends an alert email.
+
+The backup route only works once it has a mailbox to sign in to:
+
+- **Mailbox address** — `info@thegreenbroom.co.uk`
+- **Mailbox password** — that mailbox's own password, from the FastHosts
+  control panel (write-only, like the Stripe keys)
+- **Outgoing server** — `smtp.livemail.co.uk`, port `587`, STARTTLS. If
+  FastHosts gives different settings for the mailbox, use theirs.
+- **Use the backup mailbox** — Enabled
+
+Save, then press **Test backup sign-in** and **Send test via backup**. Until
+this is done, a Brevo refusal falls straight to the web server, which is not
+in the domain's SPF record and does not sign mail, so those emails may land
+in spam.
+
+In Brevo, **Settings → Security → Authorised IPs**: either turn blocking off
+for API keys, or keep `217.160.134.0/24` on the list. A missing address there
+is what stopped email on 29 September.
+
+---
+
 ## After go-live: what to watch in the first week
 
 - **Stripe → Developers → Webhooks** — any endpoint showing failed deliveries.
@@ -221,6 +250,8 @@ charging, or be clear in the sales copy about what the membership buys.
 - **Members → Ending** — the count of people on their way out, which is the
   first number worth watching.
 - **Cleaners** — how many are still not payout-ready.
+- **Settings → Email & delivery** — the delivery health panel and the recent
+  emails log. Anything "Not delivered" can be resent from there.
 - **Failed payments** — `invoice.payment_failed` is subscribed; a card that
   fails puts the subscription into `past_due`, which this site still treats as
   active until Stripe gives up on it. That is deliberate, so nobody loses
