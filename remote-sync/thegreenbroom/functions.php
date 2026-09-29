@@ -2136,7 +2136,34 @@ function gb_send_security_headers() {
     header( 'X-Frame-Options: SAMEORIGIN', true );
     header( 'Permissions-Policy: camera=(), geolocation=(), microphone=()', true );
     header( 'X-Permitted-Cross-Domain-Policies: none', true );
-    header( "Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://checkout.stripe.com https://connect.stripe.com;", true );
+    /*
+     * Every host a form on this site is allowed to end up submitting to.
+     *
+     * Chrome applies form-action to the whole redirect chain, not just the
+     * form's own action, so any POST handler that redirects to Stripe needs
+     * its destination named here. When one is missing the browser blocks the
+     * navigation silently: no error page, no failed request, nothing but a
+     * console line. The button simply appears dead.
+     *
+     * That is exactly what happened to "Manage or cancel" - the billing portal
+     * lives on billing.stripe.com, which was not on this list, and the whole
+     * of the rest of the flow was working perfectly behind it.
+     *
+     * So: one list, with what each entry is for, next to the code that needs
+     * it rather than buried in a header string.
+     */
+    $gb_form_targets = array(
+        "'self'",
+        'https://checkout.stripe.com', // Membership and booking checkout
+        'https://connect.stripe.com',  // Cleaner payout onboarding
+        'https://billing.stripe.com',  // The billing portal: change card, cancel
+    );
+
+    header(
+        "Content-Security-Policy: frame-ancestors 'self'; base-uri 'self'; form-action "
+            . implode( ' ', $gb_form_targets ) . ';',
+        true
+    );
 
     if ( is_ssl() ) {
         header( 'Strict-Transport-Security: max-age=31536000; includeSubDomains', true );
