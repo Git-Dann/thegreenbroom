@@ -52,12 +52,18 @@ foreach ($gb_member_ids as $gb_extra_id) {
     }
 }
 
-$gb_counts = ['active' => 0, 'expired' => 0, 'none' => 0, 'cancelled' => 0];
+/*
+ * Counted by display state, so Ending is its own number rather than being
+ * buried inside Active. At a hundred members "how many are on their way out"
+ * is the figure worth seeing, and it was not on the screen at all.
+ */
+$gb_counts = ['active' => 0, 'ending' => 0, 'expired' => 0, 'cancelled' => 0, 'none' => 0];
 $gb_rows = [];
 foreach ($gb_customers as $gb_u) {
-    $gb_m = gb_get_membership($gb_u->ID);
-    $gb_counts[$gb_m['status']] = ($gb_counts[$gb_m['status']] ?? 0) + 1;
-    $gb_rows[] = [$gb_u, $gb_m];
+    $gb_m     = gb_get_membership($gb_u->ID);
+    $gb_state = gb_membership_display_state($gb_m);
+    $gb_counts[$gb_state['key']] = ($gb_counts[$gb_state['key']] ?? 0) + 1;
+    $gb_rows[] = [$gb_u, $gb_m, $gb_state];
 }
 ?>
 
@@ -87,46 +93,77 @@ foreach ($gb_customers as $gb_u) {
  * on this tab, which is why they came out as a stack of bare text.
  */
 ?>
+<?php
+/*
+ * The counts double as a filter. At a hundred members, reading a state off a
+ * long table is the hard part, and "show me only the ones on their way out" is
+ * the question this screen exists to answer. A link and a query string rather
+ * than any JavaScript, so it survives a reload and can be sent to somebody.
+ */
+$gb_filter = isset($_GET['state']) ? sanitize_key(wp_unslash($_GET['state'])) : '';
+if (!array_key_exists($gb_filter, $gb_counts)) {
+    $gb_filter = '';
+}
+?>
 <div class="gb-grid-stats" style="margin-bottom:24px;">
     <?php foreach ([
-        'active'    => ['Active members', '#16a34a'],
-        'expired'   => ['Expired', '#d97706'],
+        'active'    => ['Active', '#16a34a'],
+        'ending'    => ['Ending', '#d97706'],
+        'expired'   => ['Expired', '#ea580c'],
         'cancelled' => ['Cancelled', '#64748b'],
         'none'      => ['No membership', '#94a3b8'],
     ] as $gb_k => $gb_cfg): ?>
-        <div class="gb-widget gb-widget-stat">
+        <?php $gb_is_on = $gb_filter === $gb_k; ?>
+        <a class="gb-widget gb-widget-stat" style="display:block; text-decoration:none; <?php echo $gb_is_on ? 'border-color:' . esc_attr($gb_cfg[1]) . '; box-shadow:0 0 0 2px ' . esc_attr($gb_cfg[1]) . '22;' : ''; ?>"
+           href="<?php echo esc_url(add_query_arg($gb_is_on ? ['tab' => 'members'] : ['tab' => 'members', 'state' => $gb_k], home_url('/manager-dashboard/'))); ?>"
+           title="<?php echo $gb_is_on ? 'Show everybody again' : esc_attr('Show only: ' . $gb_cfg[0]); ?>">
             <div class="gb-widget-body">
                 <div class="gb-stat-val" style="color:<?php echo esc_attr($gb_cfg[1]); ?>;"><?php echo (int) ($gb_counts[$gb_k] ?? 0); ?></div>
-                <div class="gb-stat-label"><?php echo esc_html($gb_cfg[0]); ?></div>
+                <div class="gb-stat-label"><?php echo esc_html($gb_cfg[0]); ?><?php echo $gb_is_on ? ' &times;' : ''; ?></div>
             </div>
-        </div>
+        </a>
     <?php endforeach; ?>
 </div>
+
+<?php if ($gb_filter !== ''): ?>
+    <p style="margin:-10px 0 20px; font-size:13px; color:#475569;">
+        Showing only <strong><?php echo esc_html($gb_filter); ?></strong>.
+        <a href="<?php echo esc_url(add_query_arg(['tab' => 'members'], home_url('/manager-dashboard/'))); ?>" style="color:#2e7d32; font-weight:700;">Show everybody</a>
+    </p>
+<?php endif; ?>
 
 <div class="gb-card" style="padding:0; overflow:hidden; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
     <div class="gb-table-scroll">
         <table class="gb-booking-table gb-members-table">
-            <thead><tr><th style="width:28%;">Customer</th><th>Status</th><th>Plan</th><th>Renews / ended</th><th style="text-align:right;">Set membership</th></tr></thead>
+            <thead><tr><th style="width:28%;">Customer</th><th>Status</th><th>Plan</th><th>Date</th><th style="text-align:right;">Set membership</th></tr></thead>
             <tbody>
-            <?php if (empty($gb_rows)): ?>
-                <tr><td colspan="5" style="color:#64748b; font-size:13px;">No customer accounts yet.</td></tr>
+            <?php
+            $gb_visible = $gb_filter === ''
+                ? $gb_rows
+                : array_values(array_filter($gb_rows, static function ($gb_row) use ($gb_filter) {
+                    return $gb_row[2]['key'] === $gb_filter;
+                }));
+            ?>
+            <?php if (empty($gb_visible)): ?>
+                <tr><td colspan="5" style="color:#64748b; font-size:13px;">
+                    <?php echo $gb_filter === '' ? 'No customer accounts yet.' : 'Nobody is in that state right now.'; ?>
+                </td></tr>
             <?php endif; ?>
-            <?php foreach ($gb_rows as [$gb_u, $gb_m]):
-                $gb_colour = ['active' => '#16a34a', 'expired' => '#d97706', 'cancelled' => '#64748b'][$gb_m['status']] ?? '#94a3b8'; ?>
+            <?php foreach ($gb_visible as [$gb_u, $gb_m, $gb_state]):
+                $gb_colour   = $gb_state['colour'];
+                $gb_row_date = gb_membership_display_date($gb_m); ?>
                 <tr>
                     <td>
                         <strong style="font-size:14px; color:#0f172a;"><?php echo esc_html($gb_u->display_name); ?></strong>
                         <div style="font-size:11px; color:#94a3b8; margin-top:3px;"><?php echo esc_html($gb_u->user_email); ?></div>
                     </td>
                     <td>
-                        <span style="display:inline-block; white-space:nowrap; padding:5px 11px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; background:<?php echo esc_attr($gb_colour); ?>1a; color:<?php echo esc_attr($gb_colour); ?>;">
-                            <?php echo esc_html($gb_m['status'] === 'none' ? 'Not a member' : $gb_m['status']); ?>
+                        <?php // One pill, one answer. Ending is a state here, not a note under Active. ?>
+                        <span style="display:inline-block; min-width:92px; text-align:center; white-space:nowrap; padding:5px 11px; border-radius:20px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; background:<?php echo esc_attr($gb_colour); ?>1a; color:<?php echo esc_attr($gb_colour); ?>;">
+                            <?php echo esc_html($gb_state['label']); ?>
                         </span>
-                        <?php if ($gb_m['source'] === 'manual' && $gb_m['status'] !== 'none'): ?>
+                        <?php if ($gb_m['source'] === 'manual' && $gb_state['key'] !== 'none'): ?>
                             <div style="font-size:10.5px; color:#94a3b8; margin-top:4px;">Recorded by hand</div>
-                        <?php endif; ?>
-                        <?php if (!empty($gb_m['cancels_at'])): ?>
-                            <div style="font-size:10.5px; color:#d97706; margin-top:4px;">Cancelled &mdash; not renewing</div>
                         <?php endif; ?>
                         <?php
                         /*
@@ -143,10 +180,13 @@ foreach ($gb_customers as $gb_u) {
                         <?php endif; ?>
                     </td>
                     <td style="font-size:12.5px; color:#475569;"><?php echo esc_html($gb_m['plan'] ? ($gb_plans[$gb_m['plan']]['label'] ?? $gb_m['plan']) : '&mdash;'); ?></td>
+                    <?php // The date, and what that date means, rather than a bare number. ?>
                     <td style="font-size:12.5px; color:#475569; white-space:nowrap;">
-                        <?php echo $gb_m['expires'] ? esc_html(date_i18n('j M Y', strtotime($gb_m['expires']))) : '&mdash;'; ?>
-                        <?php if (!empty($gb_m['cancels_at'])): ?>
-                            <div style="font-size:10.5px; color:#d97706;">ends, no renewal</div>
+                        <?php if ($gb_row_date !== '' && strtotime($gb_row_date)): ?>
+                            <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:<?php echo esc_attr($gb_colour); ?>;"><?php echo esc_html($gb_state['date_label']); ?></div>
+                            <?php echo esc_html(date_i18n('j M Y', strtotime($gb_row_date))); ?>
+                        <?php else: ?>
+                            &mdash;
                         <?php endif; ?>
                     </td>
                     <td style="text-align:right;">
