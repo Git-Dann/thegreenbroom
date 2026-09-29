@@ -17,6 +17,41 @@ $gb_customers = get_users([
     'order'    => 'DESC',
 ]);
 
+/*
+ * Anyone who has actually paid, whatever their role.
+ *
+ * This screen says "who has paid for access" and listed only users holding the
+ * customer role, so a membership bought by a manager or an administrator was
+ * invisible here - which is exactly what happened on the first live test and
+ * made it look as though the payment had not recorded at all. A membership is
+ * a membership whoever holds it.
+ */
+$gb_member_ids = array_map('intval', (array) get_users([
+    'meta_key'     => GB_MEMBER_STATUS,
+    'meta_compare' => 'EXISTS',
+    'number'       => 200,
+    'fields'       => 'ID',
+]));
+
+$gb_seen = [];
+foreach ($gb_customers as $gb_u) {
+    $gb_seen[(int) $gb_u->ID] = true;
+}
+
+foreach ($gb_member_ids as $gb_extra_id) {
+    if (isset($gb_seen[$gb_extra_id])) {
+        continue;
+    }
+
+    $gb_extra = get_userdata($gb_extra_id);
+
+    // Only worth listing if there is something to show.
+    if ($gb_extra && gb_get_membership($gb_extra_id)['status'] !== 'none') {
+        $gb_customers[] = $gb_extra;
+        $gb_seen[$gb_extra_id] = true;
+    }
+}
+
 $gb_counts = ['active' => 0, 'expired' => 0, 'none' => 0, 'cancelled' => 0];
 $gb_rows = [];
 foreach ($gb_customers as $gb_u) {

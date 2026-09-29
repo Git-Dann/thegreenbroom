@@ -224,6 +224,8 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
                 '_gb_stripe_live_secret_key',
                 '_gb_stripe_live_webhook_secret',
                 '_gb_stripe_live_connect_webhook_secret',
+                '_gb_stripe_test_v2_webhook_secret',
+                '_gb_stripe_live_v2_webhook_secret',
                 '_gb_stripe_secret_key',
                 '_gb_stripe_webhook_secret',
                 '_gb_stripe_connect_webhook_secret',

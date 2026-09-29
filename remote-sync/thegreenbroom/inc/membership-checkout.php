@@ -274,7 +274,7 @@ function gb_membership_handle_checkout_request() {
     // Already a member: their account is where they change or stop it, and
     // sending them back to the price they cannot buy again explains nothing.
     if ( is_wp_error( $url ) && $url->get_error_code() === 'gb_membership_already_active' ) {
-        wp_safe_redirect( add_query_arg( 'gb_billing', 'already', home_url( '/my-account' ) ) );
+        wp_safe_redirect( add_query_arg( 'gb_billing', 'already', home_url( '/my-account/' ) ) );
         exit;
     }
 
@@ -692,7 +692,7 @@ function gb_membership_create_portal_session( $user_id, $return_url = '' ) {
     }
 
     if ( $return_url === '' ) {
-        $return_url = home_url( '/my-account' );
+        $return_url = home_url( '/my-account/' );
     }
 
     $response = gb_stripe_api_request( 'billing_portal/sessions', array(
@@ -728,7 +728,7 @@ function gb_membership_handle_portal_request() {
         empty( $_POST['gb_membership_nonce'] ) ||
         ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['gb_membership_nonce'] ) ), 'gb_membership_portal' )
     ) {
-        wp_safe_redirect( add_query_arg( 'gb_billing', 'expired', home_url( '/my-account' ) ) );
+        wp_safe_redirect( add_query_arg( 'gb_billing', 'expired', home_url( '/my-account/' ) ) );
         exit;
     }
 
@@ -737,12 +737,12 @@ function gb_membership_handle_portal_request() {
         exit;
     }
 
-    $url = gb_membership_create_portal_session( get_current_user_id(), home_url( '/my-account' ) );
+    $url = gb_membership_create_portal_session( get_current_user_id(), home_url( '/my-account/' ) );
 
     if ( is_wp_error( $url ) ) {
         wp_safe_redirect( add_query_arg(
             array( 'gb_billing' => 'error', 'gb_billing_msg' => rawurlencode( $url->get_error_message() ) ),
-            home_url( '/my-account' )
+            home_url( '/my-account/' )
         ) );
         exit;
     }
@@ -818,7 +818,7 @@ function gb_membership_send_trial_ending_email( array $subscription ) {
             ? 'After that your listing is ' . $amount . ' a month. Nothing changes on your profile and there is nothing you need to do.'
             : 'Nothing changes on your profile and there is nothing you need to do.',
         '',
-        'If you would rather stop, you can cancel any time from your account page: ' . home_url( '/my-account' ),
+        'If you would rather stop, you can cancel any time from your account page: ' . home_url( '/my-account/' ),
         '',
         'Thanks for being part of it.',
         'The Green Broom',

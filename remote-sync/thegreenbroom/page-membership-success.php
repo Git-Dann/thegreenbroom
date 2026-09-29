@@ -68,7 +68,7 @@ if ( $gb_audience === 'cleaner' ) {
         : 'Your payment is with Stripe. This page will show your membership once it comes through.';
     $gb_actions = array(
         array( 'Find a cleaner', home_url( '/cleaner-listings' ), true ),
-        array( 'Your account', home_url( '/my-account' ), false ),
+        array( 'Your account', home_url( '/my-account/' ), false ),
     );
     $gb_next = array(
         'Search your postcode to see the verified cleaners covering your street.',

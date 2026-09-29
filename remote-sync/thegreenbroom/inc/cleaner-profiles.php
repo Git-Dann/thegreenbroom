@@ -880,7 +880,7 @@ function gb_get_user_dashboard_url( $user = null ) {
         return home_url( '/cleaner-dashboard' );
     }
 
-    return home_url( '/my-account' );
+    return home_url( '/my-account/' );
 }
 
 function gb_get_post_login_redirect_url( $user ) {

@@ -105,7 +105,7 @@
                             $dashboard_text = 'Manager';
                         } else {
                             // 3. Customers (and everyone else) see "My Account"
-                            $dashboard_url  = function_exists( 'gb_get_post_login_redirect_url' ) ? gb_get_post_login_redirect_url( $current_user ) : home_url('/my-account');
+                            $dashboard_url  = function_exists( 'gb_get_post_login_redirect_url' ) ? gb_get_post_login_redirect_url( $current_user ) : home_url('/my-account/');
                             $dashboard_text = 'My Account';
                         }
                     ?>
