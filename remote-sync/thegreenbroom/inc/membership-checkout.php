@@ -446,15 +446,32 @@ function gb_membership_period_end( array $subscription ) {
  * the explicit date is not.
  */
 function gb_membership_cancellation_date( array $subscription ) {
-    if ( empty( $subscription['cancel_at_period_end'] ) ) {
-        return '';
+    /*
+     * cancel_at on its own is enough.
+     *
+     * The first version of this gated everything behind cancel_at_period_end,
+     * which is the same mistake as reading current_period_end off the
+     * subscription: this account runs a recent API version, and Stripe has
+     * been moving cancellation onto cancel_at and cancellation_details. A
+     * subscription showing "Cancels on 28 Dec" in the dashboard can arrive
+     * here with cancel_at set and the older flag absent or false, and the
+     * whole cancellation was being thrown away on that one check.
+     *
+     * A date is a date. If Stripe has told us when this stops, that is the
+     * answer regardless of which field carried the intent.
+     */
+    if ( ! empty( $subscription['cancel_at'] ) ) {
+        return gmdate( 'Y-m-d', (int) $subscription['cancel_at'] );
     }
 
-    $at = ! empty( $subscription['cancel_at'] )
-        ? (int) $subscription['cancel_at']
-        : gb_membership_period_end( $subscription );
+    // No explicit date, but flagged to stop at the end of the period.
+    if ( ! empty( $subscription['cancel_at_period_end'] ) ) {
+        $at = gb_membership_period_end( $subscription );
 
-    return $at > 0 ? gmdate( 'Y-m-d', $at ) : '';
+        return $at > 0 ? gmdate( 'Y-m-d', $at ) : '';
+    }
+
+    return '';
 }
 
 /**
@@ -592,7 +609,25 @@ function gb_membership_sync_subscription( $subscription_id ) {
 
     gb_membership_apply_subscription( $subscription );
 
-    return true;
+    /*
+     * Report what Stripe actually sent, not just that something happened.
+     *
+     * Twice now a cancellation has been lost because a field moved between API
+     * versions, and both times the only way to find out was to guess and
+     * redeploy. The fields that decide this are cheap to print, so the next
+     * time the screen and Stripe disagree it is one press to see which of them
+     * is missing rather than another round trip.
+     */
+    return sprintf(
+        'status=%s, cancel_at=%s, cancel_at_period_end=%s',
+        isset( $subscription['status'] ) ? sanitize_text_field( (string) $subscription['status'] ) : 'absent',
+        isset( $subscription['cancel_at'] ) && $subscription['cancel_at']
+            ? gmdate( 'Y-m-d', (int) $subscription['cancel_at'] )
+            : ( array_key_exists( 'cancel_at', $subscription ) ? 'null' : 'absent' ),
+        array_key_exists( 'cancel_at_period_end', $subscription )
+            ? ( $subscription['cancel_at_period_end'] ? 'true' : 'false' )
+            : 'absent'
+    );
 }
 
 /**
