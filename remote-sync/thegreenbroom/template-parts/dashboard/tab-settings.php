@@ -279,8 +279,9 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         Use a Brevo <strong>v3 API key</strong> from Brevo Settings → SMTP &amp; API. The sender address must be verified in Brevo before messages can be delivered.
                         <?php if ($brevo_key_present): ?>
                             <span style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
-                                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=connection'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Test Brevo Connection</a>
-                                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=send'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Send Test Email</a>
+                                <?php // Front-end route: /wp-admin/ is closed to managers, so admin-post.php never ran for them. ?>
+                                <a href="<?php echo esc_url(function_exists('gb_brevo_test_url') ? gb_brevo_test_url('connection') : wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=connection'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Test Brevo Connection</a>
+                                <a href="<?php echo esc_url(function_exists('gb_brevo_test_url') ? gb_brevo_test_url('send') : wp_nonce_url(admin_url('admin-post.php?action=gb_brevo_test&mode=send'), 'gb_brevo_test')); ?>" class="gb-btn-small-os">Send Test Email</a>
                             </span>
                         <?php endif; ?>
                     </div>
