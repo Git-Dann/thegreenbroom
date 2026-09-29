@@ -427,7 +427,10 @@ function gb_brevo_api_request( $endpoint, $body = [], $method = 'GET' ) {
 
     $args = [
         'method'  => strtoupper( (string) $method ),
-        'timeout' => 20,
+        // Brevo answers in well under a second when it is well. Waiting
+        // longer than this only keeps somebody staring at a signup form
+        // while the backup mailbox could already have sent it.
+        'timeout' => 10,
         'headers' => [
             'accept'  => 'application/json',
             'api-key' => $settings['api_key'],
@@ -593,6 +596,21 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
     $template_key = absint( $template_id ) > 0 ? array_search( absint( $template_id ), gb_get_brevo_template_ids(), true ) : false;
     $kind = $template_key ? (string) $template_key : '';
 
+    // Blank values are left out, so the template's own |default:"..." text
+    // is used instead of an empty gap.
+    $params = array_filter( is_array( $params ) ? $params : [], function ( $v ) {
+        return is_scalar( $v ) && trim( (string) $v ) !== '';
+    } );
+
+    /*
+     * The version that goes out if Brevo's template cannot be used. The
+     * branded design, filled in by the site itself, wherever there is a local
+     * copy of it; the plain text only if there is not.
+     */
+    $local_html = $kind !== '' ? gb_render_local_email_template( $kind, $params ) : '';
+    $fallback_message = $local_html !== '' ? $local_html : $plain_message;
+    $fallback_headers = $local_html !== '' ? gb_email_headers_as_html( $headers ) : $headers;
+
     /*
      * Brevo cannot send this one as a template: it is not set up, the address
      * will not parse, or there is no template for this kind of email (the trial
@@ -602,10 +620,25 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
      */
     $recipients = gb_is_brevo_configured() ? gb_brevo_recipients( $to ) : [];
 
-    if ( ! gb_is_brevo_configured() || empty( $recipients ) || absint( $template_id ) < 1 ) {
-        gb_outbox_hand_to_wp_mail( 0, $kind );
+    /*
+     * The last health check found this template missing, switched off or
+     * using the wrong link. Sending it would at best be refused and at worst
+     * deliver a dead button, so the site's own copy of the design goes
+     * instead - still through Brevo, as ordinary HTML.
+     */
+    if ( $kind !== '' && $local_html !== '' && gb_brevo_template_known_bad( $kind ) ) {
+        $template_id = 0;
+    }
 
-        return wp_mail( $to, $subject, $plain_message, $headers );
+    if ( ! gb_is_brevo_configured() || empty( $recipients ) || absint( $template_id ) < 1 ) {
+        gb_outbox_hand_to_wp_mail( 0, $kind, [
+            'to'      => $to,
+            'subject' => $subject,
+            'message' => $fallback_message,
+            'headers' => $fallback_headers,
+        ] );
+
+        return wp_mail( $to, $subject, $fallback_message, $fallback_headers );
     }
 
     $settings = gb_get_brevo_settings();
@@ -616,8 +649,8 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
         [
             'to'      => $to,
             'subject' => $subject,
-            'message' => $plain_message,
-            'headers' => $headers,
+            'message' => $fallback_message,
+            'headers' => $fallback_headers,
         ],
         $kind
     );
@@ -631,7 +664,7 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
         'to'         => $recipients,
         'templateId' => absint( $template_id ),
         'subject'    => sanitize_text_field( (string) $subject ),
-        'params'     => is_array( $params ) ? $params : [],
+        'params'     => (object) $params, // {} not [] when empty; Brevo wants an object.
     ];
 
     $reply_to = ! empty( $parsed_headers['reply_to'] ) ? $parsed_headers['reply_to'][0] : gb_get_email_reply_to();
@@ -678,11 +711,11 @@ function gb_send_brevo_template_email( $to, $subject, $plain_message, $headers =
 
         gb_outbox_hand_to_wp_mail( $log_id, $kind );
 
-        return wp_mail( $to, $subject, $plain_message, $headers );
+        return wp_mail( $to, $subject, $fallback_message, $fallback_headers );
     }
 
     delete_option( 'gb_brevo_last_error' );
-    gb_outbox_mark_sent( $log_id, 'brevo' );
+    gb_outbox_mark_sent( $log_id, 'brevo', gb_brevo_message_id_from( $result ) );
 
     return true;
 }
@@ -756,7 +789,7 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
     // Already refused once on this request. Asking again just adds a 20 second
     // timeout to every subsequent email while Brevo is unwell. The backup
     // mailbox attempt and the backup test skip Brevo by design.
-    if ( ! empty( $GLOBALS['gb_brevo_failed_this_request'] ) || ! empty( $GLOBALS['gb_outbox_inner'] ) || ! empty( $GLOBALS['gb_outbox_backup_only'] ) ) {
+    if ( ! empty( $GLOBALS['gb_brevo_failed_this_request'] ) || ! empty( $GLOBALS['gb_outbox_inner'] ) || ! empty( $GLOBALS['gb_outbox_backup_only'] ) || ! empty( $GLOBALS['gb_outbox_skip_brevo'] ) ) {
         return null;
     }
 
@@ -805,8 +838,10 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
         ],
         'to'          => $recipients,
         'subject'     => $subject,
-        'htmlContent' => $headers['is_html'] ? $message : wpautop( esc_html( $message ) ),
-        'textContent' => wp_strip_all_tags( $message ),
+        // Plain text gets its links made clickable; HTML gets a readable
+        // text part alongside it, which spam filters look for.
+        'htmlContent' => $headers['is_html'] ? $message : make_clickable( wpautop( esc_html( $message ) ) ),
+        'textContent' => $headers['is_html'] ? gb_email_html_to_text( $message ) : $message,
     ];
 
     $reply_to = ! empty( $headers['reply_to'] ) ? $headers['reply_to'][0] : gb_get_email_reply_to();
@@ -871,7 +906,7 @@ function gb_send_wp_mail_through_brevo( $pre_wp_mail, $atts ) {
 
     // Returning true here means wp_mail stops, and its success hook never
     // fires, so the line is closed here instead.
-    gb_outbox_mark_sent( $log_id, 'brevo' );
+    gb_outbox_mark_sent( $log_id, 'brevo', gb_brevo_message_id_from( $result ) );
     unset( $GLOBALS['gb_outbox_current'] );
 
     return true;
@@ -923,7 +958,36 @@ function gb_handle_brevo_test_connection() {
         ];
         $all_ok = ! empty( $health['brevo']['ok'] ) && ( ! empty( $health['backup']['ok'] ) || empty( $health['backup']['configured'] ) );
 
+        if ( isset( $health['caps'] ) ) {
+            $bad_templates = array_filter( (array) $health['caps']['templates'], function ( $t ) {
+                return empty( $t['ok'] );
+            } );
+            $lines[] = $bad_templates
+                ? count( $bad_templates ) . ' of ' . count( $health['caps']['templates'] ) . ' Brevo templates need attention; the site sends its own copy of those.'
+                : 'All ' . count( $health['caps']['templates'] ) . ' Brevo templates ready.';
+            if ( empty( $health['caps']['domain']['ok'] ) ) {
+                $lines[] = $health['caps']['domain']['message'];
+                $all_ok  = false;
+            }
+            if ( ! empty( $health['caps']['credits']['low'] ) ) {
+                $lines[] = $health['caps']['credits']['message'];
+                $all_ok  = false;
+            }
+        }
+
         gb_redirect_manager_settings_with_brevo_notice( $all_ok ? 'ok' : 'error', 'Checked just now. ' . implode( ' ', $lines ) );
+    }
+
+    if ( $mode === 'webhook_connect' ) {
+        $connected = gb_brevo_webhook_connect();
+        gb_outbox_health_check();
+
+        gb_redirect_manager_settings_with_brevo_notice(
+            is_wp_error( $connected ) ? 'error' : 'ok',
+            is_wp_error( $connected )
+                ? 'Brevo would not connect delivery reports: ' . $connected->get_error_message()
+                : 'Delivery reports connected. Brevo will now tell the site about every delivery, bounce and block.'
+        );
     }
 
     if ( $mode === 'backup_connect' ) {
@@ -989,7 +1053,7 @@ function gb_handle_brevo_test_connection() {
         }
 
         delete_option( 'gb_brevo_last_error' );
-        gb_outbox_mark_sent( $log_id, 'brevo' );
+        gb_outbox_mark_sent( $log_id, 'brevo', gb_brevo_message_id_from( $send_result ) );
 
         gb_redirect_manager_settings_with_brevo_notice( 'ok', 'A Brevo test email was sent to ' . $recipient . '.' );
     }

@@ -250,7 +250,9 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         $gb_route_brevo = ['warn', 'Not set up', $brevo_enabled ? 'Enabled, but the API key is missing.' : 'Turned off below.'];
                     } elseif ($gb_health && isset($gb_health['brevo']['ok']) && !$gb_health['brevo']['ok']) {
                         $gb_route_brevo = ['bad', 'Refusing the site', $gb_health['brevo']['message']];
-                    } elseif (is_array($gb_brevo_fail) && !empty($gb_brevo_fail['message']) && !empty($gb_brevo_fail['at']) && (time() - (int) $gb_brevo_fail['at']) < DAY_IN_SECONDS) {
+                    } elseif (is_array($gb_brevo_fail) && !empty($gb_brevo_fail['message']) && !empty($gb_brevo_fail['at']) && (time() - (int) $gb_brevo_fail['at']) < DAY_IN_SECONDS
+                        && (!$gb_health || empty($gb_health['at']) || (int) $gb_brevo_fail['at'] > (int) $gb_health['at'])) {
+                        // Only while nothing newer says it is fine again.
                         $gb_route_brevo = ['warn', 'Refused an email today', $gb_brevo_fail['message']];
                     } elseif ($gb_health) {
                         $gb_route_brevo = ['good', 'Working', 'Branded emails go out through Brevo.'];
@@ -291,7 +293,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         .gb-mail-pill.is-bad  { background:#fef2f2; color:#991b1b; }
                         .gb-mail-pill.is-idle { background:#f1f5f9; color:#475569; }
                         .gb-mail-route__detail { margin:5px 0 0; font-size:12.5px; line-height:1.55; color:#475569; word-break:break-word; }
-                        .gb-mail-stats { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); border-top:1px solid #eef2f7; }
+                        .gb-mail-caps { padding:12px 16px 14px; border-top:1px solid #eef2f7; background:#fcfdfe; }
+                        .gb-mail-caps__title { margin:0 0 8px; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#64748b; }
+                        .gb-mail-cap { display:grid; grid-template-columns:128px minmax(0,1fr); gap:10px; align-items:start; padding:5px 0; font-size:12.5px; line-height:1.5; color:#475569; }
+                        .gb-mail-cap .gb-mail-pill { justify-self:start; white-space:nowrap; }
+                        .gb-mail-cap strong { color:#0f172a; }
+                        .gb-mail-stats { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); border-top:1px solid #eef2f7; }
                         .gb-mail-stat { padding:12px 16px; border-right:1px solid #f1f5f9; }
                         .gb-mail-stat:last-child { border-right:0; }
                         .gb-mail-stat strong { display:block; font-size:20px; color:#0f172a; line-height:1.1; }
@@ -313,7 +320,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             .gb-mail-route { grid-template-columns:28px minmax(0,1fr); }
                             .gb-mail-route > div:last-child { grid-column:2; }
                             .gb-mail-stats { grid-template-columns:repeat(2, minmax(0,1fr)); }
-                            .gb-mail-stat:nth-child(2) { border-right:0; }
+                            .gb-mail-cap { grid-template-columns:1fr; gap:4px; padding:7px 0; }
+                            .gb-mail-stat:nth-child(2n) { border-right:0; }
                             .gb-mail-log thead { display:none; }
                             .gb-mail-log, .gb-mail-log tbody, .gb-mail-log tr, .gb-mail-log td { display:block; width:100%; box-sizing:border-box; }
                             .gb-mail-log tr { padding:10px 12px; border-bottom:1px solid #eef2f7; }
@@ -345,10 +353,58 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                 </div>
                             </div>
                         <?php endforeach; ?>
+                        <?php
+                        /*
+                         * What Brevo can actually do, from the last check:
+                         * signed sending, sends left, and each template the
+                         * site relies on. A connection test passes with all
+                         * of these broken.
+                         */
+                        $gb_caps = $gb_health && isset($gb_health['caps']) ? $gb_health['caps'] : null;
+                        $gb_tpl_labels = [
+                            'verification'         => 'Verify email',
+                            'password_reset'       => 'Password reset',
+                            'booking_customer'     => 'Booking confirmed (customer)',
+                            'booking_cleaner'      => 'New booking (cleaner)',
+                            'support_reply'        => 'Support reply',
+                            'manager_message'      => 'New message (managers)',
+                            'subscription_expired' => 'Subscription expired',
+                        ];
+                        ?>
+                        <?php if ($gb_caps): ?>
+                            <div class="gb-mail-caps">
+                                <p class="gb-mail-caps__title">What Brevo can do</p>
+                                <div class="gb-mail-cap">
+                                    <span class="gb-mail-pill is-<?php echo !empty($gb_caps['domain']['ok']) ? 'good' : 'bad'; ?>"><?php echo !empty($gb_caps['domain']['ok']) ? 'Signed' : 'Not signed'; ?></span>
+                                    <span><strong>Sending domain.</strong> <?php echo esc_html($gb_caps['domain']['message']); ?></span>
+                                </div>
+                                <div class="gb-mail-cap">
+                                    <span class="gb-mail-pill is-<?php echo empty($gb_caps['credits']['ok']) ? 'bad' : (!empty($gb_caps['credits']['low']) ? 'warn' : 'good'); ?>"><?php echo isset($gb_caps['credits']['count']) ? esc_html(number_format_i18n((int) $gb_caps['credits']['count'])) . ' left' : 'Unknown'; ?></span>
+                                    <span><strong>Plan.</strong> <?php echo esc_html($gb_caps['credits']['message']); ?></span>
+                                </div>
+                                <?php if (isset($gb_caps['webhook'])): ?>
+                                    <div class="gb-mail-cap">
+                                        <span class="gb-mail-pill is-<?php echo !empty($gb_caps['webhook']['ok']) ? 'good' : 'warn'; ?>"><?php echo !empty($gb_caps['webhook']['ok']) ? 'Connected' : 'Not connected'; ?></span>
+                                        <span><strong>Delivery reports.</strong> <?php echo esc_html($gb_caps['webhook']['message']); ?>
+                                            <?php if (empty($gb_caps['webhook']['ok']) && function_exists('gb_brevo_test_url')): ?>
+                                                <a href="<?php echo esc_url(gb_brevo_test_url('webhook_connect')); ?>" style="color:#166534; font-weight:700;">Connect delivery reports</a>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                <?php foreach ((array) ($gb_caps['templates'] ?? []) as $gb_tkey => $gb_t): ?>
+                                    <div class="gb-mail-cap">
+                                        <span class="gb-mail-pill is-<?php echo !empty($gb_t['ok']) ? 'good' : 'warn'; ?>"><?php echo !empty($gb_t['ok']) ? 'Ready' : 'Using site copy'; ?></span>
+                                        <span><strong><?php echo esc_html($gb_tpl_labels[$gb_tkey] ?? $gb_tkey); ?>.</strong> <?php echo esc_html($gb_t['message']); ?><?php if (empty($gb_t['ok'])): ?> The site sends its own copy of this design instead, so it still arrives branded.<?php endif; ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                         <div class="gb-mail-stats" aria-label="Emails in the last 24 hours">
                             <div class="gb-mail-stat"><strong><?php echo (int) $gb_counts['sent']; ?></strong><span>Delivered, 24h</span></div>
                             <div class="gb-mail-stat <?php echo $gb_counts['retrying'] ? 'is-warn' : ''; ?>"><strong><?php echo (int) $gb_counts['retrying']; ?></strong><span>Waiting to retry</span></div>
                             <div class="gb-mail-stat <?php echo $gb_counts['dead'] ? 'is-bad' : ''; ?>"><strong><?php echo (int) $gb_counts['dead']; ?></strong><span>Not delivered</span></div>
+                            <div class="gb-mail-stat <?php echo $gb_counts['bounced'] ? 'is-warn' : ''; ?>"><strong><?php echo (int) $gb_counts['bounced']; ?></strong><span>Bounced</span></div>
                             <div class="gb-mail-stat <?php echo $gb_counts['server_mail'] ? 'is-warn' : ''; ?>"><strong><?php echo (int) $gb_counts['server_mail']; ?></strong><span>Via web server</span></div>
                         </div>
                         <?php if (function_exists('gb_brevo_test_url')): ?>
@@ -478,13 +534,18 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                     $gb_route_name = function_exists('gb_outbox_route_label') ? gb_outbox_route_label((string) $gb_row->route) : (string) $gb_row->route;
                                     switch ($gb_state) {
                                         case 'sent':
-                                            $gb_pill = [$gb_row->route === 'php_mail' ? 'warn' : 'good', 'Delivered by ' . $gb_route_name];
+                                            $gb_pill = ($gb_row->route === 'brevo' && (string) ($gb_row->delivery ?? '') === 'blocked')
+                                                ? ['bad', 'Blocked by Brevo']
+                                                : [$gb_row->route === 'php_mail' ? 'warn' : 'good', 'Sent by ' . $gb_route_name];
                                             break;
                                         case 'retrying':
                                             $gb_pill = ['warn', 'Retrying ' . ($gb_row->next_attempt_at ? 'at ' . get_date_from_gmt($gb_row->next_attempt_at, 'H:i') : 'soon')];
                                             break;
                                         case 'dead':
                                             $gb_pill = ['bad', 'Not delivered'];
+                                            break;
+                                        case 'bounced':
+                                            $gb_pill = ['bad', 'Bounced: address not found'];
                                             break;
                                         case 'superseded':
                                             $gb_pill = ['idle', 'Replaced by a newer one'];
@@ -503,18 +564,34 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                             <div class="gb-mail-log__subject"><?php echo esc_html($gb_row->subject !== '' ? $gb_row->subject : '(no subject)'); ?></div>
                                             <div style="color:#64748b;"><?php echo esc_html($gb_row->to_email); ?></div>
                                             <?php if (trim((string) $gb_row->last_error) !== '' && $gb_state !== 'superseded'): ?>
-                                                <div class="gb-mail-log__why<?php echo $gb_state === 'sent' ? ' is-resolved' : ''; ?>"><?php echo $gb_state === 'sent' ? 'Got through after: ' : ''; ?><?php echo esc_html((string) $gb_row->last_error); ?></div>
+                                                <?php $gb_resolved = $gb_state === 'sent' && $gb_pill[0] !== 'bad'; ?>
+                                                <div class="gb-mail-log__why<?php echo $gb_resolved ? ' is-resolved' : ''; ?>"><?php echo $gb_resolved ? 'Got through after: ' : ''; ?><?php echo esc_html((string) $gb_row->last_error); ?></div>
                                             <?php endif; ?>
                                         </td>
                                         <td style="white-space:nowrap;">
                                             <span class="gb-mail-pill is-<?php echo esc_attr($gb_pill[0]); ?>"><?php echo esc_html($gb_pill[1]); ?></span>
+                                            <?php
+                                            $gb_delivery_note = [
+                                                'delivered' => 'Confirmed delivered',
+                                                'delayed'   => 'Delayed; Brevo still trying',
+                                                'spam'      => 'Recipient marked it as spam',
+                                                'blocked'   => $gb_row->route === 'brevo' ? '' : 'Brevo blocked it, so it went this way',
+                                            ][(string) ($gb_row->delivery ?? '')] ?? '';
+                                            ?>
+                                            <?php if ($gb_delivery_note !== ''): ?>
+                                                <div style="margin-top:4px; font-size:11px; color:<?php echo $gb_row->delivery === 'delivered' ? '#166534' : '#b45309'; ?>;"><?php echo esc_html($gb_delivery_note); ?></div>
+                                            <?php endif; ?>
                                             <?php if ((int) $gb_row->attempts > 1): ?>
                                                 <div style="margin-top:4px; font-size:11px; color:#94a3b8;"><?php echo (int) $gb_row->attempts; ?> attempts</div>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ($gb_can_resend || in_array($gb_state, ['retrying', 'dead'], true)): ?>
+                                            <?php $gb_is_blocked = (string) ($gb_row->delivery ?? '') === 'blocked'; ?>
+                                            <?php if ($gb_can_resend || $gb_is_blocked || in_array($gb_state, ['retrying', 'dead', 'bounced'], true)): ?>
                                                 <div class="gb-mail-log__btns">
+                                                    <?php if ($gb_is_blocked): ?>
+                                                        <button type="submit" form="gb-email-unblock-form" name="gb_email_log_id" value="<?php echo (int) $gb_row->id; ?>" class="gb-btn-small-os">Unblock in Brevo</button>
+                                                    <?php endif; ?>
                                                     <?php if ($gb_can_resend): ?>
                                                         <button type="submit" form="gb-email-resend-form" name="gb_email_log_id" value="<?php echo (int) $gb_row->id; ?>" class="gb-btn-small-os">Resend now</button>
                                                     <?php endif; ?>
@@ -971,6 +1048,10 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
         ?>
         <form method="post" id="gb-email-resend-form" action="<?php echo esc_url(home_url('/manager-dashboard/')); ?>" hidden>
             <input type="hidden" name="gb_save_action" value="resend_email">
+            <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce', true, true); ?>
+        </form>
+        <form method="post" id="gb-email-unblock-form" action="<?php echo esc_url(home_url('/manager-dashboard/')); ?>" hidden>
+            <input type="hidden" name="gb_save_action" value="unblock_email">
             <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce', true, true); ?>
         </form>
         <form method="post" id="gb-email-dismiss-form" action="<?php echo esc_url(home_url('/manager-dashboard/')); ?>" hidden>

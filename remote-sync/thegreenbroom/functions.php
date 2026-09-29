@@ -2291,6 +2291,7 @@ function gb_get_rate_limit_message( $state, $default = 'Too many attempts. Pleas
    ========================================================================== */
 require_once get_template_directory() . '/inc/anti-spam.php';
 require_once get_template_directory() . '/inc/outbox.php';
+require_once get_template_directory() . '/inc/email-render.php';
 require_once get_template_directory() . '/inc/cleaner-profiles.php';
 require_once get_template_directory() . '/inc/roles.php';
 require_once get_template_directory() . '/inc/post-types.php';

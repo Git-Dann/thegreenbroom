@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-const GB_OUTBOX_DB_VERSION   = 1;
+const GB_OUTBOX_DB_VERSION   = 2; // 2: Brevo message id and delivery outcome.
 const GB_OUTBOX_MAX_ATTEMPTS = 5;   // The first send plus four retries.
 const GB_OUTBOX_KEEP_DAYS    = 30;  // How long the log keeps a line about each email.
 const GB_OUTBOX_PAYLOAD_HOURS = 48; // How long a failed email's content is kept for resending.
@@ -95,7 +95,10 @@ function gb_outbox_install() {
   last_error text NULL,
   next_attempt_at datetime NULL,
   payload longtext NULL,
+  message_id varchar(191) NOT NULL DEFAULT '',
+  delivery varchar(20) NOT NULL DEFAULT '',
   PRIMARY KEY  (id),
+  KEY message_id (message_id),
   KEY status_next (status,next_attempt_at),
   KEY created_at (created_at),
   KEY to_kind (to_email(100),kind)
@@ -105,7 +108,8 @@ function gb_outbox_install() {
 
     // Only record the version if the table really exists, so a failed
     // install is tried again on the next request rather than never.
-    if ( gb_outbox_ready( true ) ) {
+    // ...and has the newest columns, so a half-applied upgrade is retried too.
+    if ( gb_outbox_ready( true ) && $wpdb->get_var( "SHOW COLUMNS FROM {$table} LIKE 'delivery'" ) ) {
         update_option( 'gb_outbox_db_version', GB_OUTBOX_DB_VERSION, false );
     }
 }
@@ -224,6 +228,22 @@ function gb_outbox_begin( array $atts, $kind = '' ) {
     return $inserted ? (int) $wpdb->insert_id : 0;
 }
 
+/**
+ * Replace the copy kept for resending.
+ */
+function gb_outbox_store_copy( $id, array $atts ) {
+    $payload = wp_json_encode( array(
+        'to'      => isset( $atts['to'] ) ? $atts['to'] : '',
+        'subject' => isset( $atts['subject'] ) ? (string) $atts['subject'] : '',
+        'message' => isset( $atts['message'] ) ? (string) $atts['message'] : '',
+        'headers' => isset( $atts['headers'] ) ? $atts['headers'] : array(),
+    ) );
+
+    if ( $payload ) {
+        gb_outbox_update( $id, array( 'payload' => $payload ) );
+    }
+}
+
 function gb_outbox_update( $id, array $fields ) {
     $id = (int) $id;
 
@@ -274,13 +294,52 @@ function gb_outbox_note_error( $id, $route, $message ) {
     gb_outbox_update( $id, array( 'last_error' => $trail ) );
 }
 
-function gb_outbox_mark_sent( $id, $route ) {
-    gb_outbox_update( $id, array(
+function gb_outbox_mark_sent( $id, $route, $message_id = '' ) {
+    /*
+     * Brevo accepting an email is not the same as it arriving. When Brevo's
+     * delivery reports are connected, its copy is kept until Brevo confirms
+     * it was delivered, so an email Brevo later blocks can still be sent
+     * another way. Otherwise, and for every other route, it goes now: it can
+     * hold a single-use link, and it is not kept a moment longer than useful.
+     */
+    $keep = $route === 'brevo' && $message_id !== '' && gb_brevo_webhook_connected();
+
+    $fields = array(
         'status'          => 'sent',
         'route'           => sanitize_key( $route ),
-        'payload'         => null,
         'next_attempt_at' => null,
-    ) );
+    );
+    if ( ! $keep ) {
+        $fields['payload'] = null;
+    }
+    gb_outbox_update( $id, $fields );
+
+    // Separately, so a table that is not upgraded yet can never stop the
+    // line above from marking the email sent (and so from it being sent twice).
+    if ( $message_id !== '' ) {
+        gb_outbox_update( $id, array( 'message_id' => gb_outbox_normalise_message_id( $message_id ) ) );
+    }
+}
+
+function gb_outbox_normalise_message_id( $message_id ) {
+    return substr( trim( (string) $message_id, " \t\n\r<>" ), 0, 191 );
+}
+
+/**
+ * The id Brevo gave a sent email, from its API response.
+ */
+function gb_brevo_message_id_from( $result ) {
+    if ( ! is_array( $result ) ) {
+        return '';
+    }
+    if ( ! empty( $result['messageId'] ) && is_string( $result['messageId'] ) ) {
+        return $result['messageId'];
+    }
+    if ( ! empty( $result['messageIds'] ) && is_array( $result['messageIds'] ) ) {
+        return (string) reset( $result['messageIds'] );
+    }
+
+    return '';
 }
 
 /**
@@ -473,6 +532,7 @@ add_action( 'wp_mail_failed', function ( $error ) {
 function gb_outbox_open_line( array $atts, $kind = '' ) {
     if ( ! empty( $GLOBALS['gb_outbox_bridge_id'] ) ) {
         $id = (int) $GLOBALS['gb_outbox_bridge_id'];
+        gb_outbox_store_copy( $id, $atts );
     } elseif ( ! empty( $GLOBALS['gb_outbox_retry'] ) ) {
         $id = (int) $GLOBALS['gb_outbox_retry'];
     } else {
@@ -488,9 +548,14 @@ function gb_outbox_open_line( array $atts, $kind = '' ) {
  * About to fall back to wp_mail with the same email: make sure it lands on
  * the same log line, or, if none is open yet, that the new one is labelled.
  */
-function gb_outbox_hand_to_wp_mail( $id, $kind = '' ) {
+function gb_outbox_hand_to_wp_mail( $id, $kind = '', array $atts = array() ) {
     if ( (int) $id < 1 && ! empty( $GLOBALS['gb_outbox_bridge_id'] ) ) {
         $id = (int) $GLOBALS['gb_outbox_bridge_id'];
+        // The line was opened with WordPress's plain version; keep the one
+        // actually being sent, so a retry sends the same thing.
+        if ( $atts ) {
+            gb_outbox_store_copy( $id, $atts );
+        }
     }
 
     if ( (int) $id > 0 ) {
@@ -560,6 +625,17 @@ function gb_backup_smtp_apply( $phpmailer, array $cfg ) {
  * PHPMailer to the server's own mail() at the start of every call, so the
  * last-resort attempt that follows a failed backup goes out the plain way.
  */
+/*
+ * Every HTML email gets a plain-text part too, whichever route it takes:
+ * HTML-only mail scores worse with spam filters. wp_mail empties AltBody at
+ * the start of each call, so this never carries over from one to the next.
+ */
+add_action( 'phpmailer_init', function ( $phpmailer ) {
+    if ( $phpmailer->ContentType === 'text/html' && trim( (string) $phpmailer->AltBody ) === '' && function_exists( 'gb_email_html_to_text' ) ) {
+        $phpmailer->AltBody = gb_email_html_to_text( $phpmailer->Body );
+    }
+}, 15 );
+
 add_action( 'phpmailer_init', function ( $phpmailer ) {
     if ( empty( $GLOBALS['gb_outbox_inner'] ) ) {
         return;
@@ -634,7 +710,7 @@ function gb_backup_smtp_check() {
  *
  * @return bool Whether it went this time.
  */
-function gb_outbox_retry_one( $id ) {
+function gb_outbox_retry_one( $id, $skip_brevo = false ) {
     $row = gb_outbox_get( $id );
 
     if ( ! $row || empty( $row->payload ) || $row->status === 'superseded' || $row->status === 'sent' ) {
@@ -656,6 +732,9 @@ function gb_outbox_retry_one( $id ) {
     ) );
 
     $GLOBALS['gb_outbox_retry'] = (int) $id;
+    if ( $skip_brevo ) {
+        $GLOBALS['gb_outbox_skip_brevo'] = true;
+    }
 
     $sent = wp_mail(
         $payload['to'],
@@ -664,7 +743,7 @@ function gb_outbox_retry_one( $id ) {
         isset( $payload['headers'] ) ? $payload['headers'] : array()
     );
 
-    unset( $GLOBALS['gb_outbox_retry'] );
+    unset( $GLOBALS['gb_outbox_retry'], $GLOBALS['gb_outbox_skip_brevo'] );
 
     return (bool) $sent;
 }
@@ -776,6 +855,12 @@ function gb_outbox_health_check() {
         $health['brevo'] = is_wp_error( $result )
             ? array( 'ok' => false, 'message' => $result->get_error_message() )
             : array( 'ok' => true, 'message' => 'Connected.' );
+
+        // Connected is not the same as able to send what we need. Only worth
+        // asking once Brevo is answering at all.
+        if ( ! is_wp_error( $result ) ) {
+            $health['caps'] = gb_brevo_capability_check( $result );
+        }
     } else {
         $health['brevo'] = array( 'ok' => false, 'message' => 'Not set up.' );
     }
@@ -793,6 +878,15 @@ function gb_outbox_health_check() {
     if ( function_exists( 'gb_is_brevo_configured' ) && gb_is_brevo_configured() && empty( $health['brevo']['ok'] ) && $was_ok( 'brevo' ) ) {
         $problems[] = 'Brevo is refusing the site: ' . $health['brevo']['message'];
     }
+    if ( isset( $health['caps'] ) ) {
+        $prev_caps = is_array( $previous ) && isset( $previous['caps'] ) ? $previous['caps'] : array();
+        if ( empty( $health['caps']['domain']['ok'] ) && ( ! isset( $prev_caps['domain'] ) || ! empty( $prev_caps['domain']['ok'] ) ) ) {
+            $problems[] = 'Brevo: ' . $health['caps']['domain']['message'];
+        }
+        if ( ! empty( $health['caps']['credits']['low'] ) && empty( $prev_caps['credits']['low'] ) ) {
+            $problems[] = 'Brevo: ' . $health['caps']['credits']['message'];
+        }
+    }
     if ( ! empty( $health['backup']['configured'] ) && empty( $health['backup']['ok'] ) && $was_ok( 'backup' ) ) {
         $problems[] = 'The backup mailbox will not let the site sign in: ' . $health['backup']['message'];
     }
@@ -803,6 +897,138 @@ function gb_outbox_health_check() {
     return $health;
 }
 add_action( 'gb_outbox_health_check', 'gb_outbox_health_check' );
+
+/**
+ * Can Brevo actually send everything the site needs it to?
+ *
+ * Three things have to be true, and none of them is checked by a connection
+ * test:
+ *
+ *   - The sending domain is authenticated in Brevo. If not, Brevo either
+ *     refuses or sends mail that fails DKIM and lands in spam.
+ *   - The plan has sends left today. The free plan stops at 300 a day, and
+ *     after that every email is refused.
+ *   - Each template the site names by id exists, is switched on, and uses the
+ *     link the site sends it. A template that says {{ params.link }} when the
+ *     site sends reset_url delivers a button that goes nowhere - the worst
+ *     kind of failure, because Brevo reports it as a success.
+ *
+ * None of these stops email going out any more (the site falls back to its
+ * own copy of the design), but each means the email is not going the way it
+ * should, and a manager should know.
+ */
+function gb_brevo_capability_check( $account = null ) {
+    $caps = array();
+
+    // Sends left. The plan list has one entry per product; the sending one
+    // carries creditsType sendLimit.
+    $caps['credits'] = array( 'ok' => true, 'low' => false, 'message' => 'Plan limit not reported.' );
+    if ( is_array( $account ) && ! empty( $account['plan'] ) && is_array( $account['plan'] ) ) {
+        foreach ( $account['plan'] as $plan ) {
+            if ( ! is_array( $plan ) || ! isset( $plan['credits'] ) ) {
+                continue;
+            }
+            $credits = (int) $plan['credits'];
+            $type    = isset( $plan['creditsType'] ) ? (string) $plan['creditsType'] : '';
+            $name    = isset( $plan['type'] ) ? (string) $plan['type'] : '';
+            $unit    = $type === 'sendLimit' ? 'sends left today' : 'email credits left';
+            $low     = $credits < 50;
+
+            $caps['credits'] = array(
+                'ok'      => $credits > 0,
+                'low'     => $low,
+                'count'   => $credits,
+                'message' => number_format_i18n( $credits ) . ' ' . $unit . ( $name !== '' ? ' on the ' . $name . ' plan' : '' ) . '.'
+                    . ( $low ? ' When they run out Brevo refuses every email and the backup mailbox takes over.' : '' ),
+            );
+            break;
+        }
+    }
+
+    // The sending domain.
+    $from   = function_exists( 'gb_get_brevo_settings' ) ? (string) gb_get_brevo_settings()['from_address'] : '';
+    $domain = strtolower( (string) substr( strrchr( $from, '@' ), 1 ) );
+    $caps['domain'] = array( 'ok' => false, 'message' => 'Could not check the sending domain.' );
+    $domains = gb_brevo_api_request( 'senders/domains' );
+    if ( ! is_wp_error( $domains ) && $domain !== '' ) {
+        $found = null;
+        foreach ( (array) ( isset( $domains['domains'] ) ? $domains['domains'] : array() ) as $d ) {
+            if ( is_array( $d ) && isset( $d['domain_name'] ) && strtolower( (string) $d['domain_name'] ) === $domain ) {
+                $found = $d;
+                break;
+            }
+        }
+        if ( ! $found ) {
+            $caps['domain'] = array( 'ok' => false, 'message' => $domain . ' is not added in Brevo, so it cannot sign mail from ' . $from . '.' );
+        } elseif ( empty( $found['authenticated'] ) ) {
+            $caps['domain'] = array( 'ok' => false, 'message' => $domain . ' is in Brevo but not authenticated, so mail from it may be refused or land in spam.' );
+        } else {
+            $caps['domain'] = array( 'ok' => true, 'message' => $domain . ' is authenticated; mail from ' . $from . ' is signed.' );
+        }
+    }
+
+    // Each template.
+    $caps['templates'] = array();
+    foreach ( gb_get_brevo_template_ids() as $key => $id ) {
+        $needs = function_exists( 'gb_email_template_required_params' ) ? gb_email_template_required_params( $key ) : array();
+        $tpl   = gb_brevo_api_request( 'smtp/templates/' . absint( $id ) );
+
+        if ( is_wp_error( $tpl ) ) {
+            $data   = $tpl->get_error_data();
+            $status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
+            $caps['templates'][ $key ] = array(
+                'ok'      => false,
+                'id'      => $id,
+                'message' => $status === 404 ? 'No template ' . $id . ' in Brevo.' : $tpl->get_error_message(),
+            );
+            continue;
+        }
+
+        $html    = isset( $tpl['htmlContent'] ) ? (string) $tpl['htmlContent'] : '';
+        $missing = array();
+        foreach ( $needs as $param ) {
+            if ( ! preg_match( '/params\.' . preg_quote( $param, '/' ) . '\b/', $html ) ) {
+                $missing[] = $param;
+            }
+        }
+
+        if ( empty( $tpl['isActive'] ) ) {
+            $caps['templates'][ $key ] = array( 'ok' => false, 'id' => $id, 'message' => 'Template ' . $id . ' is switched off in Brevo.' );
+        } elseif ( $missing ) {
+            $caps['templates'][ $key ] = array( 'ok' => false, 'id' => $id, 'message' => 'Template ' . $id . ' does not use ' . implode( ', ', $missing ) . ', so its button would go nowhere.' );
+        } else {
+            $caps['templates'][ $key ] = array(
+                'ok'      => true,
+                'id'      => $id,
+                'message' => 'Template ' . $id . ( ! empty( $tpl['name'] ) ? ' (' . sanitize_text_field( (string) $tpl['name'] ) . ')' : '' ) . ' is ready.',
+            );
+        }
+    }
+
+    // Delivery reports: without them, "accepted by Brevo" is the last the
+    // site ever hears of an email.
+    if ( ! gb_brevo_webhook_connected() ) {
+        $caps['webhook'] = array( 'ok' => false, 'message' => 'Not connected, so an email Brevo accepts and then blocks or bounces goes unnoticed.' );
+    } else {
+        $hook = gb_brevo_api_request( 'webhooks/' . (int) get_option( 'gb_brevo_webhook_id', 0 ) );
+        $caps['webhook'] = is_wp_error( $hook )
+            ? array( 'ok' => false, 'message' => 'Brevo no longer has the connection (' . $hook->get_error_message() . '). Press Connect delivery reports again.' )
+            : array( 'ok' => true, 'message' => 'Brevo reports each delivery, bounce and block back to the site. Blocked emails are re-sent through the backup mailbox.' );
+    }
+
+    return $caps;
+}
+
+/**
+ * Is a template known to be unusable? Then do not bother asking Brevo for it.
+ */
+function gb_brevo_template_known_bad( $key ) {
+    $health = gb_outbox_health();
+
+    return is_array( $health )
+        && isset( $health['caps']['templates'][ $key ] )
+        && empty( $health['caps']['templates'][ $key ]['ok'] );
+}
 
 function gb_outbox_health() {
     $health = get_option( 'gb_email_health' );
@@ -829,7 +1055,7 @@ function gb_outbox_cleanup() {
     ) );
 
     $wpdb->query( $wpdb->prepare(
-        "UPDATE {$table} SET payload = NULL WHERE status = 'dead' AND payload IS NOT NULL AND updated_at < %s",
+        "UPDATE {$table} SET payload = NULL WHERE status IN ('dead','sent') AND payload IS NOT NULL AND updated_at < %s",
         gb_outbox_now( -GB_OUTBOX_PAYLOAD_HOURS * HOUR_IN_SECONDS )
     ) );
 }
@@ -841,7 +1067,7 @@ add_action( 'gb_outbox_cleanup', 'gb_outbox_cleanup' );
  * @return array{sent: int, retrying: int, dead: int}
  */
 function gb_outbox_counts( $hours = 24 ) {
-    $counts = array( 'sent' => 0, 'retrying' => 0, 'dead' => 0, 'server_mail' => 0 );
+    $counts = array( 'sent' => 0, 'retrying' => 0, 'dead' => 0, 'bounced' => 0, 'server_mail' => 0 );
 
     if ( ! gb_outbox_ready() ) {
         return $counts;
@@ -877,8 +1103,9 @@ function gb_outbox_recent( $limit = 25 ) {
     global $wpdb;
 
     return (array) $wpdb->get_results( $wpdb->prepare(
-        'SELECT id, created_at, updated_at, to_email, subject, kind, status, route, attempts, last_error, next_attempt_at,
-                (payload IS NOT NULL) AS resendable
+        // Every column, so a log not yet upgraded to the newest columns
+        // still lists; the screen treats a missing one as empty.
+        'SELECT *, (payload IS NOT NULL) AS resendable
            FROM ' . gb_outbox_table() . ' ORDER BY id DESC LIMIT %d',
         max( 1, (int) $limit )
     ) );
@@ -896,6 +1123,8 @@ function gb_outbox_needs_attention() {
         && isset( $health['brevo']['ok'] ) && ! $health['brevo']['ok'];
 
     $backup_down = $health && ! empty( $health['backup']['configured'] ) && empty( $health['backup']['ok'] );
+    $brevo_limited = $health && ! $brevo_down && isset( $health['caps'] )
+        && ( empty( $health['caps']['domain']['ok'] ) || ! empty( $health['caps']['credits']['low'] ) );
 
     return array(
         'dead'        => $counts['dead'],
@@ -903,7 +1132,8 @@ function gb_outbox_needs_attention() {
         'server_mail' => $counts['server_mail'],
         'brevo_down'  => (bool) $brevo_down,
         'backup_down' => (bool) $backup_down,
-        'any'         => $counts['dead'] > 0 || $counts['retrying'] > 0 || $brevo_down || $backup_down,
+        'brevo_limited' => (bool) $brevo_limited,
+        'any'         => $counts['dead'] > 0 || $counts['retrying'] > 0 || $brevo_down || $backup_down || $brevo_limited,
     );
 }
 
@@ -994,4 +1224,237 @@ function gb_outbox_route_label( $route ) {
     );
 
     return isset( $labels[ $route ] ) ? $labels[ $route ] : (string) $route;
+}
+
+/* --------------------------------------------------------------------------
+   DELIVERY REPORTS FROM BREVO
+   --------------------------------------------------------------------------
+   Brevo saying "accepted" only means it took the email. It can still fail
+   afterwards, and the site would never know:
+
+     blocked      Brevo will not send to this address at all, because it
+                  bounced or complained once before. Silent, and permanent
+                  until somebody unblocks it - a customer who mistyped their
+                  address once never hears from the site again, even after
+                  fixing it.
+     hard bounce  The receiving server says the address does not exist.
+     soft bounce  Full mailbox, server down; Brevo keeps trying.
+     spam         The recipient marked it as spam.
+
+   With the reports connected, Brevo tells the site about each one. A blocked
+   email is sent again straight away through the backup mailbox, which has no
+   such list. A bounce is marked on the log, because no route can deliver to
+   an address that does not exist - but a manager can see it and ask.
+   -------------------------------------------------------------------------- */
+
+function gb_brevo_webhook_token() {
+    return (string) get_option( 'gb_brevo_webhook_token', '' );
+}
+
+function gb_brevo_webhook_connected() {
+    return gb_brevo_webhook_token() !== '' && (int) get_option( 'gb_brevo_webhook_id', 0 ) > 0;
+}
+
+/*
+ * A front-end address, not admin-post.php. This site sends anybody who is not
+ * signed in as an administrator away from /wp-admin/, and Brevo is never
+ * signed in, so a report sent there would be bounced to the home page and
+ * lost. The secret token in the address is what lets it in.
+ */
+function gb_brevo_webhook_url( $token ) {
+    return add_query_arg(
+        array(
+            'gb_brevo_webhook' => 1,
+            'token'            => rawurlencode( $token ),
+        ),
+        home_url( '/' )
+    );
+}
+
+/**
+ * The events the site acts on. Opens and clicks are left out: nothing here
+ * uses them, and they would be a report for every email somebody reads.
+ */
+function gb_brevo_webhook_events() {
+    return array( 'delivered', 'hardBounce', 'softBounce', 'blocked', 'invalid', 'deferred', 'spam' );
+}
+
+/**
+ * Register the site with Brevo, or confirm it still is.
+ *
+ * @return true|WP_Error
+ */
+function gb_brevo_webhook_connect() {
+    $existing_id = (int) get_option( 'gb_brevo_webhook_id', 0 );
+    $token       = gb_brevo_webhook_token();
+
+    if ( $existing_id > 0 && $token !== '' ) {
+        $found = gb_brevo_api_request( 'webhooks/' . $existing_id );
+        if ( ! is_wp_error( $found ) && isset( $found['url'] ) && $found['url'] === gb_brevo_webhook_url( $token ) ) {
+            return true;
+        }
+        // Gone, or pointing somewhere else; make a fresh one.
+    }
+
+    $token  = wp_generate_password( 40, false, false );
+    $result = gb_brevo_api_request( 'webhooks', array(
+        'url'         => gb_brevo_webhook_url( $token ),
+        'description' => 'The Green Broom website: delivery reports',
+        'events'      => gb_brevo_webhook_events(),
+        'type'        => 'transactional',
+    ), 'POST' );
+
+    if ( is_wp_error( $result ) ) {
+        return $result;
+    }
+
+    if ( empty( $result['id'] ) ) {
+        return new WP_Error( 'gb_brevo_webhook_no_id', 'Brevo did not confirm the connection.' );
+    }
+
+    update_option( 'gb_brevo_webhook_token', $token, false );
+    update_option( 'gb_brevo_webhook_id', (int) $result['id'], false );
+
+    return true;
+}
+
+/**
+ * Brevo's report arrives here. Always answered 200 once the token matches,
+ * even for events the site ignores, so Brevo does not keep retrying them.
+ */
+function gb_handle_brevo_webhook() {
+    $token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+    $known = gb_brevo_webhook_token();
+
+    if ( $known === '' || $token === '' || ! hash_equals( $known, $token ) ) {
+        status_header( 403 );
+        exit;
+    }
+
+    $body   = json_decode( (string) file_get_contents( 'php://input' ), true );
+    $events = is_array( $body ) && isset( $body['event'] ) ? array( $body ) : ( is_array( $body ) ? $body : array() );
+
+    foreach ( $events as $event ) {
+        if ( is_array( $event ) ) {
+            gb_brevo_apply_delivery_event( $event );
+        }
+    }
+
+    status_header( 200 );
+    echo 'ok';
+    exit;
+}
+add_action( 'init', function () {
+    if ( isset( $_GET['gb_brevo_webhook'] ) ) {
+        nocache_headers();
+        gb_handle_brevo_webhook();
+    }
+}, 1 );
+
+/**
+ * What one report means for the email it is about.
+ *
+ * @return string What was done, for testing and the log.
+ */
+function gb_brevo_apply_delivery_event( array $event ) {
+    if ( ! gb_outbox_ready() ) {
+        return 'no_log';
+    }
+
+    $message_id = gb_outbox_normalise_message_id( isset( $event['message-id'] ) ? $event['message-id'] : ( isset( $event['message_id'] ) ? $event['message_id'] : '' ) );
+    if ( $message_id === '' ) {
+        return 'no_id';
+    }
+
+    global $wpdb;
+    $row = $wpdb->get_row( $wpdb->prepare(
+        'SELECT * FROM ' . gb_outbox_table() . ' WHERE message_id = %s ORDER BY id DESC LIMIT 1',
+        $message_id
+    ) );
+
+    if ( ! $row ) {
+        return 'unknown';
+    }
+
+    // "hard_bounce", "hardBounce", "invalid_email" and so on, all the same.
+    $type   = strtolower( str_replace( array( '_', '-', ' ' ), '', (string) ( isset( $event['event'] ) ? $event['event'] : '' ) ) );
+    $reason = isset( $event['reason'] ) ? sanitize_text_field( (string) $event['reason'] ) : '';
+
+    switch ( $type ) {
+        case 'delivered':
+            // Arrived. Nothing more to keep.
+            gb_outbox_update( (int) $row->id, array( 'delivery' => 'delivered', 'payload' => null ) );
+
+            return 'delivered';
+
+        case 'blocked':
+        case 'error':
+            /*
+             * Brevo will not send it. The backup mailbox keeps no such list,
+             * so hand it straight over - unless another route already has.
+             */
+            gb_outbox_note_error( (int) $row->id, 'brevo', 'Brevo accepted it but then would not send it (' . $type . ( $reason !== '' ? ': ' . $reason : '' ) . ').' );
+            gb_outbox_update( (int) $row->id, array( 'delivery' => 'blocked' ) );
+
+            if ( $row->route === 'brevo' && ! empty( $row->payload ) && $row->status === 'sent' ) {
+                // Back into the queue as a fresh attempt, skipping Brevo.
+                gb_outbox_update( (int) $row->id, array( 'status' => 'retrying' ) );
+                $sent = gb_outbox_retry_one( (int) $row->id, true );
+
+                return $sent ? 'resent' : 'resend_failed';
+            }
+
+            return 'blocked';
+
+        case 'hardbounce':
+        case 'invalid':
+        case 'invalidemail':
+            gb_outbox_note_error( (int) $row->id, 'brevo', 'The receiving server says this address does not exist' . ( $reason !== '' ? ': ' . $reason : '' ) . '.' );
+            gb_outbox_update( (int) $row->id, array( 'status' => 'bounced', 'delivery' => 'bounced', 'payload' => null, 'next_attempt_at' => null ) );
+
+            return 'bounced';
+
+        case 'softbounce':
+        case 'deferred':
+            // Brevo keeps trying these itself.
+            gb_outbox_note_error( (int) $row->id, 'brevo', 'Delayed (' . $type . ( $reason !== '' ? ': ' . $reason : '' ) . '); Brevo is still trying.' );
+            gb_outbox_update( (int) $row->id, array( 'delivery' => 'delayed' ) );
+
+            return 'delayed';
+
+        case 'spam':
+            gb_outbox_note_error( (int) $row->id, 'brevo', 'The recipient marked this as spam.' );
+            gb_outbox_update( (int) $row->id, array( 'delivery' => 'spam', 'payload' => null ) );
+
+            return 'spam';
+    }
+
+    return 'ignored';
+}
+
+/**
+ * Take an address off Brevo's block list, so it can be sent to again.
+ *
+ * @return true|WP_Error
+ */
+function gb_brevo_unblock( $email ) {
+    $email = sanitize_email( (string) $email );
+
+    if ( ! is_email( $email ) ) {
+        return new WP_Error( 'gb_bad_email', 'That is not an email address.' );
+    }
+
+    $result = gb_brevo_api_request( 'smtp/blockedContacts/' . rawurlencode( $email ), array(), 'DELETE' );
+
+    // Not on the list is as good as taken off it.
+    if ( is_wp_error( $result ) ) {
+        $data = $result->get_error_data();
+        if ( is_array( $data ) && isset( $data['status'] ) && (int) $data['status'] === 404 ) {
+            return true;
+        }
+
+        return $result;
+    }
+
+    return true;
 }

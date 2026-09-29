@@ -271,6 +271,7 @@ if (isset($_POST['gb_save_action'])) {
             exit;
         case 'resend_email':
         case 'dismiss_email':
+        case 'unblock_email':
             /*
              * The email log on Settings -> Email. Nothing here is post meta,
              * so it returns before the post-target validation, like the
@@ -280,7 +281,22 @@ if (isset($_POST['gb_save_action'])) {
                 wp_die('Email log unavailable.');
             }
             $gb_log_id = isset($_POST['gb_email_log_id']) ? absint($_POST['gb_email_log_id']) : 0;
-            if ($save_action === 'dismiss_email') {
+            if ($save_action === 'unblock_email') {
+                /*
+                 * Brevo keeps a list of addresses it will never send to again
+                 * after one bounce or complaint. Take this one off it, and if
+                 * the email has not already gone another way, send it now.
+                 */
+                $gb_row = gb_outbox_get($gb_log_id);
+                $gb_unblocked = $gb_row ? gb_brevo_unblock($gb_row->to_email) : new WP_Error('gb_no_row', 'That email is no longer in the log.');
+                if (is_wp_error($gb_unblocked)) {
+                    $gb_notice = ['error', 'Brevo would not unblock it: ' . $gb_unblocked->get_error_message()];
+                } else {
+                    gb_outbox_update($gb_log_id, ['delivery' => '']);
+                    $gb_resent = ($gb_row->status !== 'sent' || $gb_row->route === 'brevo') && !empty($gb_row->payload) ? gb_outbox_retry_one($gb_log_id) : false;
+                    $gb_notice = ['ok', $gb_row->to_email . ' is off Brevo\'s block list' . ($gb_resent ? ' and the email has been sent again.' : '. Future emails to it will go through Brevo as normal.')];
+                }
+            } elseif ($save_action === 'dismiss_email') {
                 gb_outbox_update($gb_log_id, ['status' => 'dismissed', 'payload' => null, 'next_attempt_at' => null]);
                 $gb_notice = ['ok', 'Cleared from the list.'];
             } else {
@@ -979,6 +995,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             $gb_mail_bits = [];
             if (!empty($gb_mail_flag['brevo_down'])) { $gb_mail_bits[] = 'Brevo is refusing the site'; }
             if (!empty($gb_mail_flag['backup_down'])) { $gb_mail_bits[] = 'the backup mailbox will not sign in'; }
+            if (!empty($gb_mail_flag['brevo_limited'])) { $gb_mail_bits[] = 'Brevo cannot send everything it should'; }
             if (!empty($gb_mail_flag['dead'])) { $gb_mail_bits[] = (int) $gb_mail_flag['dead'] . ' email' . ((int) $gb_mail_flag['dead'] === 1 ? '' : 's') . ' not delivered'; }
             if (!empty($gb_mail_flag['retrying'])) { $gb_mail_bits[] = (int) $gb_mail_flag['retrying'] . ' waiting to retry'; }
             ?>

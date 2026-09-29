@@ -237,6 +237,21 @@ this is done, a Brevo refusal falls straight to the web server, which is not
 in the domain's SPF record and does not sign mail, so those emails may land
 in spam.
 
+Then, on the same screen:
+
+- Press **Check now** and read **What Brevo can do**. It confirms the sending
+  domain is signed, shows how many sends are left on the plan, and checks all
+  seven templates exist in Brevo, are switched on and use the link the site
+  sends. Any template marked *Using site copy* still arrives branded (the
+  site sends its own copy of the design), but fix it in Brevo so the two
+  stay the same. The designs are in `remote-sync/thegreenbroom/email-templates/`.
+- Press **Connect delivery reports**. Without it, "accepted by Brevo" is the
+  last the site hears of an email. With it, Brevo reports every delivery,
+  bounce and block; a blocked email is re-sent through the backup mailbox
+  automatically, and bounces are marked on the log.
+- The free Brevo plan stops at 300 emails a day. The panel shows what is
+  left and warns under 50; past the limit, the backup mailbox takes over.
+
 In Brevo, **Settings → Security → Authorised IPs**: either turn blocking off
 for API keys, or keep `217.160.134.0/24` on the list. A missing address there
 is what stopped email on 29 September.
