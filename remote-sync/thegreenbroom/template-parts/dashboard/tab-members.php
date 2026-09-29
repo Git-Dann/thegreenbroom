@@ -125,9 +125,30 @@ foreach ($gb_customers as $gb_u) {
                         <?php if ($gb_m['source'] === 'manual' && $gb_m['status'] !== 'none'): ?>
                             <div style="font-size:10.5px; color:#94a3b8; margin-top:4px;">Recorded by hand</div>
                         <?php endif; ?>
+                        <?php if (!empty($gb_m['cancels_at'])): ?>
+                            <div style="font-size:10.5px; color:#d97706; margin-top:4px;">Cancelled &mdash; not renewing</div>
+                        <?php endif; ?>
+                        <?php
+                        /*
+                         * If their billing page refused to open, that is the
+                         * only record of it. Without this the member says "the
+                         * cancel button does nothing" and nobody here can see
+                         * any more than they can.
+                         */
+                        $gb_bill_err = get_user_meta($gb_u->ID, '_gb_billing_last_error', true);
+                        if (is_array($gb_bill_err) && !empty($gb_bill_err['message'])): ?>
+                            <div style="font-size:10.5px; color:#991b1b; margin-top:4px;" title="<?php echo esc_attr($gb_bill_err['message']); ?>">
+                                Billing page failed <?php echo !empty($gb_bill_err['at']) ? esc_html(date_i18n('j M, H:i', strtotime($gb_bill_err['at']))) : ''; ?>
+                            </div>
+                        <?php endif; ?>
                     </td>
                     <td style="font-size:12.5px; color:#475569;"><?php echo esc_html($gb_m['plan'] ? ($gb_plans[$gb_m['plan']]['label'] ?? $gb_m['plan']) : '&mdash;'); ?></td>
-                    <td style="font-size:12.5px; color:#475569; white-space:nowrap;"><?php echo $gb_m['expires'] ? esc_html(date_i18n('j M Y', strtotime($gb_m['expires']))) : '&mdash;'; ?></td>
+                    <td style="font-size:12.5px; color:#475569; white-space:nowrap;">
+                        <?php echo $gb_m['expires'] ? esc_html(date_i18n('j M Y', strtotime($gb_m['expires']))) : '&mdash;'; ?>
+                        <?php if (!empty($gb_m['cancels_at'])): ?>
+                            <div style="font-size:10.5px; color:#d97706;">ends, no renewal</div>
+                        <?php endif; ?>
+                    </td>
                     <td style="text-align:right;">
                         <form method="post" style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
                             <input type="hidden" name="gb_save_action" value="save_membership">

@@ -274,7 +274,7 @@ function gb_membership_handle_checkout_request() {
     // Already a member: their account is where they change or stop it, and
     // sending them back to the price they cannot buy again explains nothing.
     if ( is_wp_error( $url ) && $url->get_error_code() === 'gb_membership_already_active' ) {
-        wp_safe_redirect( add_query_arg( 'gb_billing', 'already', home_url( '/my-account/' ) ) );
+        wp_safe_redirect( add_query_arg( 'gb_billing', 'already', home_url( '/my-account/' ) ) . '#gb-billing' );
         exit;
     }
 
@@ -431,6 +431,33 @@ function gb_membership_period_end( array $subscription ) {
 }
 
 /**
+ * The date a subscription is set to stop, or '' if it is not stopping.
+ *
+ * Stripe's portal is configured to cancel at the end of the billing period,
+ * which is the right way round for somebody who has paid to December. But that
+ * does not cancel the subscription: it flags it, leaves the status 'active',
+ * and sends customer.subscription.updated. Read only the status and a
+ * cancellation is invisible until the period actually ends - months later, and
+ * in the meantime the account page cheerfully promises a renewal that is not
+ * going to happen.
+ *
+ * cancel_at is the authoritative date when Stripe sends one. Falling back to
+ * the period end matters for older subscriptions, where the flag is set but
+ * the explicit date is not.
+ */
+function gb_membership_cancellation_date( array $subscription ) {
+    if ( empty( $subscription['cancel_at_period_end'] ) ) {
+        return '';
+    }
+
+    $at = ! empty( $subscription['cancel_at'] )
+        ? (int) $subscription['cancel_at']
+        : gb_membership_period_end( $subscription );
+
+    return $at > 0 ? gmdate( 'Y-m-d', $at ) : '';
+}
+
+/**
  * The single place a Stripe subscription becomes site state.
  */
 function gb_membership_apply_subscription( array $subscription ) {
@@ -461,6 +488,10 @@ function gb_membership_apply_subscription( array $subscription ) {
     $period_end = gb_membership_period_end( $subscription );
     $expires    = $period_end > 0 ? gmdate( 'Y-m-d', $period_end ) : '';
 
+    // Already stopped is not the same as due to stop, and saying both at once
+    // would be nonsense on the account page.
+    $cancels_at = $status === 'cancelled' ? '' : gb_membership_cancellation_date( $subscription );
+
     $subscription_id = sanitize_text_field( (string) $subscription['id'] );
 
     // Whatever they picked before they had an account, they have now bought.
@@ -472,7 +503,7 @@ function gb_membership_apply_subscription( array $subscription ) {
     update_user_meta( $user_id, '_gb_stripe_subscription_status', sanitize_text_field( (string) $subscription['status'] ) );
 
     if ( $plan['audience'] === 'cleaner' ) {
-        gb_membership_apply_cleaner_listing( $user_id, $status, $expires, $subscription );
+        gb_membership_apply_cleaner_listing( $user_id, $status, $expires, $subscription, $cancels_at );
 
         return;
     }
@@ -484,6 +515,7 @@ function gb_membership_apply_subscription( array $subscription ) {
     );
 
     gb_set_membership( $user_id, $status, $plan['plan'], $expires, 'stripe', $note );
+    gb_set_membership_cancellation( $user_id, $cancels_at );
 }
 
 /**
@@ -491,12 +523,13 @@ function gb_membership_apply_subscription( array $subscription ) {
  * only knows quarterly and annual - so it gets its own record, mirrored onto
  * the cleaner profile so a manager can see it without opening Stripe.
  */
-function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array $subscription ) {
+function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array $subscription, $cancels_at = '' ) {
     $stripe_status = sanitize_text_field( (string) ( isset( $subscription['status'] ) ? $subscription['status'] : '' ) );
 
     update_user_meta( $user_id, '_gb_listing_status', $status );
     update_user_meta( $user_id, '_gb_listing_renews', $expires );
     update_user_meta( $user_id, '_gb_listing_stripe_status', $stripe_status );
+    update_user_meta( $user_id, '_gb_listing_cancels_at', $cancels_at );
 
     $cleaners = get_posts( array(
         'post_type'      => 'gb_cleaner',
@@ -510,6 +543,7 @@ function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array
         update_post_meta( $cleaner_id, '_gb_listing_status', $status );
         update_post_meta( $cleaner_id, '_gb_listing_renews', $expires );
         update_post_meta( $cleaner_id, '_gb_listing_stripe_status', $stripe_status );
+        update_post_meta( $cleaner_id, '_gb_listing_cancels_at', $cancels_at );
     }
 }
 
@@ -728,26 +762,54 @@ function gb_membership_handle_portal_request() {
         empty( $_POST['gb_membership_nonce'] ) ||
         ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['gb_membership_nonce'] ) ), 'gb_membership_portal' )
     ) {
-        wp_safe_redirect( add_query_arg( 'gb_billing', 'expired', home_url( '/my-account/' ) ) );
-        exit;
+        gb_membership_portal_bail( 'expired' );
     }
 
     if ( ! is_user_logged_in() ) {
-        wp_safe_redirect( home_url( '/login' ) );
+        wp_safe_redirect( home_url( '/login/' ) );
         exit;
     }
 
     $url = gb_membership_create_portal_session( get_current_user_id(), home_url( '/my-account/' ) );
 
     if ( is_wp_error( $url ) ) {
-        wp_safe_redirect( add_query_arg(
-            array( 'gb_billing' => 'error', 'gb_billing_msg' => rawurlencode( $url->get_error_message() ) ),
-            home_url( '/my-account/' )
+        /*
+         * Record what Stripe said. The person gets the message on the page, but
+         * it is gone the moment they navigate, and "I pressed it and nothing
+         * happened" is not something anybody can diagnose from. A manager can
+         * read this off the Members screen afterwards.
+         */
+        update_user_meta( get_current_user_id(), '_gb_billing_last_error', array(
+            'at'      => current_time( 'mysql' ),
+            'code'    => $url->get_error_code(),
+            'message' => $url->get_error_message(),
         ) );
-        exit;
+
+        gb_membership_portal_bail( 'error', $url->get_error_message() );
     }
 
+    delete_user_meta( get_current_user_id(), '_gb_billing_last_error' );
+
     wp_redirect( $url );
+    exit;
+}
+
+/**
+ * Send somebody back to their account with something to read.
+ *
+ * The fragment is the point. Pressing a button and being returned to the top
+ * of the same page you were already on is indistinguishable from the button
+ * being broken, which is exactly how this was reported. Landing on the message
+ * itself makes the difference between "nothing happened" and an answer.
+ */
+function gb_membership_portal_bail( $notice, $detail = '' ) {
+    $args = array( 'gb_billing' => $notice );
+
+    if ( $detail !== '' ) {
+        $args['gb_billing_msg'] = rawurlencode( $detail );
+    }
+
+    wp_safe_redirect( add_query_arg( $args, home_url( '/my-account/' ) ) . '#gb-billing' );
     exit;
 }
 add_action( 'init', 'gb_membership_handle_portal_request' );

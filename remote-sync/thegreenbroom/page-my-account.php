@@ -140,6 +140,14 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
         $gb_acc_renews  = $gb_acc_member['expires'] !== '' && strtotime($gb_acc_member['expires'])
             ? date_i18n('j F Y', strtotime($gb_acc_member['expires']))
             : '';
+
+        // Cancelled, but paid up until the period ends. Still active, and must
+        // not be described as renewing.
+        $gb_acc_cancels_raw = isset($gb_acc_member['cancels_at']) ? $gb_acc_member['cancels_at'] : '';
+        $gb_acc_cancels     = $gb_acc_cancels_raw !== '' && strtotime($gb_acc_cancels_raw)
+            ? date_i18n('j F Y', strtotime($gb_acc_cancels_raw))
+            : '';
+        $gb_acc_ending      = $gb_acc_active && $gb_acc_cancels !== '';
         $gb_acc_pending = function_exists('gb_membership_get_pending_plan') ? gb_membership_get_pending_plan($gb_acc_user_id) : '';
         $gb_acc_cat     = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : [];
 
@@ -147,21 +155,29 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
         $gb_billing_detail = isset($_GET['gb_billing_msg']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['gb_billing_msg']))) : '';
         $gb_billing_copy   = [
             'already' => ['info',  'You already have an active membership. You can change or cancel it below.'],
-            'expired' => ['error', 'That page had been open a while, so we stopped. Please try again.'],
-            'error'   => ['error', $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page. Please try again.'],
+            'expired' => ['error', 'That page had been open a while, so we stopped before anything was changed. Please try again.'],
+            'error'   => ['error', $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page.'],
         ];
         ?>
 
         <?php if (isset($gb_billing_copy[$gb_billing_notice])): ?>
-            <div class="gb-membership-notice gb-membership-notice-<?php echo esc_attr($gb_billing_copy[$gb_billing_notice][0]); ?>" style="margin-bottom:20px;">
+            <div id="gb-billing" class="gb-membership-notice gb-membership-notice-<?php echo esc_attr($gb_billing_copy[$gb_billing_notice][0]); ?>" style="margin-bottom:20px;">
                 <?php echo esc_html($gb_billing_copy[$gb_billing_notice][1]); ?>
+                <?php if ($gb_billing_notice === 'error'): ?>
+                    <br><strong>Nothing has been charged or changed.</strong>
+                    Try again, and if it keeps happening
+                    <a href="<?php echo esc_url(home_url('/contact-support/')); ?>" style="color:inherit; text-decoration:underline;">tell us</a>
+                    and we will sort your membership out for you.
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
         <div class="gb-card mb-20">
             <div class="gb-card-head">
                 <span class="gb-card-title">Membership</span>
-                <?php if ($gb_acc_active): ?>
+                <?php if ($gb_acc_ending): ?>
+                    <span class="gb-badge gb-badge-warning">Ending</span>
+                <?php elseif ($gb_acc_active): ?>
                     <span class="gb-badge gb-badge-success">Active</span>
                 <?php endif; ?>
             </div>
@@ -169,14 +185,24 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                 <?php if ($gb_acc_active): ?>
                     <p style="margin:0 0 16px; color:#475569;">
                         <?php if ($gb_acc_plan !== ''): ?>You are on the <strong><?php echo esc_html($gb_acc_plan); ?></strong> plan.<?php else: ?>Your membership is active.<?php endif; ?>
-                        <?php if ($gb_acc_renews !== ''): ?> It renews on <strong><?php echo esc_html($gb_acc_renews); ?></strong>.<?php endif; ?>
+                        <?php if ($gb_acc_ending): ?>
+                            You have cancelled it, so it will <strong>not</strong> renew. You keep everything you have paid for until <strong><?php echo esc_html($gb_acc_cancels); ?></strong>, and it stops then.
+                        <?php elseif ($gb_acc_renews !== ''): ?>
+                            It renews on <strong><?php echo esc_html($gb_acc_renews); ?></strong>.
+                        <?php endif; ?>
                     </p>
                     <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" style="margin:0;">
                         <input type="hidden" name="gb_membership_action" value="portal">
                         <?php wp_nonce_field('gb_membership_portal', 'gb_membership_nonce'); ?>
-                        <button type="submit" class="gb-btn gb-btn-primary gb-btn-sm">Manage or cancel</button>
+                        <button type="submit" class="gb-btn gb-btn-primary gb-btn-sm"><?php echo $gb_acc_ending ? 'Restart or manage' : 'Manage or cancel'; ?></button>
                     </form>
-                    <p style="margin:10px 0 0; font-size:.82rem; color:#94a3b8;">Change your card, switch plan, download a receipt or stop your membership.</p>
+                    <p style="margin:10px 0 0; font-size:.82rem; color:#94a3b8;">
+                        <?php if ($gb_acc_ending): ?>
+                            Changed your mind? Turn renewal back on, or update your card, from the same page.
+                        <?php else: ?>
+                            Change your card, switch plan, download a receipt or stop your membership.
+                        <?php endif; ?>
+                    </p>
 
                 <?php elseif ($gb_acc_pending !== '' && isset($gb_acc_cat[$gb_acc_pending])): ?>
                     <p style="margin:0 0 16px; color:#475569;">

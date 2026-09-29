@@ -26,6 +26,7 @@ const GB_MEMBER_STARTED  = 'gb_member_started';
 const GB_MEMBER_EXPIRES  = 'gb_member_expires';
 const GB_MEMBER_SOURCE   = 'gb_member_source';   // manual | stripe
 const GB_MEMBER_HISTORY  = 'gb_member_history';
+const GB_MEMBER_CANCELS  = 'gb_member_cancels_at'; // Y-m-d while a cancellation is pending, else empty
 
 function gb_membership_plans() {
     return array(
@@ -56,7 +57,7 @@ function gb_membership_gate_enabled() {
 function gb_get_membership( $user_id ) {
     $user_id = (int) $user_id;
     if ( $user_id < 1 ) {
-        return array( 'status' => 'none', 'plan' => '', 'started' => '', 'expires' => '', 'source' => '' );
+        return array( 'status' => 'none', 'plan' => '', 'started' => '', 'expires' => '', 'source' => '', 'cancels_at' => '' );
     }
 
     $status = (string) get_user_meta( $user_id, GB_MEMBER_STATUS, true );
@@ -68,13 +69,51 @@ function gb_get_membership( $user_id ) {
         $status = 'expired';
     }
 
+    /*
+     * A pending cancellation only means anything while the membership is still
+     * running. Once it has actually stopped, the status says so and a leftover
+     * date would be describing something that has already happened.
+     */
+    $cancels_at = $status === 'active' ? (string) get_user_meta( $user_id, GB_MEMBER_CANCELS, true ) : '';
+
     return array(
-        'status'  => $status !== '' ? $status : 'none',
-        'plan'    => (string) get_user_meta( $user_id, GB_MEMBER_PLAN, true ),
-        'started' => (string) get_user_meta( $user_id, GB_MEMBER_STARTED, true ),
-        'expires' => $expires,
-        'source'  => (string) get_user_meta( $user_id, GB_MEMBER_SOURCE, true ),
+        'status'     => $status !== '' ? $status : 'none',
+        'plan'       => (string) get_user_meta( $user_id, GB_MEMBER_PLAN, true ),
+        'started'    => (string) get_user_meta( $user_id, GB_MEMBER_STARTED, true ),
+        'expires'    => $expires,
+        'source'     => (string) get_user_meta( $user_id, GB_MEMBER_SOURCE, true ),
+        'cancels_at' => $cancels_at,
     );
+}
+
+/**
+ * Record that a membership is set to stop, or that it is not.
+ *
+ * Stripe's portal offers "cancel at the end of the billing period", which is
+ * the humane setting and the one in use: somebody who has paid to December
+ * keeps what they paid for. But it leaves the subscription active, so without
+ * this the account page would go on saying "renews on 28 December" to somebody
+ * who had just cancelled - who would reasonably conclude it had not worked.
+ *
+ * Passing '' clears it, which is what a resumed subscription needs: Stripe
+ * lets people turn renewal back on, and that has to undo this as cleanly as it
+ * set it.
+ */
+function gb_set_membership_cancellation( $user_id, $cancels_at ) {
+    $user_id    = (int) $user_id;
+    $cancels_at = (string) $cancels_at;
+
+    if ( $user_id < 1 ) {
+        return;
+    }
+
+    if ( $cancels_at === '' ) {
+        delete_user_meta( $user_id, GB_MEMBER_CANCELS );
+
+        return;
+    }
+
+    update_user_meta( $user_id, GB_MEMBER_CANCELS, $cancels_at );
 }
 
 function gb_user_is_member( $user_id ) {
@@ -160,6 +199,16 @@ function gb_set_membership( $user_id, $status, $plan = '', $expires = '', $sourc
     update_user_meta( $user_id, GB_MEMBER_PLAN, $plan );
     update_user_meta( $user_id, GB_MEMBER_EXPIRES, $expires );
     update_user_meta( $user_id, GB_MEMBER_SOURCE, $source );
+
+    /*
+     * A manager setting a membership by hand is overriding whatever Stripe
+     * last said, so any pending cancellation it recorded no longer describes
+     * this membership. Stripe's own path re-records it immediately afterwards
+     * from the subscription, so only the manual case actually clears.
+     */
+    if ( $source === 'manual' ) {
+        gb_set_membership_cancellation( $user_id, '' );
+    }
 
     $actor = get_current_user_id();
     $who   = $actor ? ( get_userdata( $actor ) ? get_userdata( $actor )->user_email : 'User #' . $actor ) : 'System';
