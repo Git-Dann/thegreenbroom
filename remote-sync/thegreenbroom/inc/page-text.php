@@ -860,3 +860,41 @@ function gb_finish_standard_insurance_line() {
 
     update_option( 'gb_standard_insurance_line_v2', 1, false );
 }
+
+/**
+ * How We Do It: drop the Green Interview, promote Ongoing Monitoring.
+ *
+ * The client asked for the interview step to go and for Ongoing Monitoring to
+ * sit centred beneath the two checks above it. The template renders three
+ * steps now, so Ongoing Monitoring has to MOVE from slot four into slot three
+ * - otherwise the page would quietly show the deleted interview in the place
+ * the client asked for monitoring.
+ *
+ * Only moves when slot four is actually populated, so running twice is safe
+ * and a manager who has since written their own third step is not overwritten
+ * by a stale fourth one.
+ */
+function gb_promote_ongoing_monitoring() {
+    if ( get_option( 'gb_vetting_three_steps' ) ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'how-we-do-it' );
+
+    if ( $page instanceof WP_Post ) {
+        $s4_title = (string) get_post_meta( $page->ID, '_gb_vet_s4_title', true );
+        $s4_desc  = (string) get_post_meta( $page->ID, '_gb_vet_s4_desc', true );
+
+        if ( trim( $s4_title ) !== '' ) {
+            update_post_meta( $page->ID, '_gb_vet_s3_title', $s4_title );
+            update_post_meta( $page->ID, '_gb_vet_s3_desc', $s4_desc );
+        }
+
+        // Gone either way: nothing renders slot four any more, and leaving it
+        // behind means the next person finds two answers to the same question.
+        delete_post_meta( $page->ID, '_gb_vet_s4_title' );
+        delete_post_meta( $page->ID, '_gb_vet_s4_desc' );
+    }
+
+    update_option( 'gb_vetting_three_steps', 1, false );
+}

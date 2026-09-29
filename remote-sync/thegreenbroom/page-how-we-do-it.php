@@ -38,11 +38,8 @@ $vet_s1_desc  = get_post_meta(get_the_ID(), '_gb_vet_s1_desc', true)  ?: 'We ver
 $vet_s2_title = get_post_meta(get_the_ID(), '_gb_vet_s2_title', true) ?: 'Reference Verification';
 $vet_s2_desc  = get_post_meta(get_the_ID(), '_gb_vet_s2_desc', true)  ?: 'We speak to previous employers or clients. If they haven\'t delivered 5-star service before, they won\'t be on The Green Broom.';
 
-$vet_s3_title = get_post_meta(get_the_ID(), '_gb_vet_s3_title', true) ?: 'The "Green" Interview';
-$vet_s3_desc  = get_post_meta(get_the_ID(), '_gb_vet_s3_desc', true)  ?: 'We test their knowledge of eco-friendly cleaning methods.';
-
-$vet_s4_title = get_post_meta(get_the_ID(), '_gb_vet_s4_title', true) ?: 'Ongoing Monitoring';
-$vet_s4_desc  = get_post_meta(get_the_ID(), '_gb_vet_s4_desc', true)  ?: 'Verification doesn\'t stop at signup. We monitor ratings after every job.';
+$vet_s3_title = get_post_meta(get_the_ID(), '_gb_vet_s3_title', true) ?: 'Ongoing Monitoring';
+$vet_s3_desc  = get_post_meta(get_the_ID(), '_gb_vet_s3_desc', true)  ?: 'Verification doesn\'t stop at signup. We monitor ratings after every job.';
 
 // E. Bottom CTA
 $cta_head   = get_post_meta(get_the_ID(), '_gb_about_cta_head', true)   ?: 'Join the Cleaning Revolution';
@@ -80,6 +77,7 @@ $cta_link2  = get_post_meta(get_the_ID(), '_gb_about_btn2_link', true)  ?: '/joi
     .gb-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; max-width: 900px; margin: 0 auto; }
     .gb-stat-num { font-size: 3rem; font-weight: 800; color: #2e7d32; display: block; margin-bottom: 5px; }
     .gb-vet-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:24px; }
+    .gb-vet-centre { grid-column:1 / -1; width:calc(50% - 12px); margin:0 auto; }
 
     /* FLOATING CTA STYLE */
     .gb-cta-banner { background: transparent; padding: 80px 20px; text-align: center; }
@@ -90,6 +88,8 @@ $cta_link2  = get_post_meta(get_the_ID(), '_gb_about_btn2_link', true)  ?: '/joi
 
     @media (max-width: 900px) {
         .gb-story-grid, .gb-stats-grid, .gb-vet-grid { grid-template-columns: 1fr; gap: 40px; }
+        /* One column, so there is nothing to centre it against. */
+        .gb-vet-centre { width:100%; }
     }
 </style>
 
@@ -145,13 +145,9 @@ $cta_link2  = get_post_meta(get_the_ID(), '_gb_about_btn2_link', true)  ?: '/joi
                     <h3 style="margin:0 0 10px; color:#1b5e20; font-size:20px;"><?php echo esc_html($vet_s2_title); ?></h3>
                     <p style="margin:0; color:#475569; line-height:1.6;"><?php echo esc_html($vet_s2_desc); ?></p>
                 </div>
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px;">
+                <div class="gb-vet-centre" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px;">
                     <h3 style="margin:0 0 10px; color:#1b5e20; font-size:20px;"><?php echo esc_html($vet_s3_title); ?></h3>
                     <p style="margin:0; color:#475569; line-height:1.6;"><?php echo esc_html($vet_s3_desc); ?></p>
-                </div>
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px;">
-                    <h3 style="margin:0 0 10px; color:#1b5e20; font-size:20px;"><?php echo esc_html($vet_s4_title); ?></h3>
-                    <p style="margin:0; color:#475569; line-height:1.6;"><?php echo esc_html($vet_s4_desc); ?></p>
                 </div>
             </div>
         </div>

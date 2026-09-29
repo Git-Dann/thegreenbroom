@@ -136,10 +136,8 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
             '_gb_vet_s1_desc'      => 'We verify government-issued ID and proof of address for every single applicant.',
             '_gb_vet_s2_title'     => 'Reference Verification',
             '_gb_vet_s2_desc'      => "We speak to previous employers or clients. If they haven't delivered 5-star service before, they won't be on The Green Broom.",
-            '_gb_vet_s3_title'     => 'The "Green" Interview',
-            '_gb_vet_s3_desc'      => 'We test their knowledge of eco-friendly cleaning methods.',
-            '_gb_vet_s4_title'     => 'Ongoing Monitoring',
-            '_gb_vet_s4_desc'      => "Verification doesn't stop at signup. We monitor ratings after every job.",
+            '_gb_vet_s3_title'     => 'Ongoing Monitoring',
+            '_gb_vet_s3_desc'      => "Verification doesn't stop at signup. We monitor ratings after every job.",
             '_gb_about_cta_head'   => 'Join the Cleaning Revolution',
             '_gb_about_cta_sub'    => 'Whether you want a spotless home or a flexible career.',
             '_gb_about_btn1_text'  => 'Find a Cleaner',
@@ -566,8 +564,9 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                 <div class="gb-sub-head">Vetting Intro</div>
                                 <div class="gb-form-row"><label class="gb-label">Vetting Section Heading</label><input type="text" name="_gb_vet_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_vet_head')); ?>"></div>
                                 <div class="gb-form-row"><label class="gb-label">Vetting Section Subheading</label><textarea name="_gb_vet_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_vet_sub')); ?></textarea></div>
-                                <?php for($i=1;$i<=4;$i++): ?>
-                                    <div class="gb-sub-head">Vetting Step <?php echo $i; ?></div>
+                                <?php // Three steps since the Green Interview was dropped. ?>
+                                <?php for($i=1;$i<=3;$i++): ?>
+                                    <div class="gb-sub-head">Vetting Step <?php echo $i; ?><?php echo $i === 3 ? ' (shown centred beneath the other two)' : ''; ?></div>
                                     <div class="gb-form-row"><input type="text" name="_gb_vet_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_vet_s{$i}_title")); ?>"><textarea name="_gb_vet_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_vet_s{$i}_desc")); ?></textarea></div>
                                 <?php endfor; ?>
                             </div>

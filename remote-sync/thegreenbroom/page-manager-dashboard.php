@@ -186,6 +186,27 @@ if (isset($_POST['gb_save_action']) && isset($_POST['post_id'])) {
             );
             wp_redirect(home_url('/manager-dashboard?tab=members&msg=saved'));
             exit;
+        case 'sync_membership':
+            /*
+             * Ask Stripe again rather than waiting for it to tell us.
+             *
+             * Same shape as save_membership: user meta, no post to validate.
+             */
+            if ( ! function_exists('gb_membership_resync_user') ) {
+                wp_die('Membership handling unavailable.');
+            }
+            $gb_member_user = isset($_POST['gb_member_user']) ? (int) $_POST['gb_member_user'] : 0;
+            if ( $gb_member_user < 1 || ! get_userdata($gb_member_user) ) {
+                wp_die('Invalid customer.');
+            }
+            $gb_synced = gb_membership_resync_user($gb_member_user);
+            wp_redirect(add_query_arg(
+                is_wp_error($gb_synced)
+                    ? ['tab' => 'members', 'msg' => 'sync_failed', 'detail' => rawurlencode($gb_synced->get_error_message())]
+                    : ['tab' => 'members', 'msg' => 'synced'],
+                home_url('/manager-dashboard')
+            ));
+            exit;
         case 'save_settings':
             if ($pid !== (int) get_option('page_on_front')) {
                 wp_die('Invalid settings target.');
@@ -845,6 +866,8 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
+        <?php if($msg == 'synced'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Asked Stripe again. Whatever it said is now on the row below &mdash; if nothing changed, Stripe and this site already agreed.</div><?php endif; ?>
+        <?php if($msg == 'sync_failed'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fecaca; color:#991b1b; padding:15px;">Could not read that subscription from Stripe: <?php echo esc_html(isset($_GET['detail']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['detail']))) : 'no reason given'); ?></div><?php endif; ?>
         <?php if($msg == 'approved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Cleaner approved.</div><?php endif; ?>
         <?php if($msg == 'deleted'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">🗑️ Item deleted.</div><?php endif; ?>
         <?php if($msg == 'save_failed'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:15px;">⚠️ That could not be saved. Please check the title is filled in and try again.</div><?php endif; ?>

@@ -168,6 +168,33 @@ foreach ($gb_customers as $gb_u) {
                             <input type="date" name="gb_member_expires" class="gb-input gb-input-sm" value="<?php echo esc_attr($gb_m['expires']); ?>" title="Leave blank to set automatically from the plan">
                             <button type="submit" class="gb-btn-small-os">Save</button>
                         </form>
+                        <?php
+                        /*
+                         * Ask Stripe again.
+                         *
+                         * The webhook normally keeps this current and when it
+                         * is working this is never needed. It is for when it
+                         * is not: a delivery that failed, an event type never
+                         * subscribed to, or a change made in Stripe before the
+                         * site was listening. Without it the only correction
+                         * available is to type the right answer in by hand,
+                         * which records a manual override rather than the
+                         * truth, and tells nobody which of those it was.
+                         */
+                        $gb_sub_id = (string) get_user_meta($gb_u->ID, '_gb_stripe_subscription_id', true);
+                        if ($gb_sub_id !== ''):
+                            $gb_sub_status = (string) get_user_meta($gb_u->ID, '_gb_stripe_subscription_status', true);
+                        ?>
+                            <form method="post" style="margin-top:6px; display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+                                <input type="hidden" name="gb_save_action" value="sync_membership">
+                                <input type="hidden" name="gb_member_user" value="<?php echo (int) $gb_u->ID; ?>">
+                                <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
+                                <span style="font-size:10.5px; color:#94a3b8;" title="<?php echo esc_attr($gb_sub_id); ?>">
+                                    Stripe says <strong><?php echo esc_html($gb_sub_status !== '' ? $gb_sub_status : 'unknown'); ?></strong>
+                                </span>
+                                <button type="submit" class="gb-btn-small-os">Sync from Stripe</button>
+                            </form>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>

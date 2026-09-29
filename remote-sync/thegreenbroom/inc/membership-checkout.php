@@ -577,16 +577,46 @@ function gb_membership_sync_subscription( $subscription_id ) {
     $subscription_id = sanitize_text_field( (string) $subscription_id );
 
     if ( $subscription_id === '' ) {
-        return;
+        return new WP_Error( 'gb_membership_no_subscription', 'No Stripe subscription is recorded for this account.' );
     }
 
     $subscription = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $subscription_id ), array(), 'GET' );
 
-    if ( is_wp_error( $subscription ) || ! is_array( $subscription ) ) {
-        return;
+    if ( is_wp_error( $subscription ) ) {
+        return $subscription;
+    }
+
+    if ( ! is_array( $subscription ) ) {
+        return new WP_Error( 'gb_membership_bad_subscription', 'Stripe did not return that subscription.' );
     }
 
     gb_membership_apply_subscription( $subscription );
+
+    return true;
+}
+
+/**
+ * Pull a member's subscription from Stripe again and re-apply it.
+ *
+ * The webhook is what normally keeps this current, and when it is working
+ * this button is never needed. It exists for when it is not: a delivery that
+ * failed, an event type that was never subscribed to, or a change made in the
+ * Stripe dashboard before the site was listening. Without it the only way to
+ * find out which of those it was is to read Stripe's delivery log, and the
+ * only way to correct the record is to type it in by hand and hope.
+ *
+ * @return true|WP_Error
+ */
+function gb_membership_resync_user( $user_id ) {
+    $user_id = (int) $user_id;
+
+    if ( $user_id < 1 || ! get_userdata( $user_id ) ) {
+        return new WP_Error( 'gb_membership_no_user', 'That account could not be found.' );
+    }
+
+    return gb_membership_sync_subscription(
+        (string) get_user_meta( $user_id, '_gb_stripe_subscription_id', true )
+    );
 }
 
 /**
