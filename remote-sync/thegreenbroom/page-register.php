@@ -40,6 +40,14 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
                     update_user_meta($uid, '_gb_subscriber_terms_accepted_version', function_exists('gb_get_subscriber_terms_of_association_version') ? gb_get_subscriber_terms_of_association_version() : 'current');
                 }
                 $u = new WP_User($uid);
+
+                // They clicked a price before they had an account. Hold on to
+                // it so their account page can offer it back, rather than
+                // losing the thing they were actually trying to do.
+                $chosen_plan = isset($_POST['gb_plan']) ? sanitize_key(wp_unslash($_POST['gb_plan'])) : '';
+                if ($chosen_plan !== '' && function_exists('gb_membership_set_pending_plan')) {
+                    gb_membership_set_pending_plan($uid, $chosen_plan);
+                }
                 
                 if($type === 'cleaner') {
                     $u->set_role('gb_cleaner');
@@ -73,6 +81,15 @@ get_header();
         <form method="post">
             <input type="hidden" name="gb_register" value="1">
             <?php wp_nonce_field('gb_register_action', 'gb_register_nonce'); ?>
+            <?php
+            // Carried through from a price they clicked while logged out.
+            $gb_reg_plan = isset($_GET['plan']) ? sanitize_key(wp_unslash($_GET['plan'])) : '';
+            $gb_reg_cat  = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : [];
+            if ($gb_reg_plan !== '' && isset($gb_reg_cat[$gb_reg_plan])) :
+            ?>
+                <input type="hidden" name="gb_plan" value="<?php echo esc_attr($gb_reg_plan); ?>">
+                <p class="gb-reg-plan-note">Creating your account first &mdash; we will pick up <strong><?php echo esc_html($gb_reg_cat[$gb_reg_plan]['label']); ?></strong> straight after.</p>
+            <?php endif; ?>
             <div class="gb-form-group">
                 <label class="gb-label" for="register-user-type">I want to...</label>
                 <select id="register-user-type" name="user_type" class="gb-input">

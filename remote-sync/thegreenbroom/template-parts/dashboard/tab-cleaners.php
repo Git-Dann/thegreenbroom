@@ -58,36 +58,15 @@
     $stripe_mode = function_exists('gb_get_stripe_config') ? (gb_get_stripe_config()['mode'] ?? 'test') : 'test';
     $connect_redirect = home_url('/manager-dashboard?tab=cleaners&action=edit&id=' . $pid);
     $connect_onboard_url = wp_nonce_url(
-        add_query_arg(
-            [
-                'action'      => 'gb_connect_onboarding',
-                'cleaner_id'  => $pid,
-                'redirect_to' => $connect_redirect,
-            ],
-            admin_url('admin-post.php')
-        ),
+        gb_connect_action_url('gb_connect_onboarding', $pid, $connect_redirect),
         'gb_connect_onboarding_' . $pid
     );
     $connect_login_url = wp_nonce_url(
-        add_query_arg(
-            [
-                'action'      => 'gb_connect_login_link',
-                'cleaner_id'  => $pid,
-                'redirect_to' => $connect_redirect,
-            ],
-            admin_url('admin-post.php')
-        ),
+        gb_connect_action_url('gb_connect_login_link', $pid, $connect_redirect),
         'gb_connect_login_' . $pid
     );
     $connect_sync_url = wp_nonce_url(
-        add_query_arg(
-            [
-                'action'      => 'gb_connect_sync',
-                'cleaner_id'  => $pid,
-                'redirect_to' => $connect_redirect,
-            ],
-            admin_url('admin-post.php')
-        ),
+        gb_connect_action_url('gb_connect_sync', $pid, $connect_redirect),
         'gb_connect_sync_' . $pid
     );
     $connect_notice = isset($_GET['connect']) ? sanitize_key(wp_unslash($_GET['connect'])) : '';

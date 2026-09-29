@@ -33,13 +33,13 @@ function gb_green_broom_standard_seed_content() {
 
 <h2>Every cleaner is checked before they appear</h2>
 
-<p>A profile does not go live, and the Verified badge does not appear on it, until all four of these are complete and on file:</p>
+<p>A profile does not go live, and the Verified badge does not appear on it, until these are complete and on file:</p>
 
 <ul>
 <li><strong>Identity verified</strong> &mdash; photographic ID, checked against the name on the profile.</li>
 <li><strong>Basic DBS certificate verified</strong> &mdash; a current Basic Disclosure, seen and recorded by us.</li>
 <li><strong>Two references verified</strong> &mdash; contacted directly, not simply collected.</li>
-<li><strong>Insured</strong> &mdash; public liability cover in place and evidenced.</li>
+<li><strong>Insured</strong> &mdash; covered by The Green Broom&rsquo;s own insurance policy, which we provide.</li>
 </ul>
 
 <p>We also confirm an address and a contact number, and every cleaner signs our Terms of Association. If a check lapses, the badge comes off. A cleaner who has not completed all four is not listed.</p>
@@ -78,7 +78,7 @@ function gb_green_broom_standard_seed_content() {
 
 <p>The Green Broom checks cleaners, handles payment and keeps a record. We are not the cleaner's employer and we do not supervise an individual clean. The cleaner is self-employed and responsible for the work they do.</p>
 
-<p>Our checks tell you that somebody is who they say they are, has a current Basic DBS, has been referenced and is insured. They are not a guarantee about how a particular clean will go. If one goes wrong, tell us &mdash; we would rather know.</p>
+<p>Our checks tell you that somebody is who they say they are, has a current Basic DBS, has been referenced, and is covered by our insurance. They are not a guarantee about how a particular clean will go. If one goes wrong, tell us &mdash; we would rather know.</p>
 HTML;
 
     return array(

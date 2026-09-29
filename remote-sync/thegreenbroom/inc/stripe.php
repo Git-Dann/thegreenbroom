@@ -366,15 +366,10 @@ function gb_handle_connect_onboarding() {
         gb_connect_redirect_with_notice($redirect_to, 'error', 'Unable to determine connected account ID.');
     }
 
+    // Where Stripe sends them if the onboarding link expires - so it has to
+    // avoid wp-admin for the same reason the buttons do.
     $refresh_url = wp_nonce_url(
-        add_query_arg(
-            [
-                'action'      => 'gb_connect_onboarding',
-                'cleaner_id'  => $cleaner_id,
-                'redirect_to' => $redirect_to,
-            ],
-            admin_url('admin-post.php')
-        ),
+        gb_connect_action_url('gb_connect_onboarding', $cleaner_id, $redirect_to),
         'gb_connect_onboarding_' . $cleaner_id
     );
     $return_url = add_query_arg('connect', 'returned', $redirect_to);
@@ -413,6 +408,57 @@ function gb_handle_connect_onboarding() {
     wp_safe_redirect(esc_url_raw($link['url']));
     exit;
 }
+/**
+ * Build a Connect action link that does not go through wp-admin.
+ *
+ * The three Connect buttons posted to admin-post.php, and this site redirects
+ * anyone who is not an administrator away from /wp-admin/ - so a cleaner
+ * pressing "Set up payouts" on their own settings page was bounced back to
+ * their dashboard before the handler ever ran, silently, with no error. The
+ * feature is built for cleaners to use on themselves, and it has never worked
+ * for its main user. Managers hit the same wall.
+ *
+ * Rather than loosen that lockout, the links come in through the front end,
+ * the same way membership checkout does. Every handler still checks login,
+ * ownership of the cleaner, and the nonce for itself, so nothing about who is
+ * allowed to do what has changed here - only the door they come through.
+ */
+function gb_connect_action_url($action, $cleaner_id, $redirect_to) {
+    return add_query_arg(
+        [
+            'gb_connect_action' => $action,
+            'cleaner_id'        => (int) $cleaner_id,
+            'redirect_to'       => $redirect_to,
+        ],
+        home_url('/')
+    );
+}
+
+function gb_connect_handle_front_end_request() {
+    if (empty($_GET['gb_connect_action'])) {
+        return;
+    }
+
+    $handlers = [
+        'gb_connect_onboarding' => 'gb_handle_connect_onboarding',
+        'gb_connect_login_link' => 'gb_handle_connect_login_link',
+        'gb_connect_sync'       => 'gb_handle_connect_sync',
+    ];
+
+    $action = sanitize_key(wp_unslash($_GET['gb_connect_action']));
+
+    if (!isset($handlers[$action]) || !function_exists($handlers[$action])) {
+        return;
+    }
+
+    // These end in a redirect to Stripe or back to a dashboard; none of it
+    // should ever be served from a page cache.
+    nocache_headers();
+
+    call_user_func($handlers[$action]);
+}
+add_action('init', 'gb_connect_handle_front_end_request');
+
 add_action('admin_post_gb_connect_onboarding', 'gb_handle_connect_onboarding');
 
 function gb_handle_connect_login_link() {

@@ -122,6 +122,88 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
         <?php echo $msg; ?>
         <?php echo function_exists('gb_password_notice_html') ? gb_password_notice_html() : ''; ?>
 
+        <?php
+        /*
+         * Membership.
+         *
+         * Until now a paying member had nowhere to see what they were paying
+         * for, and no way to change a card or stop - which is not a reasonable
+         * position to take real money from somebody in. Managing it happens in
+         * Stripe's billing portal rather than in screens built here: cancelling
+         * is the one thing that must not be subtly wrong.
+         */
+        $gb_acc_user_id = get_current_user_id();
+        $gb_acc_member  = function_exists('gb_get_membership') ? gb_get_membership($gb_acc_user_id) : ['status' => 'none', 'plan' => '', 'expires' => ''];
+        $gb_acc_active  = $gb_acc_member['status'] === 'active';
+        $gb_acc_plans   = function_exists('gb_membership_plans') ? gb_membership_plans() : [];
+        $gb_acc_plan    = isset($gb_acc_plans[$gb_acc_member['plan']]) ? $gb_acc_plans[$gb_acc_member['plan']]['label'] : '';
+        $gb_acc_renews  = $gb_acc_member['expires'] !== '' && strtotime($gb_acc_member['expires'])
+            ? date_i18n('j F Y', strtotime($gb_acc_member['expires']))
+            : '';
+        $gb_acc_pending = function_exists('gb_membership_get_pending_plan') ? gb_membership_get_pending_plan($gb_acc_user_id) : '';
+        $gb_acc_cat     = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : [];
+
+        $gb_billing_notice = isset($_GET['gb_billing']) ? sanitize_key(wp_unslash($_GET['gb_billing'])) : '';
+        $gb_billing_detail = isset($_GET['gb_billing_msg']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['gb_billing_msg']))) : '';
+        $gb_billing_copy   = [
+            'already' => ['info',  'You already have an active membership. You can change or cancel it below.'],
+            'expired' => ['error', 'That page had been open a while, so we stopped. Please try again.'],
+            'error'   => ['error', $gb_billing_detail !== '' ? $gb_billing_detail : 'We could not open your billing page. Please try again.'],
+        ];
+        ?>
+
+        <?php if (isset($gb_billing_copy[$gb_billing_notice])): ?>
+            <div class="gb-membership-notice gb-membership-notice-<?php echo esc_attr($gb_billing_copy[$gb_billing_notice][0]); ?>" style="margin-bottom:20px;">
+                <?php echo esc_html($gb_billing_copy[$gb_billing_notice][1]); ?>
+            </div>
+        <?php endif; ?>
+
+        <div class="gb-card mb-20">
+            <div class="gb-card-head">
+                <span class="gb-card-title">Membership</span>
+                <?php if ($gb_acc_active): ?>
+                    <span class="gb-badge gb-badge-success">Active</span>
+                <?php endif; ?>
+            </div>
+            <div style="padding:20px;">
+                <?php if ($gb_acc_active): ?>
+                    <p style="margin:0 0 16px; color:#475569;">
+                        <?php if ($gb_acc_plan !== ''): ?>You are on the <strong><?php echo esc_html($gb_acc_plan); ?></strong> plan.<?php else: ?>Your membership is active.<?php endif; ?>
+                        <?php if ($gb_acc_renews !== ''): ?> It renews on <strong><?php echo esc_html($gb_acc_renews); ?></strong>.<?php endif; ?>
+                    </p>
+                    <form method="post" style="margin:0;">
+                        <input type="hidden" name="gb_membership_action" value="portal">
+                        <?php wp_nonce_field('gb_membership_portal', 'gb_membership_nonce'); ?>
+                        <button type="submit" class="gb-btn gb-btn-primary gb-btn-sm">Manage or cancel</button>
+                    </form>
+                    <p style="margin:10px 0 0; font-size:.82rem; color:#94a3b8;">Change your card, switch plan, download a receipt or stop your membership.</p>
+
+                <?php elseif ($gb_acc_pending !== '' && isset($gb_acc_cat[$gb_acc_pending])): ?>
+                    <p style="margin:0 0 16px; color:#475569;">
+                        You picked <strong><?php echo esc_html($gb_acc_cat[$gb_acc_pending]['label']); ?></strong> before creating your account. Finish whenever you are ready.
+                    </p>
+                    <form method="post" style="margin:0;">
+                        <input type="hidden" name="gb_membership_action" value="checkout">
+                        <input type="hidden" name="gb_plan" value="<?php echo esc_attr($gb_acc_pending); ?>">
+                        <?php wp_nonce_field('gb_membership_checkout', 'gb_membership_nonce'); ?>
+                        <button type="submit" class="gb-btn gb-btn-primary gb-btn-sm">Finish signing up</button>
+                    </form>
+
+                <?php else: ?>
+                    <p style="margin:0 0 16px; color:#475569;">
+                        <?php if ($gb_acc_member['status'] === 'expired'): ?>
+                            Your membership has ended<?php echo $gb_acc_renews !== '' ? ' (' . esc_html($gb_acc_renews) . ')' : ''; ?>. You can start again whenever you like.
+                        <?php elseif ($gb_acc_member['status'] === 'cancelled'): ?>
+                            Your membership was cancelled. You can start again whenever you like.
+                        <?php else: ?>
+                            You do not have a membership yet.
+                        <?php endif; ?>
+                    </p>
+                    <a href="<?php echo esc_url(home_url('/cleaner-listings#membership')); ?>" class="gb-btn gb-btn-primary gb-btn-sm">See membership options</a>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="gb-card mb-20">
             <div class="gb-card-head">
                 <span class="gb-card-title">Upcoming Appointments</span>

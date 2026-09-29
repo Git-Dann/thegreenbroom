@@ -43,9 +43,10 @@ function gb_pricing_panel_defaults() {
         '_gb_price_cust_p2_period' => 'per year',
         '_gb_price_cust_p2_flag'   => 'Best value',
         '_gb_price_cust_benefits'  => "Verified local cleaners, ID and reference checked\nSecure bookings through the platform\nCashless payment\nReal reviews from real bookings\nMember benefits and offers",
-        '_gb_price_cust_btn'       => 'Create your account',
+        '_gb_price_cust_btn'       => 'Create an account now',
         '_gb_price_cust_link'      => '/register',
         '_gb_price_cust_foot'      => 'Browsing is free while we finish setting up payments. Create an account now and we will be in touch before anything is charged.',
+        '_gb_price_cust_foot_live' => 'Cancel any time from your account. We will remind you before each renewal.',
 
         // Cleaner membership: Become a Cleaner.
         '_gb_price_clean_show'     => '1',
@@ -58,6 +59,7 @@ function gb_pricing_panel_defaults() {
         '_gb_price_clean_btn'      => 'Become a Cleaner',
         '_gb_price_clean_link'     => '/register',
         '_gb_price_clean_foot'     => 'Nothing to pay today. We will let you know before your free three months are up.',
+        '_gb_price_clean_foot_live' => 'Nothing to pay for three months. We will remind you before your free period ends, and you can cancel any time.',
     );
 }
 
@@ -135,6 +137,27 @@ function gb_pricing_return_notice() {
 }
 
 /**
+ * The small print under the panel.
+ *
+ * Two versions, because one line cannot be true both before and after the site
+ * takes money. "Browsing is free while we finish setting up payments" sitting
+ * directly above a button that charges a card is the kind of contradiction
+ * nobody notices until a customer points it out.
+ *
+ * Which one shows follows whether a buy button is actually on the page for
+ * this visitor, so the wording and the button can never disagree.
+ */
+function gb_pricing_foot( $which, $selling ) {
+    $key = $which === 'cleaner' ? '_gb_price_clean_foot' : '_gb_price_cust_foot';
+
+    if ( $selling ) {
+        $key .= '_live';
+    }
+
+    return trim( (string) gb_pricing_field( $key ) );
+}
+
+/**
  * @param string $which 'customer' or 'cleaner'
  */
 function gb_render_pricing_panel( $which = 'customer' ) {
@@ -152,7 +175,9 @@ function gb_render_pricing_panel( $which = 'customer' ) {
 
 function gb_render_customer_pricing_panel() {
     $benefits = gb_pricing_lines( '_gb_price_cust_benefits' );
-    $foot     = trim( (string) gb_pricing_field( '_gb_price_cust_foot' ) );
+    $selling  = function_exists( 'gb_membership_checkout_visible' )
+        && ( gb_membership_checkout_visible( 'customer_quarterly' ) || gb_membership_checkout_visible( 'customer_annual' ) );
+    $foot     = gb_pricing_foot( 'customer', $selling );
     $flag     = trim( (string) gb_pricing_field( '_gb_price_cust_p2_flag' ) );
     ?>
     <section class="gb-pricing-panel" id="membership">
@@ -204,7 +229,8 @@ function gb_render_customer_pricing_panel() {
 
 function gb_render_cleaner_pricing_panel() {
     $benefits = gb_pricing_lines( '_gb_price_clean_benefits' );
-    $foot     = trim( (string) gb_pricing_field( '_gb_price_clean_foot' ) );
+    $selling  = function_exists( 'gb_membership_checkout_visible' ) && gb_membership_checkout_visible( 'cleaner_monthly' );
+    $foot     = gb_pricing_foot( 'cleaner', $selling );
     $free     = trim( (string) gb_pricing_field( '_gb_price_clean_free' ) );
     ?>
     <section class="gb-pricing-panel" id="membership">

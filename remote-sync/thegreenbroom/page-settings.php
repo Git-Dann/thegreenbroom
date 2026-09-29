@@ -97,36 +97,15 @@ $connect_badge_style = $connect_is_active ? 'background:#dcfce7; color:#166534;'
 
 $connect_actions_enabled = $cleaner_id && $stripe_config_error === '';
 $connect_onboarding_url = $connect_actions_enabled ? wp_nonce_url(
-    add_query_arg(
-        [
-            'action'      => 'gb_connect_onboarding',
-            'cleaner_id'  => $cleaner_id,
-            'redirect_to' => $settings_page_url,
-        ],
-        admin_url('admin-post.php')
-    ),
+    gb_connect_action_url('gb_connect_onboarding', $cleaner_id, $settings_page_url),
     'gb_connect_onboarding_' . $cleaner_id
 ) : '#';
 $connect_login_url = $connect_actions_enabled ? wp_nonce_url(
-    add_query_arg(
-        [
-            'action'      => 'gb_connect_login_link',
-            'cleaner_id'  => $cleaner_id,
-            'redirect_to' => $settings_page_url,
-        ],
-        admin_url('admin-post.php')
-    ),
+    gb_connect_action_url('gb_connect_login_link', $cleaner_id, $settings_page_url),
     'gb_connect_login_' . $cleaner_id
 ) : '#';
 $connect_sync_url = $connect_actions_enabled ? wp_nonce_url(
-    add_query_arg(
-        [
-            'action'      => 'gb_connect_sync',
-            'cleaner_id'  => $cleaner_id,
-            'redirect_to' => $settings_page_url,
-        ],
-        admin_url('admin-post.php')
-    ),
+    gb_connect_action_url('gb_connect_sync', $cleaner_id, $settings_page_url),
     'gb_connect_sync_' . $cleaner_id
 ) : '#';
 ?>
