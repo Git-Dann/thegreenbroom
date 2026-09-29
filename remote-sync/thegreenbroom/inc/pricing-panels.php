@@ -113,7 +113,19 @@ function gb_pricing_checkout_button( $plan_key, $label ) {
     $config    = $test_mode ? gb_get_stripe_config() : array();
     $test_mode = isset( $config['mode'] ) && $config['mode'] !== 'live';
     ?>
-    <form method="post" class="gb-pricing-buy">
+    <?php
+    /*
+     * Post to this page's canonical URL rather than whatever address the
+     * browser happens to be on. WordPress 301s a missing trailing slash, and
+     * a 301 turns a POST into a GET and throws the body away - the form then
+     * appears to do nothing at all.
+     */
+    $gb_buy_action = get_permalink();
+    if ( ! $gb_buy_action ) {
+        $gb_buy_action = home_url( '/' );
+    }
+    ?>
+    <form method="post" action="<?php echo esc_url( $gb_buy_action ); ?>" class="gb-pricing-buy">
         <input type="hidden" name="gb_membership_action" value="checkout">
         <input type="hidden" name="gb_plan" value="<?php echo esc_attr( $plan_key ); ?>">
         <?php wp_nonce_field( 'gb_membership_checkout', 'gb_membership_nonce' ); ?>

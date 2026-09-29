@@ -171,7 +171,7 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                         <?php if ($gb_acc_plan !== ''): ?>You are on the <strong><?php echo esc_html($gb_acc_plan); ?></strong> plan.<?php else: ?>Your membership is active.<?php endif; ?>
                         <?php if ($gb_acc_renews !== ''): ?> It renews on <strong><?php echo esc_html($gb_acc_renews); ?></strong>.<?php endif; ?>
                     </p>
-                    <form method="post" style="margin:0;">
+                    <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" style="margin:0;">
                         <input type="hidden" name="gb_membership_action" value="portal">
                         <?php wp_nonce_field('gb_membership_portal', 'gb_membership_nonce'); ?>
                         <button type="submit" class="gb-btn gb-btn-primary gb-btn-sm">Manage or cancel</button>
@@ -182,7 +182,7 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                     <p style="margin:0 0 16px; color:#475569;">
                         You picked <strong><?php echo esc_html($gb_acc_cat[$gb_acc_pending]['label']); ?></strong> before creating your account. Finish whenever you are ready.
                     </p>
-                    <form method="post" style="margin:0;">
+                    <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" style="margin:0;">
                         <input type="hidden" name="gb_membership_action" value="checkout">
                         <input type="hidden" name="gb_plan" value="<?php echo esc_attr($gb_acc_pending); ?>">
                         <?php wp_nonce_field('gb_membership_checkout', 'gb_membership_nonce'); ?>
@@ -223,7 +223,7 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
                                 <td><span class="gb-badge <?php echo esc_attr($job['status_class']); ?>"><?php echo esc_html($job['status_label']); ?></span></td>
                                 <td>
                                     <?php if(!in_array($job['status'], ['cancelled'], true)): ?>
-                                        <form method="post" onsubmit="return confirm('Cancel this booking?');">
+                                        <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" onsubmit="return confirm('Cancel this booking?');">
                                             <input type="hidden" name="gb_cancel_id" value="<?php echo $job['id']; ?>">
                                             <?php wp_nonce_field('gb_cancel_booking', 'gb_cancel_nonce'); ?>
                                             <button class="gb-btn gb-btn-danger gb-btn-sm">Cancel</button>
@@ -277,7 +277,7 @@ usort($history, function($a, $b) { return $b['ts'] - $a['ts']; });
 
         <div class="gb-card mb-20" style="margin-top:20px;">
             <div class="gb-card-head"><span class="gb-card-title">Change Password</span></div>
-            <form method="post" action="<?php echo esc_url(home_url('/my-account')); ?>" style="padding:20px; max-width:420px;">
+            <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" style="padding:20px; max-width:420px;">
                 <input type="hidden" name="gb_pw_action" value="change_password">
                 <input type="hidden" name="gb_pw_redirect" value="<?php echo esc_url(home_url('/my-account')); ?>">
                 <?php wp_nonce_field('gb_change_password', 'gb_pw_nonce'); ?>
