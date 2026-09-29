@@ -357,7 +357,7 @@ if ( ! empty( $gb_selected_services ) ) {
                     <?php /* No payout account means no booking, so do not offer one. Messaging still works. */ ?>
                     <span class="gb-btn-book gb-btn-book-off" aria-disabled="true">Not taking bookings yet</span>
                 <?php else : ?>
-                    <a href="<?php echo esc_url(home_url('/book?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                    <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
                 <?php endif; ?>
                 <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 

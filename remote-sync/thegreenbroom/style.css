@@ -1173,3 +1173,4 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
     background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
 .gb-book-blocked strong { display:block; font-size:1.05rem; margin-bottom:6px; color:#78350f; }
 .gb-book-blocked p { margin:0 0 14px; font-size:.93rem; line-height:1.55; }
+.gb-btn-solid-off { display:inline-block; text-align:center; cursor:not-allowed; opacity:.62; }

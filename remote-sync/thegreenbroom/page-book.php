@@ -259,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
             $cancel_url = add_query_arg([
                 'cleaner' => $cleaner_id,
                 'payment' => 'cancelled',
-            ], home_url('/book'));
+            ], home_url('/book-now/'));
 
             $session_args = [
                 'mode'            => 'payment',

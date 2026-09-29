@@ -684,7 +684,11 @@ if ($verified_body === '') {
                     
                     <div class="gb-card-actions">
                         <a href="<?php the_permalink(); ?>" class="gb-btn-outline"><?php echo esc_html($listings_btn_profile); ?></a>
-                        <a href="<?php echo home_url('/book?cleaner=' . get_the_ID()); ?>" class="gb-btn-solid"><?php echo esc_html($listings_btn_book); ?></a>
+                        <?php if ( function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings(get_the_ID()) ) : ?>
+                            <span class="gb-btn-solid gb-btn-solid-off" aria-disabled="true">Not taking bookings</span>
+                        <?php else : ?>
+                            <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . get_the_ID())); ?>" class="gb-btn-solid"><?php echo esc_html($listings_btn_book); ?></a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
