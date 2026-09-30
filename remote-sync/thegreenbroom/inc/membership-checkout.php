@@ -517,6 +517,13 @@ function gb_membership_apply_subscription( array $subscription ) {
     }
 
     update_user_meta( $user_id, '_gb_stripe_subscription_id', $subscription_id );
+    // Which mode it was bought in: a test subscription stops counting once the
+    // site is live (see gb_membership_from_other_mode()).
+    update_user_meta(
+        $user_id,
+        '_gb_stripe_subscription_mode',
+        isset( $subscription['livemode'] ) ? ( $subscription['livemode'] ? 'live' : 'test' ) : gb_stripe_site_mode()
+    );
     update_user_meta( $user_id, '_gb_stripe_subscription_status', sanitize_text_field( (string) $subscription['status'] ) );
 
     if ( $plan['audience'] === 'cleaner' ) {
@@ -558,6 +565,7 @@ function gb_membership_apply_cleaner_listing( $user_id, $status, $expires, array
     $legacy_status = $stripe_status === 'trialing' ? 'trial' : $status;
 
     update_user_meta( $user_id, '_gb_listing_status', $status );
+    update_user_meta( $user_id, '_gb_listing_mode', ! empty( $subscription['livemode'] ) ? 'live' : ( isset( $subscription['livemode'] ) ? 'test' : gb_stripe_site_mode() ) );
     update_user_meta( $user_id, '_gb_listing_renews', $expires );
     update_user_meta( $user_id, '_gb_listing_stripe_status', $stripe_status );
     update_user_meta( $user_id, '_gb_listing_cancels_at', $cancels_at );
@@ -662,6 +670,12 @@ function gb_membership_resync_all( $limit = 200 ) {
     $failed  = 0;
 
     foreach ( $user_ids as $user_id ) {
+        // Other-mode subscriptions cannot be looked up, and are not failures:
+        // they are sandbox tests, left alone.
+        if ( function_exists( 'gb_membership_stripe_mode' ) && gb_membership_stripe_mode( (int) $user_id ) !== gb_stripe_site_mode() ) {
+            continue;
+        }
+
         $result = gb_membership_resync_user( (int) $user_id );
 
         if ( is_wp_error( $result ) ) {
@@ -708,6 +722,16 @@ function gb_membership_resync_user( $user_id ) {
 
     if ( $user_id < 1 || ! get_userdata( $user_id ) ) {
         return new WP_Error( 'gb_membership_no_user', 'That account could not be found.' );
+    }
+
+    // Stripe keeps test and live apart, so a subscription from the other mode
+    // cannot be looked up at all - asking only produces "no such subscription".
+    if ( function_exists( 'gb_membership_from_other_mode' ) && get_user_meta( $user_id, '_gb_stripe_subscription_id', true ) !== ''
+        && gb_membership_stripe_mode( $user_id ) !== gb_stripe_site_mode() ) {
+        return new WP_Error(
+            'gb_membership_other_mode',
+            'That subscription was made in ' . gb_membership_stripe_mode( $user_id ) . ' mode, so it cannot be checked while the site is in ' . gb_stripe_site_mode() . ' mode.'
+        );
     }
 
     return gb_membership_sync_subscription(
@@ -806,7 +830,12 @@ function gb_membership_is_active_for( $user_id, $audience ) {
     }
 
     if ( $audience === 'cleaner' ) {
-        return (string) get_user_meta( $user_id, '_gb_listing_status', true ) === 'active';
+        // A listing paid for in test mode is not one in live: without this, a
+        // cleaner who tried the sandbox checkout could never buy the real one.
+        $listing_mode = (string) get_user_meta( $user_id, '_gb_listing_mode', true ) === 'live' ? 'live' : 'test';
+
+        return (string) get_user_meta( $user_id, '_gb_listing_status', true ) === 'active'
+            && ( ! function_exists( 'gb_stripe_site_mode' ) || $listing_mode === gb_stripe_site_mode() );
     }
 
     if ( ! function_exists( 'gb_get_membership' ) ) {

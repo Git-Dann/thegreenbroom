@@ -739,6 +739,13 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <option value="0" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true) !== '1'); ?>>No &mdash; anyone can browse, book and message</option>
                             <option value="1" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true), '1'); ?>>Yes &mdash; anyone can browse; booking and messaging are for members</option>
                         </select>
+                        <?php $gb_gate_problems = (function_exists('gb_membership_gate_problems') && get_post_meta($settings_id, '_gb_membership_gate', true) === '1') ? gb_membership_gate_problems() : []; ?>
+                        <?php if ($gb_gate_problems): ?>
+                            <div style="margin:10px 0 0; padding:12px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:13px; line-height:1.6;">
+                                <strong>The gate is on, but nobody can become a member right now.</strong> Non-members cannot book or message anyone until this is fixed:
+                                <?php foreach ($gb_gate_problems as $gb_gp): ?><br>&bull; <?php echo esc_html($gb_gp); ?><?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                         <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
                             Either way, every visitor can search and read cleaner profiles. With this on, Book Now and Message Professional are
                             replaced for non-members by a <strong>Become a member</strong> button, and the booking page and messaging refuse them too.
