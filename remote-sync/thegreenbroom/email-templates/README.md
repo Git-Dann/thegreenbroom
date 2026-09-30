@@ -34,7 +34,7 @@ Only this much of Brevo's template language is understood:
 `{{ params.name|linebreaksbr }}`. Blank parameters are not sent, so the
 `default` text shows instead of a gap.
 
-These files can be fetched over the web. That is harmless: they hold only
-the design and placeholders, the same HTML every recipient already receives,
-never anybody's details or links. Do not put anything private in them.
-(A folder `.htaccess` deny was tried and this host does not honour it.)
+These files are not served over the web: a rewrite rule in the theme's
+`.htaccess` refuses them (this host ignores a folder `.htaccess` deny but
+honours rewrites). They hold only the design and placeholders in any case,
+never anybody's details or links.

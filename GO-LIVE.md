@@ -16,9 +16,9 @@ the following come with you:
 | Thing | What happens |
 |---|---|
 | The three plans | Recorded per mode (`_gb_stripe_subs_test` / `_gb_stripe_subs_live`). Live starts empty and must be provisioned again. |
-| Cleaners' payout accounts | A Connect account created in test does not exist in live. **Every cleaner has to complete payout setup again.** |
+| Cleaners' payout accounts | A Connect account created in test does not exist in live. The site keeps test and live accounts separately, so **every cleaner has to complete payout setup again**, with the same button. |
 | The billing portal settings | Configured per mode. The live portal starts unconfigured, and an unconfigured portal makes *Manage or cancel* fail. |
-| Existing subscriptions | The sandbox subscriptions are not real. Nobody is carried over as a paying member. |
+| Existing subscriptions | The sandbox subscriptions are not real. The site knows which mode each membership and cleaner listing was bought in, so once live, test memberships stop counting automatically and those people can buy a real one. Memberships set by hand in Members are unaffected. |
 | Webhook endpoints | Separate per mode, with their own signing secrets. |
 
 The one that bites hardest is the second. Plan for telling cleaners they need
@@ -274,6 +274,9 @@ is what stopped email on 29 September.
 
 - **Stripe → Developers → Webhooks** — any endpoint showing failed deliveries.
   A failed delivery means the site's record of somebody's membership is stale.
+- **Changes appear within five minutes** for visitors (the host caches pages;
+  signed-in users always see the latest). If a visitor reports something
+  stale, that is why.
 - **Members → Ending** — the count of people on their way out, which is the
   first number worth watching.
 - **Cleaners** — how many are still not payout-ready.

@@ -54,10 +54,51 @@ function gb_membership_gate_enabled() {
     return (string) get_post_meta( $settings_id, '_gb_membership_gate', true ) === '1';
 }
 
+/**
+ * The site's Stripe mode, test or live.
+ */
+function gb_stripe_site_mode() {
+    $mode = (string) get_post_meta( (int) get_option( 'page_on_front' ), '_gb_stripe_mode', true );
+
+    return $mode === 'live' ? 'live' : 'test';
+}
+
+/**
+ * Which Stripe mode a member's subscription was bought in. Memberships from
+ * before this was recorded are test ones: the site had never been live.
+ */
+function gb_membership_stripe_mode( $user_id ) {
+    return (string) get_user_meta( (int) $user_id, '_gb_stripe_subscription_mode', true ) === 'live' ? 'live' : 'test';
+}
+
+/**
+ * Was this membership bought in the other Stripe mode from the one the site
+ * is in now? A test subscription is not a real one, so once the site is live
+ * it must not count - otherwise everybody who tried the sandbox checkout
+ * would be a member for free until their test date ran out, up to a year.
+ * Memberships set by hand in Members are not tied to a mode.
+ */
+function gb_membership_from_other_mode( $user_id ) {
+    return (string) get_user_meta( (int) $user_id, GB_MEMBER_SOURCE, true ) === 'stripe'
+        && gb_membership_stripe_mode( $user_id ) !== gb_stripe_site_mode();
+}
+
 function gb_get_membership( $user_id ) {
     $user_id = (int) $user_id;
     if ( $user_id < 1 ) {
-        return array( 'status' => 'none', 'plan' => '', 'started' => '', 'expires' => '', 'source' => '', 'cancels_at' => '' );
+        return array( 'status' => 'none', 'plan' => '', 'started' => '', 'expires' => '', 'source' => '', 'cancels_at' => '', 'other_mode' => '' );
+    }
+
+    if ( gb_membership_from_other_mode( $user_id ) ) {
+        return array(
+            'status'     => 'none',
+            'plan'       => '',
+            'started'    => '',
+            'expires'    => '',
+            'source'     => 'stripe',
+            'cancels_at' => '',
+            'other_mode' => gb_membership_stripe_mode( $user_id ),
+        );
     }
 
     $status = (string) get_user_meta( $user_id, GB_MEMBER_STATUS, true );
@@ -83,6 +124,7 @@ function gb_get_membership( $user_id ) {
         'expires'    => $expires,
         'source'     => (string) get_user_meta( $user_id, GB_MEMBER_SOURCE, true ),
         'cancels_at' => $cancels_at,
+        'other_mode' => '',
     );
 }
 
@@ -254,10 +296,36 @@ function gb_can_contact_cleaners( $user_id = null ) {
  * panel on Find a Cleaner, next to the cleaners they were looking at.
  */
 function gb_membership_join_url() {
+    // With the membership panel switched off there is nothing to scroll to;
+    // account creation is the next best door rather than a dead anchor.
+    if ( function_exists( 'gb_pricing_panel_enabled' ) && ! gb_pricing_panel_enabled( 'customer' ) ) {
+        return home_url( '/register/' );
+    }
+
     $page = get_page_by_path( 'cleaner-listings' );
     $base = $page ? get_permalink( $page ) : home_url( '/cleaner-listings/' );
 
     return $base . '#membership';
+}
+
+/**
+ * Anything that would leave the gate locking everybody out with no way in:
+ * nowhere to buy a membership, or buttons only managers can see.
+ *
+ * @return string[] Plain-English problems; empty when the gate is safe.
+ */
+function gb_membership_gate_problems() {
+    $problems = array();
+
+    if ( function_exists( 'gb_pricing_panel_enabled' ) && ! gb_pricing_panel_enabled( 'customer' ) ) {
+        $problems[] = 'The customer membership panel is switched off (Settings, Membership pricing), so there is nowhere to buy a membership.';
+    }
+
+    if ( gb_stripe_site_mode() !== 'live' ) {
+        $problems[] = 'Stripe is in test mode, where the buy buttons are shown only to managers, so visitors cannot buy a membership.';
+    }
+
+    return $problems;
 }
 
 /**
@@ -269,7 +337,17 @@ function gb_render_members_only_contact( $return_url = '' ) {
     <div class="gb-members-contact">
         <strong>Book or message this cleaner</strong>
         <p>Browsing is free. Booking and messaging cleaners is for members.</p>
-        <a href="<?php echo esc_url( gb_membership_join_url() ); ?>" class="gb-btn-book">Become a member</a>
+        <?php
+        /*
+         * Remember who they were looking at, so the page they land on after
+         * paying can send them straight back to this cleaner rather than to
+         * the start of the search. A cookie set on click, because this page is
+         * cached for visitors and cannot carry anything per person.
+         */
+        $gb_cleaner_id = get_the_ID();
+        ?>
+        <a href="<?php echo esc_url( gb_membership_join_url() ); ?>" class="gb-btn-book"
+           onclick="document.cookie='gb_return_cleaner=<?php echo (int) $gb_cleaner_id; ?>; path=/; max-age=172800; samesite=lax';">Become a member</a>
         <?php if ( ! is_user_logged_in() ) : ?>
             <a href="<?php echo esc_url( $login ); ?>" class="gb-members-contact-login">Already a member? Log in</a>
         <?php endif; ?>

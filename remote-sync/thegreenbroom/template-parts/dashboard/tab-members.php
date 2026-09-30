@@ -281,6 +281,9 @@ $gb_unverified = get_users([
                         <?php if ($gb_m['source'] === 'manual' && $gb_state['key'] !== 'none'): ?>
                             <div style="font-size:10.5px; color:#94a3b8; margin-top:4px;">Recorded by hand</div>
                         <?php endif; ?>
+                        <?php if (!empty($gb_m['other_mode'])): ?>
+                            <div style="font-size:10.5px; color:#94a3b8; margin-top:4px;">Had a <?php echo esc_html($gb_m['other_mode']); ?>-mode subscription; not valid in <?php echo esc_html(function_exists('gb_stripe_site_mode') ? gb_stripe_site_mode() : ''); ?> mode</div>
+                        <?php endif; ?>
                         <?php
                         /*
                          * If their billing page refused to open, that is the

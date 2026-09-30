@@ -70,6 +70,17 @@ if ( $gb_audience === 'cleaner' ) {
         array( 'Find a cleaner', home_url( '/cleaner-listings' ), true ),
         array( 'Your account', home_url( '/my-account/' ), false ),
     );
+
+    // They clicked "Become a member" on a particular cleaner: offer that
+    // cleaner first, so paying takes them back to where they were.
+    $gb_return_cleaner = isset( $_COOKIE['gb_return_cleaner'] ) ? absint( $_COOKIE['gb_return_cleaner'] ) : 0;
+    if ( $gb_return_cleaner && get_post_type( $gb_return_cleaner ) === 'gb_cleaner' && get_post_status( $gb_return_cleaner ) === 'publish' ) {
+        $gb_actions = array(
+            array( 'Book ' . get_the_title( $gb_return_cleaner ), get_permalink( $gb_return_cleaner ), true ),
+            array( 'Find another cleaner', home_url( '/cleaner-listings' ), false ),
+            array( 'Your account', home_url( '/my-account/' ), false ),
+        );
+    }
     $gb_next = array(
         'Search your postcode to see the verified cleaners covering your street.',
         'Message a cleaner directly before you book, if you want to ask anything first.',

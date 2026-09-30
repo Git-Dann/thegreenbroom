@@ -2265,6 +2265,41 @@ function gb_send_security_headers() {
 add_action( 'send_headers', 'gb_send_security_headers' );
 add_action( 'login_init', 'gb_send_security_headers' );
 
+/**
+ * How long pages may be kept, by the host's cache and by browsers.
+ *
+ * The host keeps a copy of every page for an hour unless told otherwise
+ * (x-cache: HIT, the same page byte for byte, Cache-Control: max-age=3600).
+ * The site never said otherwise, so anything saved in Manager OS took up to an
+ * hour to appear - Nick saved a Standard page image and could not see it - and
+ * the same delay would apply to a cleaner becoming bookable, or to switching
+ * the membership gate on.
+ *
+ * Signed in: never kept. The page is personal (name, account, dashboard) and
+ * whoever is looking at it has usually just changed something.
+ * Signed out: five minutes, which keeps the speed of the cache for visitors
+ * while changes reach them within minutes rather than an hour.
+ */
+function gb_send_page_cache_headers() {
+    if ( is_admin() || headers_sent() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || wp_doing_ajax() ) {
+        return;
+    }
+
+    if ( is_user_logged_in() ) {
+        nocache_headers();
+
+        return;
+    }
+
+    if ( ! empty( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'HEAD' ) {
+        return;
+    }
+
+    header( 'Cache-Control: public, max-age=300', true );
+    header( 'Expires: ' . gmdate( 'D, d M Y H:i:s', time() + 300 ) . ' GMT', true );
+}
+add_action( 'send_headers', 'gb_send_page_cache_headers', 20 );
+
 function gb_get_request_ip() {
     $candidates = [];
     foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'REMOTE_ADDR' ] as $key ) {
