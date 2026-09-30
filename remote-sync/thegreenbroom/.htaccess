@@ -27,11 +27,3 @@
     </FilesMatch>
 </IfModule>
 
-# The email designs are read by the site itself (inc/email-render.php) and
-# never need to be fetched over the web. This host ignores "Require all
-# denied" in a folder's .htaccess but honours rewrite rules, so the refusal
-# is written as one.
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^email-templates/ - [F,L]
-</IfModule>
