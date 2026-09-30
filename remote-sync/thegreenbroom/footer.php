@@ -79,6 +79,8 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
             <ul class="gb-footer-links">
                 <li><a href="<?php echo esc_url($gb_privacy_url); ?>">Privacy Policy</a></li>
                 <li><a href="<?php echo esc_url($gb_terms_url); ?>">Terms & Conditions</a></li>
+                <?php // Linked from the sign-up form's agreement box, so it has to be findable before anyone subscribes. ?>
+                <li><a href="<?php echo esc_url(function_exists('gb_get_subscriber_terms_page_url') ? gb_get_subscriber_terms_page_url() : home_url('/subscribers-terms-of-association/')); ?>">Subscribers' Terms</a></li>
                 <li><a href="<?php echo esc_url(function_exists('gb_get_cookie_policy_page_url') ? gb_get_cookie_policy_page_url() : home_url('/cookies/')); ?>">Cookie Policy</a></li>
                 <li><a href="<?php echo esc_url(home_url('/gdpr/')); ?>">GDPR</a></li>
                 <?php /* Withdrawing consent has to be as easy as giving it, so the bar

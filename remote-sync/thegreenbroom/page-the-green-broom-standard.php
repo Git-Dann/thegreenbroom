@@ -161,7 +161,14 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-prose p:last-child { margin-bottom:0; }
 
     #gb-standard .gb-std-hero.has-image { background-size:cover; background-position:center; position:relative; }
-    #gb-standard .gb-std-hero.has-image::before { content:""; position:absolute; inset:0; background:linear-gradient(135deg, rgba(27,94,32,.92) 0%, rgba(46,125,50,.88) 100%); }
+    /*
+     * The same 58% dark wash as the homepage and Find a Cleaner heroes. It was
+     * a near-solid green (88-92%), which kept the heading readable by hiding
+     * the photo: Nick attached one and could not see it on the page.
+     */
+    #gb-standard .gb-std-hero.has-image::before { content:""; position:absolute; inset:0; background:rgba(0, 0, 0, 0.58); }
+    #gb-standard .gb-std-hero.has-image h1,
+    #gb-standard .gb-std-hero.has-image p { text-shadow:0 2px 12px rgba(0,0,0,.35); }
     #gb-standard .gb-std-hero.has-image .gb-std-container { position:relative; z-index:1; }
 
     #gb-standard .gb-std-cta { padding:70px 20px; text-align:center; }

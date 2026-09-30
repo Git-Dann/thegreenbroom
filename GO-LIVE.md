@@ -186,31 +186,43 @@ re-pulls every membership and tells you what Stripe returned.
 
 ## 10. Cleaners set up payouts again
 
-Every cleaner: **Settings → Stripe Connect → Start Setup**.
+Every cleaner: **Settings → Stripe Connect → Start Setup**. It is the same
+button in test and live, and it does the same thing in both: it opens Stripe's
+payout setup for whichever mode the site is in.
+
+The site keeps each cleaner's payout account **separately for test and live**
+(`inc/connect-modes.php`). So the moment you switch to live, every cleaner
+starts with no live account and shows as "Not taking bookings", even if they
+finished setup in test. Pressing Start Setup again creates their real, live
+account. Switch back to test and their test account is exactly where it was.
 
 Until a cleaner finishes this, their listing shows "Not taking bookings" and
 the Book Now button is hidden, because there is no way to pay them. Their own
-dashboard now tells them so with a button straight to the right screen.
+dashboard tells them so with a button straight to the right screen.
 
 A manager can see who is outstanding on **Manager OS → Cleaners**, where each
 cleaner's Connect status and whether charges are enabled are both shown.
 
-**Today, nobody has completed this, so no cleaner on the platform can be
-booked.** That is the single biggest thing standing between the site as it is
-and a working marketplace.
-
 ---
 
-## 11. Decide on the membership gate
+## 11. Switch on the membership gate
 
-**Settings → Membership.**
+**Settings → Customer access → Require a membership to book or message cleaners.**
 
-It is off. A customer paying £24.95 currently gets exactly what a stranger
-gets: the cleaner database is open to everyone.
+Anyone can always search the listings and read cleaner profiles: few people
+subscribe before seeing who is available. With the gate on, booking and
+messaging are for members:
 
-That is a commercial decision, not a technical one, and it should be taken
-deliberately rather than discovered. Either turn it on before you start
-charging, or be clear in the sales copy about what the membership buys.
+- **Book Now** and **Message Professional** on a profile are replaced, for
+  non-members, by a **Become a member** button (plus "Already a member? Log in"
+  for visitors who are signed out);
+- the Book button on each listing card becomes **Join to book**;
+- both lead to the membership panel on Find a Cleaner;
+- the booking page and the messaging form refuse non-members too, so hiding
+  the buttons is not the only thing in the way.
+
+Managers always keep full access. Turn it on only once live payments work, or
+nobody will be able to book anyone.
 
 ---
 

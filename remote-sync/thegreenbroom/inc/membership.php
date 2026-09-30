@@ -231,6 +231,53 @@ function gb_can_access_directory( $user_id = null ) {
 }
 
 /**
+ * May this visitor book or message a cleaner?
+ *
+ * The gate as Nick set it out: anybody can browse the cleaners in their area
+ * - the listings and every profile stay open, because few people will pay
+ * before seeing who is available - and reaching out, by booking or by
+ * message, is what membership buys.
+ *
+ * While the switch in Settings -> Customer access is off, everybody may.
+ * Staff always may. Otherwise it takes an active membership.
+ *
+ * Until 30 September this switch did nothing at all: the check it controlled,
+ * gb_can_access_directory(), was never called from anywhere, so switching it
+ * on would have restricted nothing.
+ */
+function gb_can_contact_cleaners( $user_id = null ) {
+    return gb_can_access_directory( $user_id );
+}
+
+/**
+ * Where somebody who is not a member is sent to become one: the membership
+ * panel on Find a Cleaner, next to the cleaners they were looking at.
+ */
+function gb_membership_join_url() {
+    $page = get_page_by_path( 'cleaner-listings' );
+    $base = $page ? get_permalink( $page ) : home_url( '/cleaner-listings/' );
+
+    return $base . '#membership';
+}
+
+/**
+ * Shown in place of Book Now and Message on a cleaner's profile.
+ */
+function gb_render_members_only_contact( $return_url = '' ) {
+    $login = add_query_arg( 'redirect_to', rawurlencode( $return_url !== '' ? $return_url : home_url( '/' ) ), home_url( '/login/' ) );
+    ?>
+    <div class="gb-members-contact">
+        <strong>Book or message this cleaner</strong>
+        <p>Browsing is free. Booking and messaging cleaners is for members.</p>
+        <a href="<?php echo esc_url( gb_membership_join_url() ); ?>" class="gb-btn-book">Become a member</a>
+        <?php if ( ! is_user_logged_in() ) : ?>
+            <a href="<?php echo esc_url( $login ); ?>" class="gb-members-contact-login">Already a member? Log in</a>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
+/**
  * Record a membership change. Manual today, Stripe later - same entry point.
  */
 function gb_set_membership( $user_id, $status, $plan = '', $expires = '', $source = 'manual', $note = '' ) {

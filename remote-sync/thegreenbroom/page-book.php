@@ -1,6 +1,17 @@
 <?php
 /* Template Name: Booking Engine */
 
+/*
+ * Booking is for members once the gate is on. Checked before anything else -
+ * including the form submission further down, which goes straight to
+ * payment - so the Book Now button being hidden is not the only thing in the
+ * way. Back to the cleaner they were looking at, or the membership panel.
+ */
+if ( function_exists( 'gb_can_contact_cleaners' ) && ! gb_can_contact_cleaners() ) {
+    wp_safe_redirect( gb_membership_join_url() );
+    exit;
+}
+
 // 1. FETCH SERVICES FROM DB
 $services = [];
 $service_query = new WP_Query([

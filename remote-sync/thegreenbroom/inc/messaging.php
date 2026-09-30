@@ -18,7 +18,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 function gb_send_cleaner_message() {
     if (!empty($_POST['gb_honeypot'])) wp_send_json_error(['message'=>'Spam detected.']);
     check_ajax_referer('gb_msg_nonce', 'security');
-    
+
+    // Messaging cleaners is for members once the gate is on. Enforced here,
+    // not just by hiding the button.
+    if (function_exists('gb_can_contact_cleaners') && !gb_can_contact_cleaners()) {
+        wp_send_json_error(['message' => 'Messaging cleaners is for members. Become a member to get in touch.']);
+    }
+
     $cleaner_id = intval($_POST['cleaner_id']);
     $name = sanitize_text_field($_POST['sender_name']);
     $email = sanitize_email($_POST['sender_email']);
