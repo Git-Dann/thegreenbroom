@@ -136,11 +136,16 @@ if (isset($_POST['gb_manager_action']) && sanitize_key(wp_unslash($_POST['gb_man
  */
 if (isset($_POST['gb_save_action'])) {
     if (empty($_POST['gb_manager_nonce']) || !wp_verify_nonce($_POST['gb_manager_nonce'], 'gb_manager_action')) {
+        // Back to the same screen - including the page editor, which the
+        // redirect used to drop, so a failed save landed on the page list
+        // looking as if it had been thrown away.
         $redirect_args = [
-            'tab'    => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview',
-            'view'   => isset($_GET['view']) ? sanitize_key($_GET['view']) : '',
-            'id'     => isset($_POST['post_id']) ? intval($_POST['post_id']) : 0,
-            'msg'    => 'security_refresh',
+            'tab'     => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview',
+            'view'    => isset($_GET['view']) ? sanitize_key($_GET['view']) : '',
+            'action'  => isset($_GET['action']) ? sanitize_key($_GET['action']) : '',
+            'section' => isset($_GET['section']) ? sanitize_key($_GET['section']) : '',
+            'id'      => isset($_POST['post_id']) ? intval($_POST['post_id']) : 0,
+            'msg'     => 'security_refresh',
         ];
         wp_safe_redirect(add_query_arg(array_filter($redirect_args, static function ($value) {
             return $value !== '' && $value !== 0;
@@ -1020,6 +1025,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
                 <a href="<?php echo esc_url(function_exists('gb_get_manager_settings_url') ? gb_get_manager_settings_url(['section' => 'email']) : home_url('/manager-dashboard/?tab=settings&section=email')); ?>" class="gb-btn-small-os">Open email health</a>
             </div>
         <?php endif; ?>
+        <?php if($msg == 'security_refresh' && $tab !== 'blog'): ?><div class="gb-card" style="margin-bottom: 20px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:15px;">That page had been open too long to save safely, so nothing was changed. Make the edit again and press Save &mdash; it will go through this time.</div><?php endif; ?>
         <?php if($msg == 'saved'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Saved successfully.</div><?php endif; ?>
         <?php if($msg == 'verified_by_hand'): ?><div class="gb-card" style="margin-bottom: 20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Account verified by hand. They can sign in and carry on now.</div><?php endif; ?>
         <?php if($msg == 'synced_all'):
@@ -1387,6 +1393,67 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 })();
 </script>
 
+<script>
+/*
+ * Before any Manager OS form is saved, make sure it can be.
+ *
+ * Asks the site whether this browser is still signed in and gets a fresh
+ * security token for the form. Signed out: the save is held, a banner says
+ * so, and nothing typed is lost - sign in in another tab and press Save
+ * again. Signed in: the fresh token goes into the form, so a page left open
+ * overnight saves as well as one opened a minute ago.
+ *
+ * If the check itself cannot be made (offline, an old browser), the form is
+ * submitted exactly as it always was.
+ */
+(function () {
+    var endpoint = <?php echo wp_json_encode(admin_url('admin-ajax.php?action=gb_session_check')); ?>;
+    var loginUrl = <?php echo wp_json_encode(home_url('/login/')); ?>;
+
+    function banner() {
+        var el = document.getElementById('gb-session-banner');
+        if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        el = document.createElement('div');
+        el.id = 'gb-session-banner';
+        el.setAttribute('role', 'alert');
+        el.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:100000;max-width:560px;width:calc(100% - 32px);background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:14px 16px;font:14px/1.5 system-ui,sans-serif;box-shadow:0 12px 30px rgba(15,23,42,.18);';
+        el.innerHTML = '<strong>You have been signed out, so this was not saved yet.</strong><br>Your changes are still on this page. <a href="' + loginUrl + '" target="_blank" rel="noopener" style="color:#92400e;font-weight:700;">Sign in again in a new tab</a>, then come back here and press Save.';
+        document.body.appendChild(el);
+    }
+
+    // Sent synchronously, so the flag is cleared again straight after; a
+    // form stopped by its own validation is checked afresh next time.
+    function resubmit(form, submitter) {
+        form.dataset.gbChecked = '1';
+        try { form.requestSubmit(submitter); } finally { delete form.dataset.gbChecked; }
+    }
+
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || !form.querySelector || form.dataset.gbChecked === '1') { return; }
+        // Forms that ask "are you sure?" first would ask twice when re-sent.
+        if (form.hasAttribute('onsubmit')) { return; }
+        var nonce = form.querySelector('input[name="gb_manager_nonce"]');
+        if (!nonce || !window.fetch || !form.requestSubmit) { return; }
+
+        e.preventDefault();
+        var submitter = e.submitter || null;
+
+        fetch(endpoint, { credentials: 'same-origin', cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data || !data.signed_in) { banner(); return; }
+                if (data.nonce) {
+                    document.querySelectorAll('input[name="gb_manager_nonce"]').forEach(function (i) { i.value = data.nonce; });
+                }
+                var old = document.getElementById('gb-session-banner');
+                if (old) { old.remove(); }
+                resubmit(form, submitter);
+            })
+            .catch(function () { resubmit(form, submitter); });
+    }, true);
+})();
+</script>
 <?php wp_footer(); ?>
 </body>
 </html>

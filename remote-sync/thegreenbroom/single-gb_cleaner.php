@@ -172,6 +172,11 @@ if ( ! empty( $gb_selected_services ) ) {
     .gb-btn-book:hover { background: #1b5e20; }
     .gb-btn-msg { display: block; width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #dfe5ec; padding: 14px; border-radius: 10px; font-weight: 700; text-decoration: none; text-align: center; transition: .2s; font-size: 14.5px; box-sizing: border-box; cursor: pointer; }
     .gb-btn-msg:hover { border-color: #cbd5e1; background: #f1f5f9; }
+    .gb-members-contact { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:18px; margin-bottom:11px; text-align:center; }
+    .gb-members-contact strong { display:block; color:#14532d; font-size:15px; margin-bottom:4px; }
+    .gb-members-contact p { margin:0 0 14px; color:#166534; font-size:13.5px; line-height:1.5; }
+    .gb-members-contact .gb-btn-book { margin-bottom:8px; }
+    .gb-members-contact-login { display:inline-block; color:#166534; font-size:13px; font-weight:700; text-decoration:underline; }
     .gb-trust-list { list-style: none; padding: 0; margin: 22px 0 0; }
     .gb-trust-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: #64748b; margin-bottom: 10px; line-height: 1.5; }
     .gb-trust-list li span { color: #2e7d32; font-weight: 900; flex-shrink: 0; }
@@ -353,13 +358,19 @@ if ( ! empty( $gb_selected_services ) ) {
                     <span class="gb-price-sub">per hour</span>
                 </div>
 
-                <?php if ( function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings($cleaner_id) ) : ?>
-                    <?php /* No payout account means no booking, so do not offer one. Messaging still works. */ ?>
-                    <span class="gb-btn-book gb-btn-book-off" aria-disabled="true">Not taking bookings yet</span>
+                <?php $gb_can_contact = ! function_exists('gb_can_contact_cleaners') || gb_can_contact_cleaners(); ?>
+                <?php if ( ! $gb_can_contact ) : ?>
+                    <?php /* Browsing is open to everybody; booking and messaging are what membership buys. */ ?>
+                    <?php gb_render_members_only_contact( get_permalink($cleaner_id) ); ?>
                 <?php else : ?>
-                    <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                    <?php if ( function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings($cleaner_id) ) : ?>
+                        <?php /* No payout account means no booking, so do not offer one. Messaging still works. */ ?>
+                        <span class="gb-btn-book gb-btn-book-off" aria-disabled="true">Not taking bookings yet</span>
+                    <?php else : ?>
+                        <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . $cleaner_id)); ?>" class="gb-btn-book">Book Now</a>
+                    <?php endif; ?>
+                    <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
                 <?php endif; ?>
-                <button onclick="openMsgModal()" class="gb-btn-msg">Message Professional</button>
 
                 <?php
                 /*

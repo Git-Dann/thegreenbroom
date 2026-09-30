@@ -728,16 +728,21 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                 <div class="gb-editor-header"><span class="dashicons dashicons-privacy"></span> Customer Membership</div>
                 <div class="gb-editor-body">
                     <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
-                        Your Subscribers&rsquo; Terms say access to the cleaner database is for paying members. The machinery for that is in place &mdash;
-                        memberships can be recorded and managed under <a href="?tab=members" style="color:#1d4ed8; font-weight:700;">Members</a> &mdash;
-                        but <strong>nothing is restricted while this is switched off</strong>, and it should stay off until you can actually take payment.
+                        Browsing cleaners is always open, because few people subscribe before seeing who is available. Membership is what lets
+                        somebody <strong>book or message</strong> a cleaner. Memberships are managed under
+                        <a href="?tab=members" style="color:#1d4ed8; font-weight:700;">Members</a>; <strong>nothing is restricted while this is switched off</strong>,
+                        and it should stay off until you can actually take payment.
                     </div>
                     <div class="gb-form-row" style="margin-bottom:22px;">
-                        <label class="gb-label">Require a membership to browse cleaners</label>
+                        <label class="gb-label">Require a membership to book or message cleaners</label>
                         <select name="_gb_membership_gate" class="gb-input" style="height:45px;">
-                            <option value="0" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true) !== '1'); ?>>No &mdash; the database is open to everyone (current)</option>
-                            <option value="1" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true), '1'); ?>>Yes &mdash; members only</option>
+                            <option value="0" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true) !== '1'); ?>>No &mdash; anyone can browse, book and message</option>
+                            <option value="1" <?php selected(get_post_meta($settings_id, '_gb_membership_gate', true), '1'); ?>>Yes &mdash; anyone can browse; booking and messaging are for members</option>
                         </select>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
+                            Either way, every visitor can search and read cleaner profiles. With this on, Book Now and Message Professional are
+                            replaced for non-members by a <strong>Become a member</strong> button, and the booking page and messaging refuse them too.
+                        </p>
                         <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
                             Do not switch this on before Stripe is connected. With no way to buy a membership, turning it on would lock out every customer
                             and leave them no route back in.

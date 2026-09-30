@@ -94,10 +94,98 @@ function gb_refresh_manager_dashboard_auth_cookie_policy() {
 
     $token = wp_get_session_token();
     if ( $token !== '' ) {
+        gb_extend_active_session( get_current_user_id(), $token );
         wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
     }
 }
 add_action( 'template_redirect', 'gb_refresh_manager_dashboard_auth_cookie_policy', -200 );
+
+/**
+ * Keep a login alive while it is being used.
+ *
+ * Renewing the cookie was never enough on its own. WordPress also keeps a
+ * record of each login with a fixed end date - 14 days from signing in with
+ * "remember me", 2 days without - and checks it on every request. Nothing
+ * moved that date, so however busy a manager was, the login ended on the
+ * dot, and the first click after that was usually Save: the edit was posted,
+ * the site found nobody signed in, sent them to the login page, and the work
+ * was gone. Nick reported exactly that on the Standard page.
+ *
+ * Now each visit by a signed-in user pushes the end date out to 14 days from
+ * today, so a login only ends after two weeks of not being used at all. It is
+ * written at most once a day, so this costs nothing on ordinary page views.
+ */
+function gb_extend_active_session( $user_id, $token ) {
+    if ( ! $user_id || $token === '' || ! class_exists( 'WP_Session_Tokens' ) ) {
+        return;
+    }
+
+    $sessions = WP_Session_Tokens::get_instance( (int) $user_id );
+    $session  = $sessions->get( $token );
+
+    if ( ! is_array( $session ) ) {
+        return;
+    }
+
+    $target = time() + 14 * DAY_IN_SECONDS;
+
+    if ( empty( $session['expiration'] ) || (int) $session['expiration'] < $target - DAY_IN_SECONDS ) {
+        $session['expiration'] = $target;
+        $sessions->update( $token, $session );
+    }
+}
+
+/*
+ * The same for everybody else who is signed in - cleaners in their dashboard,
+ * customers mid-booking - on any page they load. Their cookie is left as it
+ * is; only the server's record is kept from running out underneath it, and
+ * only while they are actually using the site.
+ */
+add_action( 'template_redirect', function () {
+    if ( ! is_user_logged_in() ) {
+        return;
+    }
+
+    $token = wp_get_session_token();
+    if ( $token === '' ) {
+        return;
+    }
+
+    gb_extend_active_session( get_current_user_id(), $token );
+
+    // A cookie that was issued for the old, shorter login would still run
+    // out on its own; issue a fresh one to match, unless the manager
+    // dashboard hook above already did.
+    $cookie = function_exists( 'wp_parse_auth_cookie' ) ? wp_parse_auth_cookie( '', 'logged_in' ) : false;
+    if ( ! headers_sent() && is_array( $cookie ) && ! empty( $cookie['expiration'] )
+        && (int) $cookie['expiration'] < time() + 13 * DAY_IN_SECONDS ) {
+        wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
+    }
+}, -150 );
+
+/**
+ * For the check made just before a Manager OS form is saved: still signed
+ * in, and a fresh security token for the form. Answered through admin-ajax,
+ * which the wp-admin lockout leaves open.
+ */
+add_action( 'wp_ajax_gb_session_check', function () {
+    nocache_headers();
+
+    $user = wp_get_current_user();
+    if ( ! in_array( 'gb_manager', (array) $user->roles, true ) && ! current_user_can( 'administrator' ) ) {
+        wp_send_json( array( 'signed_in' => false ) );
+    }
+
+    wp_send_json( array(
+        'signed_in' => true,
+        'nonce'     => wp_create_nonce( 'gb_manager_action' ),
+    ) );
+} );
+
+add_action( 'wp_ajax_nopriv_gb_session_check', function () {
+    nocache_headers();
+    wp_send_json( array( 'signed_in' => false ) );
+} );
 
 /**
  * Ensure the cleaner-recruitment "Join" page exists.
@@ -855,7 +943,12 @@ function gb_get_resource_url( $resource ) {
     $filename = isset( $resources[ $resource ]['file'] ) ? $resources[ $resource ]['file'] : $resource . '.pdf';
     $resource_path = '/greenbroom-resource/' . rawurlencode( $resource ) . '/' . rawurlencode( $filename );
 
-    $protected_resources = array( 'cleaner-handbook', 'subscribers-terms-of-association', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
+    /*
+     * Not the subscribers' terms. People are asked to agree to them on the
+     * sign-up form, before they have an account, so they have to be readable
+     * by anybody - the PDF was sending visitors to a login page instead.
+     */
+    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
     if ( ! in_array( $resource, $protected_resources, true ) ) {
         return home_url( $resource_path );
     }
@@ -882,14 +975,14 @@ function gb_handle_resource_download() {
         wp_die( 'Resource not found.', 'Resource not found', array( 'response' => 404 ) );
     }
 
-    $protected_resources = array( 'cleaner-handbook', 'subscribers-terms-of-association', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
+    // The subscribers' terms are public; see gb_get_resource_url().
+    $protected_resources = array( 'cleaner-handbook', 'make-the-most-of-your-eco-cleaner', 'certificate-of-insurance' );
     if ( in_array( $resource, $protected_resources, true ) && ! is_user_logged_in() ) {
         auth_redirect();
     }
 
     $role_restricted_resources = array(
         'cleaner-handbook' => array( 'gb_cleaner' ),
-        'subscribers-terms-of-association' => array( 'gb_customer', 'gb_client' ),
         // gb_client is the legacy customer role used by earlier accounts.
         'make-the-most-of-your-eco-cleaner' => array( 'gb_customer', 'gb_client' ),
     );
@@ -2299,6 +2392,7 @@ require_once get_template_directory() . '/inc/post-types.php';
 require_once get_template_directory() . '/inc/bookings.php';
 require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
+require_once get_template_directory() . '/inc/connect-modes.php';
 require_once get_template_directory() . '/inc/stripe.php';
 require_once get_template_directory() . '/inc/cleaner-availability.php';
 require_once get_template_directory() . '/inc/cleaner-stats.php';
@@ -2320,7 +2414,7 @@ require_once get_template_directory() . '/inc/membership-checkout.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 17;
+const GB_MIGRATION_VERSION = 18;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2364,7 +2458,8 @@ function gb_run_one_time_migrations() {
         'gb_ensure_membership_success_page',
         'gb_set_insurance_provided_by_platform',
         'gb_finish_standard_insurance_line',
-        'gb_promote_ongoing_monitoring'
+        'gb_promote_ongoing_monitoring',
+        'gb_migrate_connect_accounts_to_test_mode'
     );
 
     foreach ( $migrations as $migration ) {

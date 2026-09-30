@@ -39,8 +39,10 @@ function gb_find_cleaner_by_account_id($account_id) {
         'post_status'    => ['publish', 'pending', 'draft'],
         'posts_per_page' => 1,
         'fields'         => 'ids',
+        // The current mode's account only (see inc/connect-modes.php), so a
+        // test-mode event can never update a cleaner's live payout status.
         'meta_query'     => [
-            ['key' => '_gb_stripe_account_id', 'value' => $account_id],
+            ['key' => function_exists('gb_connect_mode_key') ? gb_connect_mode_key('_gb_stripe_account_id') : '_gb_stripe_account_id', 'value' => $account_id],
         ],
         'no_found_rows'  => true,
     ]);
