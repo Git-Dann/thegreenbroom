@@ -1063,6 +1063,37 @@ function gb_apply_contact_defaults() {
     }
 }
 
+/**
+ * The time zone bookings are made in.
+ *
+ * Every date and time a customer picks is UK time - the platform is in
+ * Liverpool - and is stored as plain text ("2026-10-14", "09:00"). Turning
+ * one into a real moment, for a calendar invite, has to say so; reading it as
+ * UTC put every summer booking in people's calendars an hour late. The site's
+ * own setting is used once it is set to a real place; while it is still the
+ * WordPress default of UTC, London.
+ */
+function gb_site_timezone() {
+    $tz = wp_timezone();
+
+    if ( in_array( $tz->getName(), array( 'UTC', '+00:00', 'Etc/UTC' ), true ) ) {
+        return new DateTimeZone( 'Europe/London' );
+    }
+
+    return $tz;
+}
+
+/**
+ * A booking's date and time as a real Unix timestamp.
+ */
+function gb_booking_moment( $date, $time ) {
+    try {
+        return ( new DateTimeImmutable( trim( $date . ' ' . $time ), gb_site_timezone() ) )->getTimestamp();
+    } catch ( Exception $e ) {
+        return (int) strtotime( $date . ' ' . $time );
+    }
+}
+
 function gb_get_support_email() {
     $settings_id = (int) get_option( 'page_on_front' );
     $email = $settings_id ? sanitize_email( (string) get_post_meta( $settings_id, '_gb_support_email', true ) ) : '';
