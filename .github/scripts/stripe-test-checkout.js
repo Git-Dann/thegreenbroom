@@ -32,7 +32,8 @@ const url = process.argv[2];
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // With more than one payment method switched on, the card form sits
-    // behind an accordion button.
+    // behind an accordion button. Wait for whichever appears first.
+    await page.locator('#cardNumber, [data-testid="card-accordion-item-button"]').first().waitFor({ timeout: 45000 });
     const cardButton = page.locator('[data-testid="card-accordion-item-button"]');
     if (await cardButton.count() && await cardButton.isVisible()) {
       await cardButton.click();
