@@ -59,8 +59,8 @@ function gb_stripe_selftest_handle() {
     $phase = isset( $_POST['phase'] ) ? sanitize_key( wp_unslash( $_POST['phase'] ) ) : 'check';
     $given = isset( $_POST['token'] ) ? (string) wp_unslash( $_POST['token'] ) : '';
 
-    if ( $phase === 'finish' ) {
-        gb_stripe_selftest_finish( $given );
+    if ( in_array( $phase, array( 'status', 'verify', 'finish' ), true ) ) {
+        gb_stripe_selftest_run_phase( $phase, $given );
     }
 
     $file = gb_stripe_selftest_token_file();
@@ -571,7 +571,7 @@ function gb_stripe_selftest_start() {
 
     update_option( 'gb_stripe_selftest_run', array(
         'hash'    => wp_hash_password( $finish ),
-        'expires' => time() + 15 * MINUTE_IN_SECONDS,
+        'expires' => time() + 20 * MINUTE_IN_SECONDS,
         'user_id' => (int) $user_id,
         'started' => time(),
     ), false );
@@ -584,28 +584,23 @@ function gb_stripe_selftest_start() {
     ) );
 }
 
-/**
- * Wait up to $seconds for $test to come back true, checking every 3 seconds.
- * Membership state is read fresh each time, since the webhook writes it from
- * another request.
+/*
+ * After start, the workflow drives the rest in short requests:
+ *
+ *   status  How the membership reads right now. Polled every few seconds,
+ *           first until Stripe's webhook has switched it on, then (after
+ *           verify) until it has switched it off.
+ *   verify  Once on: checks the subscription and its paid invoice in Stripe,
+ *           that the member can book and message, and that the billing
+ *           portal opens; then cancels the subscription in Stripe.
+ *   finish  Records how long each webhook took, removes the throwaway
+ *           account and customer, and reports.
+ *
+ * It used to wait inside one request instead. On this host that request held
+ * a PHP worker for up to a minute and a half, Stripe's webhooks queued behind
+ * it and timed out, and the host's 60-second gateway cut the request off.
  */
-function gb_stripe_selftest_wait( $seconds, callable $test ) {
-    $start = time();
-
-    do {
-        wp_cache_flush();
-
-        if ( $test() ) {
-            return time() - $start;
-        }
-
-        sleep( 3 );
-    } while ( time() - $start < $seconds );
-
-    return -1;
-}
-
-function gb_stripe_selftest_finish( $given ) {
+function gb_stripe_selftest_run_phase( $phase, $given ) {
     $run = get_option( 'gb_stripe_selftest_run' );
 
     // A wrong token changes nothing, so it cannot be used to break a test in
@@ -615,100 +610,86 @@ function gb_stripe_selftest_finish( $given ) {
             delete_option( 'gb_stripe_selftest_run' );
             gb_stripe_selftest_cleanup();
         }
-        gb_stripe_selftest_respond( 403, array( 'error' => 'Finish token refused.' ) );
+        gb_stripe_selftest_respond( 403, array( 'error' => 'Token refused.' ) );
     }
-
-    delete_option( 'gb_stripe_selftest_run' );
-
-    @set_time_limit( 150 );
 
     $user_id = (int) $run['user_id'];
-    $steps   = array();
-    $ok      = true;
 
-    // 1. Stripe told us about the payment, and the membership switched on.
-    // Both waits together stay inside the host's 60-second gateway limit.
-    $waited = gb_stripe_selftest_wait( 25, static function () use ( $user_id ) {
-        $m = gb_get_membership( $user_id );
-        return isset( $m['status'] ) && $m['status'] === 'active';
-    } );
-    $membership = gb_get_membership( $user_id );
-    $steps['membership_switched_on_by_webhook'] = $waited >= 0
-        ? array( 'ok' => true, 'seconds' => $waited, 'plan' => $membership['plan'], 'renews' => $membership['expires'] )
-        : array( 'ok' => false, 'detail' => 'No webhook reached the site within 25 seconds, or it did not activate the membership. Membership reads: ' . wp_json_encode( $membership ) );
-    $ok = $ok && $waited >= 0;
-
-    // 2. The subscription and its first invoice, from Stripe's side.
-    $sub_id = (string) get_user_meta( $user_id, '_gb_stripe_subscription_id', true );
-    if ( $sub_id !== '' ) {
-        $sub = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array( 'expand' => array( 'latest_invoice' ) ), 'GET' );
-        if ( is_wp_error( $sub ) ) {
-            $steps['stripe_subscription'] = array( 'ok' => false, 'detail' => $sub->get_error_message() );
-        } else {
-            $invoice = isset( $sub['latest_invoice'] ) && is_array( $sub['latest_invoice'] ) ? $sub['latest_invoice'] : array();
-            $steps['stripe_subscription'] = array(
-                'ok'           => isset( $sub['status'] ) && $sub['status'] === 'active' && isset( $invoice['status'] ) && $invoice['status'] === 'paid',
-                'status'       => isset( $sub['status'] ) ? $sub['status'] : '',
-                'invoice'      => isset( $invoice['status'] ) ? $invoice['status'] : '',
-                'amount_paid'  => isset( $invoice['amount_paid'] ) ? gb_format_minor_amount( (int) $invoice['amount_paid'], (string) $invoice['currency'] ) : '',
-                'livemode'     => ! empty( $sub['livemode'] ),
-            );
-        }
-    } else {
-        $steps['stripe_subscription'] = array( 'ok' => false, 'detail' => 'The site never recorded a subscription id for the test account.' );
+    if ( $phase === 'status' ) {
+        $membership = gb_get_membership( $user_id );
+        gb_stripe_selftest_respond( 200, array(
+            'membership' => isset( $membership['status'] ) ? $membership['status'] : 'none',
+            'recorded'   => (string) get_user_meta( $user_id, '_gb_stripe_subscription_status', true ),
+        ) );
     }
-    $ok = $ok && ! empty( $steps['stripe_subscription']['ok'] );
 
-    // 3. The member can now do what members do.
-    $steps['member_can_book_and_message'] = array(
-        'ok' => function_exists( 'gb_membership_is_active_for' ) && gb_membership_is_active_for( $user_id, 'customer' ),
-    );
-    $ok = $ok && $steps['member_can_book_and_message']['ok'];
+    if ( $phase === 'verify' ) {
+        $steps = array();
 
-    // 4. "Manage or cancel" works.
-    $portal = gb_membership_create_portal_session( $user_id );
-    $steps['billing_portal_opens'] = is_wp_error( $portal )
-        ? array( 'ok' => false, 'detail' => $portal->get_error_message() )
-        : array( 'ok' => true );
-    $ok = $ok && ! is_wp_error( $portal );
-
-    // 5. Cancelling in Stripe switches it off on the site.
-    if ( $sub_id !== '' ) {
-        $cancelled = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array(), 'DELETE' );
-        if ( is_wp_error( $cancelled ) ) {
-            $steps['cancel_reaches_site'] = array( 'ok' => false, 'detail' => 'Stripe would not cancel: ' . $cancelled->get_error_message() );
-        } else {
-            $waited = gb_stripe_selftest_wait( 25, static function () use ( $user_id ) {
-                $m = gb_get_membership( $user_id );
-                return ! isset( $m['status'] ) || $m['status'] !== 'active';
-            } );
-            $steps['cancel_reaches_site'] = $waited >= 0
-                ? array( 'ok' => true, 'seconds' => $waited )
-                : array(
-                    'ok'     => false,
-                    'detail' => 'Cancelled in Stripe, but the site still shows the membership as active after 25 seconds.',
-                    // What the site recorded, to tell "the webhook never came"
-                    // (status still active) from "it came and was misread".
-                    'site_saw' => array(
-                        'stripe_status' => (string) get_user_meta( $user_id, '_gb_stripe_subscription_status', true ),
-                        'membership'    => gb_get_membership( $user_id ),
-                        'stripe_now'    => ( static function () use ( $sub_id ) {
-                            $s = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array(), 'GET' );
-                            return is_wp_error( $s ) ? $s->get_error_message() : ( $s['status'] ?? '' );
-                        } )(),
-                    ),
+        $sub_id = (string) get_user_meta( $user_id, '_gb_stripe_subscription_id', true );
+        if ( $sub_id !== '' ) {
+            $sub = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array( 'expand' => array( 'latest_invoice' ) ), 'GET' );
+            if ( is_wp_error( $sub ) ) {
+                $steps['stripe_subscription'] = array( 'ok' => false, 'detail' => $sub->get_error_message() );
+            } else {
+                $invoice = isset( $sub['latest_invoice'] ) && is_array( $sub['latest_invoice'] ) ? $sub['latest_invoice'] : array();
+                $steps['stripe_subscription'] = array(
+                    'ok'          => isset( $sub['status'] ) && $sub['status'] === 'active' && isset( $invoice['status'] ) && $invoice['status'] === 'paid',
+                    'status'      => isset( $sub['status'] ) ? $sub['status'] : '',
+                    'invoice'     => isset( $invoice['status'] ) ? $invoice['status'] : '',
+                    'amount_paid' => isset( $invoice['amount_paid'] ) ? wp_strip_all_tags( gb_format_minor_amount( (int) $invoice['amount_paid'], (string) $invoice['currency'] ) ) : '',
+                    'livemode'    => ! empty( $sub['livemode'] ),
                 );
+            }
+        } else {
+            $steps['stripe_subscription'] = array( 'ok' => false, 'detail' => 'The site never recorded a subscription id for the test account.' );
         }
-        $ok = $ok && ! empty( $steps['cancel_reaches_site']['ok'] );
+
+        $steps['member_can_book_and_message'] = array(
+            'ok' => function_exists( 'gb_membership_is_active_for' ) && gb_membership_is_active_for( $user_id, 'customer' ),
+        );
+
+        $portal = gb_membership_create_portal_session( $user_id );
+        $steps['billing_portal_opens'] = is_wp_error( $portal ) ? array( 'ok' => false, 'detail' => $portal->get_error_message() ) : array( 'ok' => true );
+
+        if ( $sub_id !== '' ) {
+            $cancelled = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array(), 'DELETE' );
+            $steps['cancelled_in_stripe'] = is_wp_error( $cancelled )
+                ? array( 'ok' => false, 'detail' => $cancelled->get_error_message() )
+                : array( 'ok' => true );
+        }
+
+        $run['steps'] = $steps;
+        update_option( 'gb_stripe_selftest_run', $run, false );
+
+        gb_stripe_selftest_respond( 200, array( 'steps' => $steps ) );
     }
 
+    // finish
+    delete_option( 'gb_stripe_selftest_run' );
+
+    $on  = isset( $_POST['activated_after'] ) ? (int) $_POST['activated_after'] : -1;
+    $off = isset( $_POST['cancelled_after'] ) ? (int) $_POST['cancelled_after'] : -1;
+
+    $steps = array(
+        'membership_switched_on_by_webhook' => $on >= 0
+            ? array( 'ok' => true, 'seconds' => $on )
+            : array( 'ok' => false, 'detail' => 'Stripe\'s webhook did not switch the membership on in time.' ),
+    );
+    $steps = array_merge( $steps, isset( $run['steps'] ) ? (array) $run['steps'] : array() );
+    $steps['cancel_reaches_site'] = $off >= 0
+        ? array( 'ok' => true, 'seconds' => $off )
+        : array( 'ok' => false, 'detail' => 'Cancelled in Stripe, but the site still showed the membership as active.', 'recorded' => (string) get_user_meta( $user_id, '_gb_stripe_subscription_status', true ) );
     $steps['cleanup'] = gb_stripe_selftest_cleanup();
 
-    gb_stripe_selftest_respond( 200, array(
-        'passed' => $ok,
-        'mode'   => 'test',
-        'steps'  => $steps,
-    ) );
+    $passed = true;
+    foreach ( $steps as $step ) {
+        if ( is_array( $step ) && isset( $step['ok'] ) && ! $step['ok'] ) {
+            $passed = false;
+        }
+    }
+
+    gb_stripe_selftest_respond( 200, array( 'passed' => $passed, 'mode' => 'test', 'steps' => $steps ) );
 }
 
 /**
