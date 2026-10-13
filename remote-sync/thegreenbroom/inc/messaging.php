@@ -33,7 +33,10 @@ function gb_send_cleaner_message() {
      * could then "reply" from their inbox and have the site email any address
      * they had typed in as the sender, from the site's own verified domain.
      */
-    if (get_post_type($cleaner_id) !== 'gb_cleaner' || get_post_status($cleaner_id) !== 'publish') {
+    if (get_post_type($cleaner_id) !== 'gb_cleaner' || get_post_status($cleaner_id) !== 'publish'
+        // Hidden by the paid-listing gate: not findable, so not messageable either.
+        || (function_exists('gb_listing_gate_enabled') && gb_listing_gate_enabled()
+            && function_exists('gb_cleaner_listing_is_paid') && !gb_cleaner_listing_is_paid($cleaner_id))) {
         wp_send_json_error(['message' => 'That cleaner is not available to message.']);
     }
 

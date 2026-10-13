@@ -1642,7 +1642,7 @@ function gb_identity_render_manager_panel( $cleaner_id ) {
                 <?php if ( $trial_on ) : ?>
                     <div><strong style="color:#0f172a;">Used</strong> on this account.</div>
                 <?php elseif ( $decision['eligible'] ) : ?>
-                    <div><strong style="color:#166534;">Available</strong><?php echo $override ? esc_html( ' (allowed by a manager despite the flags below)' ) : ''; ?>.</div>
+                    <div><strong style="color:#166534;">Available</strong><?php echo $override ? esc_html( ' (allowed by a manager)' ) : ''; ?>.</div>
                 <?php else : ?>
                     <div><strong style="color:#b45309;">Not available</strong>: <?php echo esc_html( $decision['reason'] === 'registry' ? 'their details match somebody who has already had it.' : 'this looks like a second account.' ); ?></div>
                 <?php endif; ?>

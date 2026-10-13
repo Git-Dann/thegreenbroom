@@ -152,7 +152,16 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                     Customers cannot book you yet
                 </div>
                 <p style="margin:0 0 14px; color:#92400e; font-size:14px; line-height:1.65;">
-                    <?php if ($gb_block === 'not_connected'): ?>
+                    <?php if ($gb_block === 'listing_inactive'): ?>
+                        Your listing subscription is not active, so customers cannot find or book you. Restart it
+                        from Become a Cleaner and your profile goes straight back on.
+                    <?php elseif ($gb_block === 'not_live'): ?>
+                        Your profile has not been approved yet, so it is not on the site. We will let you know as soon
+                        as your checks are done.
+                    <?php elseif ($gb_block === 'fully_booked'): ?>
+                        You have marked yourself as fully booked, so new customers cannot book you. Change your
+                        availability on Edit Profile when you have space again.
+                    <?php elseif ($gb_block === 'not_connected'): ?>
                         Your profile is live, but we have no way to pay you, so the Book Now button is hidden on your
                         listing. Setting up payouts takes a few minutes and is done securely with Stripe, who handle
                         the payments &mdash; we never see your bank details.
@@ -162,9 +171,16 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                         where you left off usually takes a couple of minutes.
                     <?php endif; ?>
                 </p>
-                <a href="<?php echo esc_url(home_url('/settings/')); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none;">
-                    <?php echo $gb_block === 'not_connected' ? 'Set up payouts' : 'Finish setting up payouts'; ?>
-                </a>
+                <?php
+                $gb_block_cta = [
+                    'listing_inactive' => ['/join/', 'Restart my listing'],
+                    'not_live'         => ['/verify-profile/', 'Check my verification'],
+                    'fully_booked'     => ['/edit-profile/', 'Update my availability'],
+                    'not_connected'    => ['/settings/', 'Set up payouts'],
+                ];
+                list($gb_cta_url, $gb_cta_label) = isset($gb_block_cta[$gb_block]) ? $gb_block_cta[$gb_block] : ['/settings/', 'Finish setting up payouts'];
+                ?>
+                <a href="<?php echo esc_url(home_url($gb_cta_url)); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none;"><?php echo esc_html($gb_cta_label); ?></a>
             </div>
         </div>
     <?php endif; ?>
