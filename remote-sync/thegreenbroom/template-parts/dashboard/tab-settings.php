@@ -699,7 +699,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                 <div class="gb-editor-header"><span class="dashicons dashicons-backup"></span> Data Retention</div>
                 <div class="gb-editor-body">
                     <div style="margin:0 0 20px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-size:13px; line-height:1.6;">
-                        A cleaner&rsquo;s ID, proof of address and DBS certificate are destroyed the moment they are approved &mdash; those files are never kept.
+                        A cleaner&rsquo;s ID and DBS certificate are destroyed the moment they are approved &mdash; those files are never kept.
                         What remains is the audit trail: what was checked, by whom, when, and a fingerprint of each document seen. This setting governs how long that trail is kept.
                     </div>
                     <div class="gb-form-row" style="margin-bottom:22px;">

@@ -43,18 +43,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_upload_docs']) && 
             '_gb_ref1_name'     => 'ref1_name',
             '_gb_ref1_address'  => 'ref1_address',
             '_gb_ref1_email'    => 'ref1_email',
+            '_gb_ref1_relationship' => 'ref1_relationship',
             '_gb_ref2_name'     => 'ref2_name',
             '_gb_ref2_address'  => 'ref2_address',
             '_gb_ref2_email'    => 'ref2_email',
+            '_gb_ref2_relationship' => 'ref2_relationship',
         ];
         foreach ($text_fields as $meta_key => $post_key) {
             $val = isset($_POST[$post_key]) ? sanitize_text_field(wp_unslash($_POST[$post_key])) : '';
             update_post_meta($cleaner_id, $meta_key, $val);
         }
 
-        // 2. Process document uploads.
+        /*
+         * The client asks for two character references who are not relatives.
+         * Each one carries its own explicit confirmation, saved as '1' or '0'
+         * rather than deleted when unticked, so the manager can tell "said no"
+         * apart from "submitted before we asked" (no value at all).
+         */
+        foreach (['1', '2'] as $n) {
+            update_post_meta($cleaner_id, "_gb_ref{$n}_not_relative", !empty($_POST["ref{$n}_not_relative"]) ? '1' : '0');
+        }
+
+        // 2. Process document uploads. Photo ID and DBS only: proof of address
+        // is no longer asked for.
         if (class_exists('GB_Uploads') && method_exists('GB_Uploads', 'store_cleaner_verification_document')) {
-            foreach (['doc_id', 'doc_address', 'doc_dbs'] as $field) {
+            foreach (['doc_id', 'doc_dbs'] as $field) {
                 if (!empty($_FILES[$field]['name'])) {
                     $upload_result = GB_Uploads::store_cleaner_verification_document($cleaner_id, $field, $_FILES[$field]);
                     if (is_wp_error($upload_result)) {
@@ -81,8 +94,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_upload_docs']) && 
         }
 
         // 4. Hard-block completeness check (docs + phone + references + signature).
+        // 'submission' also requires the relationship answer and the
+        // not-a-relative confirmation for each referee.
         $missing = function_exists('gb_cleaner_verification_missing')
-            ? gb_cleaner_verification_missing($cleaner_id)
+            ? gb_cleaner_verification_missing($cleaner_id, 'submission')
             : [];
 
         if (empty($missing)) {
@@ -101,9 +116,21 @@ $v_phone       = get_post_meta($cleaner_id, '_gb_cleaner_phone', true);
 $v_ref1_name   = get_post_meta($cleaner_id, '_gb_ref1_name', true);
 $v_ref1_addr   = get_post_meta($cleaner_id, '_gb_ref1_address', true);
 $v_ref1_email  = get_post_meta($cleaner_id, '_gb_ref1_email', true);
+$v_ref1_rel    = get_post_meta($cleaner_id, '_gb_ref1_relationship', true);
+$v_ref1_notrel = get_post_meta($cleaner_id, '_gb_ref1_not_relative', true) === '1';
 $v_ref2_name   = get_post_meta($cleaner_id, '_gb_ref2_name', true);
 $v_ref2_addr   = get_post_meta($cleaner_id, '_gb_ref2_address', true);
 $v_ref2_email  = get_post_meta($cleaner_id, '_gb_ref2_email', true);
+$v_ref2_rel    = get_post_meta($cleaner_id, '_gb_ref2_relationship', true);
+$v_ref2_notrel = get_post_meta($cleaner_id, '_gb_ref2_not_relative', true) === '1';
+
+/*
+ * A profile photo is not a verification requirement, but listings without
+ * one look noticeably worse next to those with one, and the client wants
+ * cleaners nudged to add it. The listings and the public profile both use
+ * the gb_cleaner post's featured image, so that is what is checked here.
+ */
+$gb_has_photo = has_post_thumbnail($cleaner_id);
 
 $toa_signed      = get_post_meta($cleaner_id, '_gb_toa_signed', true) === '1';
 $toa_signed_name = get_post_meta($cleaner_id, '_gb_toa_signed_name', true) ?: $cleaner_post[0]->post_title;
@@ -151,6 +178,20 @@ get_header();
     <div class="gb-container">
 
         <?php echo $msg; ?>
+
+        <?php if (!$gb_has_photo): ?>
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:18px 20px; margin-bottom:20px;">
+                <span class="dashicons dashicons-camera" style="font-size:34px; width:34px; height:34px; color:#10b981; flex:0 0 auto;"></span>
+                <div style="flex:1 1 260px;">
+                    <strong style="display:block; color:#166534; font-size:15px; margin-bottom:4px;">Add a profile photo</strong>
+                    <span style="color:#166534; font-size:13px; line-height:1.55;">
+                        It is optional, but listings with a photo look far better and get more bookings.
+                        A clear, friendly photo of your face works best.
+                    </span>
+                </div>
+                <a href="<?php echo esc_url(home_url('/edit-profile/#photo')); ?>" style="background:#10b981; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:700; font-size:14px; white-space:nowrap;">Add your photo</a>
+            </div>
+        <?php endif; ?>
 
         <div class="gb-card">
             <?php
@@ -226,11 +267,6 @@ get_header();
                         <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Passport or Driving License (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_id') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
                         <input type="file" name="doc_id" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_id') ? '' : 'required'; ?>>
                     </div>
-                    <div class="gb-upload-box <?php echo $gb_doc_present('doc_address') ? 'done' : ''; ?>">
-                        <label class="gb-upload-label">Proof of Address <span class="gb-req">*</span></label>
-                        <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Utility Bill or Bank Statement (recent)<?php echo $gb_doc_present('doc_address') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
-                        <input type="file" name="doc_address" accept="image/*,.pdf" <?php echo $gb_doc_present('doc_address') ? '' : 'required'; ?>>
-                    </div>
                     <div class="gb-upload-box <?php echo $gb_doc_present('doc_dbs') ? 'done' : ''; ?>">
                         <label class="gb-upload-label">DBS Certificate <span class="gb-req">*</span></label>
                         <p style="font-size:12px; color:#64748b; margin:0 0 10px;">Your Disclosure &amp; Barring Service certificate (JPG/PNG/PDF)<?php echo $gb_doc_present('doc_dbs') ? ' — ✅ on file (upload again to replace)' : ''; ?></p>
@@ -238,20 +274,29 @@ get_header();
                     </div>
 
                     <div class="gb-section-head">Character References</div>
-                    <p style="font-size:13px; color:#64748b; margin:0 0 16px;">Provide two verifiable references. We may contact them to confirm your suitability.</p>
+                    <p style="font-size:13px; color:#64748b; margin:0 0 16px; line-height:1.6;">
+                        Give us two people who can vouch for your honesty and reliability, such as a past employer,
+                        a client you have cleaned for, a neighbour or a long-standing friend.
+                        <strong style="color:#0f172a;">They must not be a relative.</strong>
+                        We will contact both of them, so please check their details are correct.
+                    </p>
 
-                    <div class="gb-ref-card">
-                        <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 1</div>
-                        <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref1_name" value="<?php echo esc_attr($v_ref1_name); ?>" required></div>
-                        <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref1_address" value="<?php echo esc_attr($v_ref1_addr); ?>" required></div>
-                        <div class="gb-field" style="margin-bottom:0;"><label>Email Address <span class="gb-req">*</span></label><input type="email" name="ref1_email" value="<?php echo esc_attr($v_ref1_email); ?>" required></div>
-                    </div>
-                    <div class="gb-ref-card">
-                        <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference 2</div>
-                        <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref2_name" value="<?php echo esc_attr($v_ref2_name); ?>" required></div>
-                        <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref2_address" value="<?php echo esc_attr($v_ref2_addr); ?>" required></div>
-                        <div class="gb-field" style="margin-bottom:0;"><label>Email Address <span class="gb-req">*</span></label><input type="email" name="ref2_email" value="<?php echo esc_attr($v_ref2_email); ?>" required></div>
-                    </div>
+                    <?php foreach ([
+                        ['1', $v_ref1_name, $v_ref1_addr, $v_ref1_email, $v_ref1_rel, $v_ref1_notrel],
+                        ['2', $v_ref2_name, $v_ref2_addr, $v_ref2_email, $v_ref2_rel, $v_ref2_notrel],
+                    ] as $gb_ref): list($rn, $r_name, $r_addr, $r_email, $r_rel, $r_notrel) = $gb_ref; ?>
+                        <div class="gb-ref-card">
+                            <div style="font-weight:800; color:#0f172a; margin-bottom:12px;">Reference <?php echo esc_html($rn); ?></div>
+                            <div class="gb-field"><label>Full Name <span class="gb-req">*</span></label><input type="text" name="ref<?php echo esc_attr($rn); ?>_name" value="<?php echo esc_attr($r_name); ?>" required></div>
+                            <div class="gb-field"><label>Address <span class="gb-req">*</span></label><input type="text" name="ref<?php echo esc_attr($rn); ?>_address" value="<?php echo esc_attr($r_addr); ?>" required></div>
+                            <div class="gb-field"><label>Email Address <span class="gb-req">*</span></label><input type="email" name="ref<?php echo esc_attr($rn); ?>_email" value="<?php echo esc_attr($r_email); ?>" required></div>
+                            <div class="gb-field"><label>How do you know them? <span class="gb-req">*</span></label><input type="text" name="ref<?php echo esc_attr($rn); ?>_relationship" value="<?php echo esc_attr($r_rel); ?>" placeholder="e.g. Former employer, 3 years" maxlength="120" required></div>
+                            <label style="display:flex; gap:10px; align-items:flex-start; font-size:13px; color:#334155; cursor:pointer;">
+                                <input type="checkbox" name="ref<?php echo esc_attr($rn); ?>_not_relative" value="1" style="margin-top:3px;" <?php checked($r_notrel); ?> required>
+                                <span>I confirm this person is not related to me.</span>
+                            </label>
+                        </div>
+                    <?php endforeach; ?>
 
                     <div class="gb-section-head">Terms of Association <span class="gb-req">*</span></div>
                     <?php if ($toa_signed): ?>

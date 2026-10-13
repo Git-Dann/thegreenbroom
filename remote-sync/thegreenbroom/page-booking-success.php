@@ -37,6 +37,11 @@ if ($booking_id) {
             $start_ts = strtotime("$date $time");
             $end_ts = $start_ts + ($duration * 3600);
             $end_time_display = date('g:i A', $end_ts);
+            // The real moment, for calendars. $start_ts above is the wall
+            // clock for display only; as a timestamp it is an hour out in
+            // British Summer Time.
+            $cal_start = function_exists('gb_booking_moment') ? gb_booking_moment($date, $time) : $start_ts;
+            $cal_end   = $cal_start + ($duration * 3600);
             $checkout_status = isset($_GET['checkout']) ? sanitize_key($_GET['checkout']) : '';
             $checkout_session_id = isset($_GET['session_id']) ? sanitize_text_field(wp_unslash($_GET['session_id'])) : '';
 
@@ -109,8 +114,8 @@ if ($booking_id) {
             // ICAL LOGIC
             if (isset($_GET['download_ics'])) {
                 $filename = 'booking_' . absint($booking_id) . '.ics';
-                $ics_start = gmdate('Ymd\THis\Z', $start_ts);
-                $ics_end   = gmdate('Ymd\THis\Z', $end_ts);
+                $ics_start = gmdate('Ymd\THis\Z', $cal_start);
+                $ics_end   = gmdate('Ymd\THis\Z', $cal_end);
                 $now       = gmdate('Ymd\THis\Z');
                 $summary = preg_replace('/[\r\n]+/', ' ', 'Cleaning: ' . $service . ' with ' . $cleaner_name);
                 $location = preg_replace('/[\r\n]+/', ' ', (string) $address);
@@ -124,8 +129,8 @@ if ($booking_id) {
             }
             
             // Google Cal Link
-            $g_start = gmdate('Ymd\THis\Z', $start_ts);
-            $g_end   = gmdate('Ymd\THis\Z', $end_ts);
+            $g_start = gmdate('Ymd\THis\Z', $cal_start);
+            $g_end   = gmdate('Ymd\THis\Z', $cal_end);
             $g_text  = urlencode("Cleaning: $service with $cleaner_name");
             $google_link = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=$g_text&dates=$g_start/$g_end";
         }

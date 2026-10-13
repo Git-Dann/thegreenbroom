@@ -43,7 +43,6 @@
                         'url' => null, // parent-only, not clickable
                         'children' => [
                             ['label' => 'What Cleaners Do', 'url' => '/what-cleaners-do'],
-                            ['label' => 'How We Do It', 'url' => '/how-we-do-it'],
                             ['label' => 'The Green Broom Standard', 'url' => '/the-green-broom-standard'],
                             ['label' => 'Eco Products', 'url' => '/eco-products']
                         ]

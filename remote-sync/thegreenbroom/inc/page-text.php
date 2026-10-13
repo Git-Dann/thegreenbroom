@@ -898,3 +898,92 @@ function gb_promote_ongoing_monitoring() {
 
     update_option( 'gb_vetting_three_steps', 1, false );
 }
+
+/**
+ * Retire How We Do It, at the client's request (October 2026).
+ *
+ * Taken out of the menu and footer, and the page itself set to draft rather
+ * than deleted: its wording stays in Manager OS, and publishing it again
+ * brings it straight back. Only a published page is drafted, so this cannot
+ * undo a decision made since.
+ */
+function gb_retire_how_we_do_it() {
+    $page = get_page_by_path( 'how-we-do-it' );
+
+    if ( $page instanceof WP_Post && $page->post_status === 'publish' ) {
+        wp_update_post( array( 'ID' => $page->ID, 'post_status' => 'draft' ) );
+    }
+}
+
+/**
+ * Old links to How We Do It land on The Green Broom Standard, which now says
+ * how cleaners are checked, instead of a "page not found".
+ *
+ * Only while the page is not published, so republishing it in Manager OS
+ * is all it takes to bring it back.
+ */
+add_action( 'template_redirect', function () {
+    $path = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ), '/' );
+
+    if ( $path !== 'how-we-do-it' ) {
+        return;
+    }
+
+    $page = get_page_by_path( 'how-we-do-it' );
+
+    if ( $page instanceof WP_Post && $page->post_status === 'publish' ) {
+        return;
+    }
+
+    wp_safe_redirect( home_url( '/the-green-broom-standard/' ), 301 );
+    exit;
+}, 5 );
+
+/**
+ * The page is "Find a Cleaner" everywhere a visitor sees it, but was still
+ * titled "Cleaner Listings" in the page list, so Manager OS and the site used
+ * two names for one page. Renamed only while it still has the old title.
+ */
+function gb_rename_listings_page() {
+    $page = get_page_by_path( 'cleaner-listings' );
+
+    if ( $page instanceof WP_Post && $page->post_title === 'Cleaner Listings' ) {
+        wp_update_post( array( 'ID' => $page->ID, 'post_title' => 'Find a Cleaner' ) );
+    }
+}
+
+/**
+ * Pages whose words come from Manager OS, not from the WordPress editor.
+ *
+ * These templates build the page from the fields under Manager OS -> Pages and
+ * never print the body of the page, so typing into the WordPress editor for
+ * one of them saved happily and changed nothing on the site. Anybody opening
+ * one there is taken to the Manager OS editor that actually drives it.
+ *
+ * Add &gb_wp_editor=1 to the WordPress edit link to open the WordPress editor
+ * anyway (for the page template or slug, say).
+ */
+function gb_manager_os_page_slugs() {
+    return array( 'home', 'what-cleaners-do', 'cleaner-listings', 'join', 'contact', 'contact-support', 'book-now', 'booking-success', 'how-we-do-it' );
+}
+
+add_action( 'load-post.php', function () {
+    if ( ! empty( $_GET['gb_wp_editor'] ) || ( isset( $_GET['action'] ) && $_GET['action'] !== 'edit' ) ) {
+        return;
+    }
+
+    $post = get_post( isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0 );
+
+    if ( ! $post || $post->post_type !== 'page' ) {
+        return;
+    }
+
+    $is_front = (int) get_option( 'page_on_front' ) === (int) $post->ID;
+
+    if ( ! $is_front && ! in_array( $post->post_name, gb_manager_os_page_slugs(), true ) ) {
+        return;
+    }
+
+    wp_safe_redirect( home_url( '/manager-dashboard/?tab=pages&action=edit&id=' . (int) $post->ID ) );
+    exit;
+} );

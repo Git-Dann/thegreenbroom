@@ -850,6 +850,11 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 /* Why we are different: two columns, the agency's costs against ours. Not a
    row-by-row table - the client's two lists are different lengths, and a table
    would have needed a blank cell or a line I invented to pair with. */
+/* Its own band, so it looks the same on the homepage and on Find a Cleaner
+   rather than borrowing the homepage's section classes. */
+.gb-diff-section { padding: 80px 0; background: #f9f9f9; }
+.gb-diff-section.is-white { background: #fff; }
+.gb-diff-title { margin: 0; text-align: center; font-size: 2rem; font-weight: 700; color: #333; }
 .gb-diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 34px; }
 .gb-diff-card { background: #fff; border: 2px solid #e6eee8; border-radius: 16px; padding: 28px 26px; }
 .gb-diff-card h3 { margin: 0 0 18px; font-size: 1.15rem; font-weight: 800; color: #0f172a; }
@@ -862,6 +867,8 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 .gb-diff-us li { color: #1f3d24; }
 
 @media (max-width: 760px) {
+    .gb-diff-section { padding: 56px 0; }
+    .gb-diff-title { font-size: 1.6rem; }
     .gb-diff-grid { grid-template-columns: 1fr; gap: 16px; }
     .gb-diff-card { padding: 22px 20px; }
 }

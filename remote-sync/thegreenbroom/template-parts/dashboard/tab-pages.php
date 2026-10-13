@@ -133,7 +133,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
             '_gb_vet_head'         => 'Trust is Everything.',
             '_gb_vet_sub'          => 'We invite less than 10% of applicants to join our platform. Here is how we ensure only the best enter your home.',
             '_gb_vet_s1_title'     => 'ID & Right to Work Checks',
-            '_gb_vet_s1_desc'      => 'We verify government-issued ID and proof of address for every single applicant.',
+            '_gb_vet_s1_desc'      => 'We verify government-issued photo ID for every single applicant.',
             '_gb_vet_s2_title'     => 'Reference Verification',
             '_gb_vet_s2_desc'      => "We speak to previous employers or clients. If they haven't delivered 5-star service before, they won't be on The Green Broom.",
             '_gb_vet_s3_title'     => 'Ongoing Monitoring',
@@ -1054,7 +1054,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
         $pages_by_slug[$page_obj->post_name] = $page_obj;
     }
 
-    $core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleaner-listings', 'join', 'eco-products', 'the-green-broom-standard'];
+    $core_slugs = ['home', 'what-cleaners-do', 'cleaner-listings', 'join', 'eco-products', 'the-green-broom-standard'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr', 'subscribers-terms-of-association'];
     // Customer-facing pages whose wording is editable but which are not part of
     // the marketing core. Previously these sat in the collapsed "Other Pages"

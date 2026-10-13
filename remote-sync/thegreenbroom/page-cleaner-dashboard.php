@@ -170,6 +170,27 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
     <?php endif; ?>
 
     <div class="gb-container" style="margin-top:<?php echo $gb_block !== true ? '0' : '-50px'; ?>; position:relative; z-index:10;">
+        <?php
+        /*
+         * Not a requirement, so not a warning: a friendly nudge. Listings
+         * without a photo fall back to a grey silhouette and look noticeably
+         * worse beside those with one, and the client asked for cleaners to be
+         * encouraged to add one. Disappears as soon as a photo is set.
+         */
+        ?>
+        <?php if ($cleaner_id && !has_post_thumbnail($cleaner_id)): ?>
+            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:18px 22px; margin-bottom:20px;">
+                <div style="font-size:2rem; line-height:1;">📸</div>
+                <div style="flex:1 1 260px;">
+                    <div style="font-weight:800; color:#166534; font-size:16px; margin-bottom:4px;">Add a profile photo</div>
+                    <p style="margin:0; color:#166534; font-size:14px; line-height:1.6;">
+                        Your listing does not have a photo yet. Listings with a photo look far better and get more
+                        bookings, so it is well worth a minute. A clear, friendly photo of your face works best.
+                    </p>
+                </div>
+                <a href="<?php echo esc_url(home_url('/edit-profile/#photo')); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none; white-space:nowrap;">Add your photo</a>
+            </div>
+        <?php endif; ?>
         <div class="gb-grid-4 mb-20">
             <div class="gb-card text-center">
                 <span style="font-size:2rem; font-weight:800; color:var(--color-primary); display:block;">£<?php echo $earnings; ?></span>
@@ -222,7 +243,7 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                     <?php endif; ?>
                 </div>
                 <h3 class="gb-card-title">Get Verified</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem;">Upload ID & Proof of Address.</p>
+                <p style="color:var(--text-muted); font-size:0.9rem;">Photo ID, a Basic DBS and two references.</p>
             </a>
 
             <a href="<?php echo home_url('/settings'); ?>" class="gb-card">

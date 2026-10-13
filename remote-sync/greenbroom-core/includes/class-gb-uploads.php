@@ -269,12 +269,34 @@ class GB_Uploads {
         return self::get_legacy_dir();
     }
 
+    /**
+     * Every document type the store knows how to find, serve and destroy.
+     *
+     * Proof of address is still listed here even though cleaners are no longer
+     * asked for it (see get_requested_document_fields()). Applicants who sent
+     * one before the requirement was dropped still have that file in private
+     * storage, and it has to stay viewable by a manager and, more importantly,
+     * still be deleted on approval and by the purge tools. Dropping the key
+     * from this list would orphan those files on disk with nothing able to
+     * reach them.
+     */
     private static function get_document_fields() {
         return array(
             'doc_id'      => 'Government ID',
             'doc_address' => 'Proof of Address',
             'doc_dbs'     => 'DBS Certificate',
         );
+    }
+
+    /**
+     * The documents a cleaner is actually asked to upload: photo ID and a
+     * Basic DBS certificate. New uploads are only accepted for these.
+     */
+    public static function get_requested_document_fields() {
+        $fields = self::get_document_fields();
+        unset( $fields['doc_address'] );
+
+        return $fields;
     }
 
     private static function get_document_meta_key( $field ) {
@@ -453,7 +475,9 @@ class GB_Uploads {
             return new WP_Error( 'gb_invalid_cleaner', 'Invalid cleaner profile.' );
         }
 
-        $document_fields = self::get_document_fields();
+        // Only the documents we still ask for. A stale form or hand-built POST
+        // must not be able to put a new proof of address back into storage.
+        $document_fields = self::get_requested_document_fields();
         if ( ! isset( $document_fields[ $field ] ) ) {
             return new WP_Error( 'gb_invalid_document', 'Unknown verification document type.' );
         }
@@ -660,7 +684,7 @@ class GB_Uploads {
 
         $cleaner_id = self::get_cleaner_id_for_user( get_current_user_id() );
         $documents  = $cleaner_id ? self::get_cleaner_verification_documents( $cleaner_id ) : array();
-        $fields     = self::get_document_fields();
+        $fields     = self::get_requested_document_fields();
 
         ob_start();
         ?>
@@ -693,7 +717,7 @@ class GB_Uploads {
             return;
         }
 
-        $allowed_fields = self::get_document_fields();
+        $allowed_fields = self::get_requested_document_fields();
         foreach ( array_keys( $allowed_fields ) as $field ) {
             if ( ! empty( $_FILES['gb_document']['name'][ $field ] ) ) {
                 $file = array(

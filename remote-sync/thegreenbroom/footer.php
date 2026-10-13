@@ -58,7 +58,6 @@ foreach ($gb_social_defs as $gb_key => $gb_def) {
             <ul class="gb-footer-links">
                 <li><a href="/what-cleaners-do">What Cleaners Do</a></li>
                 <li><a href="/the-green-broom-standard">The Green Broom Standard</a></li>
-                <li><a href="/how-we-do-it">How We Do It</a></li>
                 <li><a href="/eco-products">Eco Products</a></li>
                 <li><a href="/cleaner-listings">Find a Cleaner</a></li>
                 <li><a href="<?php echo esc_url($gb_blog_url); ?>">Eco Blog</a></li>

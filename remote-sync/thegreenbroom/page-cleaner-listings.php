@@ -550,6 +550,11 @@ if ($verified_body === '') {
     if ( function_exists( 'gb_render_pricing_panel' ) ) {
         gb_render_pricing_panel( 'customer' );
     }
+
+    // Then what makes the subscription worth it, before the search.
+    if ( function_exists( 'gb_render_difference_panel' ) ) {
+        gb_render_difference_panel( 'white' );
+    }
     ?>
 
     <section class="gb-dir-search" aria-labelledby="gb-dir-search-head">

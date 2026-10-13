@@ -1063,6 +1063,37 @@ function gb_apply_contact_defaults() {
     }
 }
 
+/**
+ * The time zone bookings are made in.
+ *
+ * Every date and time a customer picks is UK time - the platform is in
+ * Liverpool - and is stored as plain text ("2026-10-14", "09:00"). Turning
+ * one into a real moment, for a calendar invite, has to say so; reading it as
+ * UTC put every summer booking in people's calendars an hour late. The site's
+ * own setting is used once it is set to a real place; while it is still the
+ * WordPress default of UTC, London.
+ */
+function gb_site_timezone() {
+    $tz = wp_timezone();
+
+    if ( in_array( $tz->getName(), array( 'UTC', '+00:00', 'Etc/UTC' ), true ) ) {
+        return new DateTimeZone( 'Europe/London' );
+    }
+
+    return $tz;
+}
+
+/**
+ * A booking's date and time as a real Unix timestamp.
+ */
+function gb_booking_moment( $date, $time ) {
+    try {
+        return ( new DateTimeImmutable( trim( $date . ' ' . $time ), gb_site_timezone() ) )->getTimestamp();
+    } catch ( Exception $e ) {
+        return (int) strtotime( $date . ' ' . $time );
+    }
+}
+
 function gb_get_support_email() {
     $settings_id = (int) get_option( 'page_on_front' );
     $email = $settings_id ? sanitize_email( (string) get_post_meta( $settings_id, '_gb_support_email', true ) ) : '';
@@ -1539,14 +1570,29 @@ function gb_schedule_message_archive() {
 add_action( 'init', 'gb_schedule_message_archive' );
 
 /**
- * Whether a cleaner has completed mandatory verification: DBS + Government ID
- * + Proof of Address documents, their phone number, and two full references.
- * Returns array of missing item labels (empty array = complete).
+ * Whether a cleaner has completed mandatory verification: Government ID and
+ * DBS documents, their phone number, two full references and the signed
+ * Terms of Association. Returns array of missing item labels (empty array =
+ * complete).
+ *
+ * Proof of address used to be on this list. The client dropped it: what they
+ * ask for is photo ID, a Basic DBS and two verifiable character references.
+ * Anyone who already uploaded one is unaffected - the file is still viewable
+ * and is still destroyed on approval - it just no longer blocks anything.
+ *
+ * $context is 'approval' (the default, used by the manager's Approve action)
+ * or 'submission' (the cleaner's own Get Verified form). A submission must also
+ * say how the cleaner knows each referee and confirm they are not a relative.
+ * Approval deliberately does not hard-block on that: applicants who submitted
+ * before the question existed would be stuck in the queue with nothing a
+ * manager could do to move them, and the manager sees the answer (or that it
+ * was never asked) in the references panel and contacts referees before
+ * ticking the references check in any case.
  */
-function gb_cleaner_verification_missing( $cleaner_id ) {
+function gb_cleaner_verification_missing( $cleaner_id, $context = 'approval' ) {
     $missing = array();
 
-    $doc_labels = array( 'doc_id' => 'Government ID', 'doc_address' => 'Proof of Address', 'doc_dbs' => 'DBS Certificate' );
+    $doc_labels = array( 'doc_id' => 'Government ID', 'doc_dbs' => 'DBS Certificate' );
     if ( class_exists( 'GB_Uploads' ) && method_exists( 'GB_Uploads', 'get_cleaner_verification_document' ) ) {
         foreach ( $doc_labels as $field => $label ) {
             $doc = GB_Uploads::get_cleaner_verification_document( $cleaner_id, $field );
@@ -1565,6 +1611,16 @@ function gb_cleaner_verification_missing( $cleaner_id ) {
            && is_email( get_post_meta( $cleaner_id, "_gb_ref{$n}_email", true ) );
         if ( ! $ok ) {
             $missing[] = "Reference {$n}";
+            continue;
+        }
+        if ( $context === 'submission' ) {
+            $known = trim( (string) get_post_meta( $cleaner_id, "_gb_ref{$n}_relationship", true ) ) !== ''
+                  && get_post_meta( $cleaner_id, "_gb_ref{$n}_not_relative", true ) === '1';
+            if ( ! $known ) {
+                // Named so the cleaner can see which part is missing, rather
+                // than a bare "Reference 1" when the name and email are there.
+                $missing[] = "Reference {$n} (how you know them, and confirmation they are not a relative)";
+            }
         }
     }
 
@@ -2421,6 +2477,7 @@ require_once get_template_directory() . '/inc/anti-spam.php';
 require_once get_template_directory() . '/inc/outbox.php';
 require_once get_template_directory() . '/inc/email-render.php';
 require_once get_template_directory() . '/inc/email-selftest.php';
+require_once get_template_directory() . '/inc/stripe-selftest.php';
 require_once get_template_directory() . '/inc/cleaner-profiles.php';
 require_once get_template_directory() . '/inc/roles.php';
 require_once get_template_directory() . '/inc/post-types.php';
@@ -2449,7 +2506,7 @@ require_once get_template_directory() . '/inc/membership-checkout.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 18;
+const GB_MIGRATION_VERSION = 19;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2494,7 +2551,9 @@ function gb_run_one_time_migrations() {
         'gb_set_insurance_provided_by_platform',
         'gb_finish_standard_insurance_line',
         'gb_promote_ongoing_monitoring',
-        'gb_migrate_connect_accounts_to_test_mode'
+        'gb_migrate_connect_accounts_to_test_mode',
+        'gb_retire_how_we_do_it',
+        'gb_rename_listings_page'
     );
 
     foreach ( $migrations as $migration ) {
