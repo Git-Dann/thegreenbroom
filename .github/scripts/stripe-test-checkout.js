@@ -27,7 +27,9 @@ const url = process.argv[2];
   };
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    // Not 'networkidle': Stripe's page keeps background requests going, and
+    // waiting for them to stop can time out on an otherwise ready page.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // With more than one payment method switched on, the card form sits
     // behind an accordion button.

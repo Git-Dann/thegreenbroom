@@ -625,14 +625,15 @@ function gb_stripe_selftest_finish( $given ) {
     $ok      = true;
 
     // 1. Stripe told us about the payment, and the membership switched on.
-    $waited = gb_stripe_selftest_wait( 60, static function () use ( $user_id ) {
+    // Both waits together stay inside the host's 60-second gateway limit.
+    $waited = gb_stripe_selftest_wait( 25, static function () use ( $user_id ) {
         $m = gb_get_membership( $user_id );
         return isset( $m['status'] ) && $m['status'] === 'active';
     } );
     $membership = gb_get_membership( $user_id );
     $steps['membership_switched_on_by_webhook'] = $waited >= 0
         ? array( 'ok' => true, 'seconds' => $waited, 'plan' => $membership['plan'], 'renews' => $membership['expires'] )
-        : array( 'ok' => false, 'detail' => 'No webhook reached the site within 60 seconds, or it did not activate the membership. Membership reads: ' . wp_json_encode( $membership ) );
+        : array( 'ok' => false, 'detail' => 'No webhook reached the site within 25 seconds, or it did not activate the membership. Membership reads: ' . wp_json_encode( $membership ) );
     $ok = $ok && $waited >= 0;
 
     // 2. The subscription and its first invoice, from Stripe's side.
@@ -675,13 +676,26 @@ function gb_stripe_selftest_finish( $given ) {
         if ( is_wp_error( $cancelled ) ) {
             $steps['cancel_reaches_site'] = array( 'ok' => false, 'detail' => 'Stripe would not cancel: ' . $cancelled->get_error_message() );
         } else {
-            $waited = gb_stripe_selftest_wait( 45, static function () use ( $user_id ) {
+            $waited = gb_stripe_selftest_wait( 25, static function () use ( $user_id ) {
                 $m = gb_get_membership( $user_id );
                 return ! isset( $m['status'] ) || $m['status'] !== 'active';
             } );
             $steps['cancel_reaches_site'] = $waited >= 0
                 ? array( 'ok' => true, 'seconds' => $waited )
-                : array( 'ok' => false, 'detail' => 'Cancelled in Stripe, but the site still shows the membership as active after 45 seconds.' );
+                : array(
+                    'ok'     => false,
+                    'detail' => 'Cancelled in Stripe, but the site still shows the membership as active after 25 seconds.',
+                    // What the site recorded, to tell "the webhook never came"
+                    // (status still active) from "it came and was misread".
+                    'site_saw' => array(
+                        'stripe_status' => (string) get_user_meta( $user_id, '_gb_stripe_subscription_status', true ),
+                        'membership'    => gb_get_membership( $user_id ),
+                        'stripe_now'    => ( static function () use ( $sub_id ) {
+                            $s = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array(), 'GET' );
+                            return is_wp_error( $s ) ? $s->get_error_message() : ( $s['status'] ?? '' );
+                        } )(),
+                    ),
+                );
         }
         $ok = $ok && ! empty( $steps['cancel_reaches_site']['ok'] );
     }
