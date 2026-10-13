@@ -2505,6 +2505,27 @@ add_action( 'wp_login', function ( $user_login ) {
     }
 } );
 
+/*
+ * wp-login.php said "The username X is not registered" for a wrong username
+ * and something different for a wrong password, which tells a stranger which
+ * accounts exist. Both now get the one message /login/ already uses.
+ */
+add_filter( 'login_errors', function ( $message ) {
+    global $errors;
+
+    if ( ! ( $errors instanceof WP_Error ) ) {
+        return $message;
+    }
+
+    $codes = $errors->get_error_codes();
+
+    if ( array_intersect( $codes, array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
+        return 'Invalid username or password.';
+    }
+
+    return $message;
+} );
+
 /* ==========================================================================
    The rest of the theme's PHP, split by subject.
 
