@@ -342,6 +342,20 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
         return 'onboarding_incomplete';
     }
 
+    /*
+     * With "Require a paid cleaner listing" switched on, a cleaner whose
+     * listing subscription is not running in the current Stripe mode is
+     * hidden from the directory, and an old /book-now/?cleaner= link must not
+     * still take money for them (see inc/identity-guard.php).
+     *
+     * Asked last on purpose: the cleaner's own dashboard explains the payout
+     * reasons above, and those are the ones to fix first.
+     */
+    if (function_exists('gb_listing_gate_enabled') && gb_listing_gate_enabled()
+        && function_exists('gb_cleaner_listing_is_paid') && !gb_cleaner_listing_is_paid($cleaner_id)) {
+        return 'listing_inactive';
+    }
+
     return true;
 }
 
@@ -363,6 +377,10 @@ function gb_cleaner_booking_block_message($cleaner_id) {
 
     if ($reason === 'fully_booked') {
         return 'This cleaner is fully booked at the moment. Browse other cleaners in your area, or message them to ask when they have space.';
+    }
+
+    if ($reason === 'listing_inactive') {
+        return 'This cleaner is not taking bookings through The Green Broom at the moment. Browse other cleaners in your area, or get in touch and we will help.';
     }
 
     return 'This cleaner is not set up to take bookings online just yet. Browse other cleaners in your area, or get in touch and we will help.';
@@ -731,7 +749,13 @@ function gb_get_stripe_config() {
     ];
 }
 
-function gb_stripe_api_request($endpoint, $params = [], $method = 'POST') {
+/*
+ * $headers is optional and added to the request as given, for the few calls
+ * that need more than the defaults: a refund sends an Idempotency-Key so a
+ * double click or a retry can never refund twice (see inc/refunds.php).
+ * Authorization and Content-Type cannot be overridden through it.
+ */
+function gb_stripe_api_request($endpoint, $params = [], $method = 'POST', $headers = []) {
     $config = gb_require_stripe_config(['secret_key']);
     if (is_wp_error($config)) {
         return $config;
@@ -742,10 +766,10 @@ function gb_stripe_api_request($endpoint, $params = [], $method = 'POST') {
     $request_args = [
         'method'  => $method,
         'timeout' => 30,
-        'headers' => [
+        'headers' => array_merge(is_array($headers) ? $headers : [], [
             'Authorization' => 'Bearer ' . $config['secret_key'],
             'Content-Type'  => 'application/x-www-form-urlencoded',
-        ],
+        ]),
     ];
 
     if (!empty($params) && $method === 'GET') {
@@ -897,6 +921,11 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
     update_post_meta($booking_id, '_gb_stripe_checkout_session_id', sanitize_text_field($session['id']));
     update_post_meta($booking_id, '_gb_payment_status', $payment_status ?: 'pending');
     update_post_meta($booking_id, '_gb_stripe_payment_intent', $payment_intent_id);
+    // Which Stripe mode took the money. Payment ids only exist in that mode,
+    // so a refund must never be attempted in the other (inc/refunds.php).
+    if (isset($session['livemode'])) {
+        update_post_meta($booking_id, '_gb_stripe_mode', $session['livemode'] ? 'live' : 'test');
+    }
 
     if ($payment_intent_id !== '') {
         $payment_intent = gb_stripe_api_request('payment_intents/' . rawurlencode($payment_intent_id), [], 'GET');
@@ -1705,6 +1734,13 @@ function gb_handle_stripe_webhook() {
     // events it cares about for itself.
     if (function_exists('gb_membership_handle_stripe_event')) {
         gb_membership_handle_stripe_event($event_type, $event_object);
+    }
+
+    // Booking refunds (charge.refunded, refund.updated, refund.failed), so a
+    // refund made by hand in the Stripe dashboard shows on the booking too.
+    // inc/refunds.php; it never fails the webhook.
+    if (function_exists('gb_refund_handle_stripe_event')) {
+        gb_refund_handle_stripe_event($event_type, $event_object);
     }
 
     status_header(200);

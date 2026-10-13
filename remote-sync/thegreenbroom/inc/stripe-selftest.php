@@ -265,6 +265,7 @@ function gb_stripe_selftest_webhooks( $secret ) {
         'checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed',
         'checkout.session.expired', 'customer.subscription.created', 'customer.subscription.updated',
         'customer.subscription.deleted', 'customer.subscription.trial_will_end', 'invoice.paid',
+        'charge.refunded',
         'invoice.payment_failed',
     );
     $found    = array();

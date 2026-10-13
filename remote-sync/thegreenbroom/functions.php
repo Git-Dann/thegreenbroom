@@ -688,6 +688,13 @@ function gb_apply_content_audit_fixes() {
  * still printing its own comment form on them - an open, unmoderated posting
  * box on a public profile page. The platform has its own review system; this
  * was only ever a spam target.
+ *
+ * Deliberately still closed for gb_cleaner now that reviews are open to the
+ * public again. Reviews come in through the form and handler in
+ * inc/reviews.php, which hold every one for a manager's approval and run the
+ * anti-spam checks; wp-comments-post.php does neither, so it stays shut.
+ * wp_insert_comment() does not consult this filter, so it does not get in
+ * the way of that handler.
  */
 function gb_close_comments_on_directory_types( $open, $post_id ) {
     $type = get_post_type( $post_id );
@@ -2698,6 +2705,7 @@ require_once get_template_directory() . '/inc/email-render.php';
 require_once get_template_directory() . '/inc/email-selftest.php';
 require_once get_template_directory() . '/inc/stripe-selftest.php';
 require_once get_template_directory() . '/inc/cleaner-profiles.php';
+require_once get_template_directory() . '/inc/reviews.php';
 require_once get_template_directory() . '/inc/roles.php';
 require_once get_template_directory() . '/inc/post-types.php';
 require_once get_template_directory() . '/inc/bookings.php';
@@ -2705,11 +2713,13 @@ require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
 require_once get_template_directory() . '/inc/connect-modes.php';
 require_once get_template_directory() . '/inc/stripe.php';
+require_once get_template_directory() . '/inc/refunds.php';
 require_once get_template_directory() . '/inc/cleaner-availability.php';
 require_once get_template_directory() . '/inc/cleaner-stats.php';
 require_once get_template_directory() . '/inc/pricing-panels.php';
 require_once get_template_directory() . '/inc/stripe-subscriptions.php';
 require_once get_template_directory() . '/inc/membership-checkout.php';
+require_once get_template_directory() . '/inc/identity-guard.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS

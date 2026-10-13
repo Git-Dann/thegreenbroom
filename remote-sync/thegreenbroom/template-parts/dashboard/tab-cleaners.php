@@ -187,6 +187,19 @@
 
                 <?php
                 /*
+                 * What Stripe says about this cleaner's listing in the mode the
+                 * site is in now (the Account Type above is not tied to a mode,
+                 * so a test-mode "active" would still read as active once live),
+                 * whether they have had the free months, and any sign that this
+                 * is the same person as another cleaner account.
+                 */
+                if ($pid && function_exists('gb_identity_render_manager_panel')) {
+                    gb_identity_render_manager_panel($pid);
+                }
+                ?>
+
+                <?php
+                /*
                  * The three checks the public Green Broom Verified badge stands
                  * on. Recorded explicitly here because the badge is a promise to
                  * customers: it should reflect a decision a manager made, not
@@ -599,8 +612,19 @@
                         <?php if (!$thumb): ?>
                             <div style="font-size:10.5px; color:#b45309; margin-top:2px;">No profile photo</div>
                         <?php endif; ?>
+                        <?php if (function_exists('gb_identity_render_list_badges')) { gb_identity_render_list_badges($cid); } ?>
                     </td>
-                    <td><span class="<?php echo ($sub === 'active') ? 'pill-active' : 'pill-trial'; ?>"><?php echo esc_html($sub); ?></span></td>
+                    <td>
+                        <?php
+                        // The listing as Stripe has it in the current mode, not
+                        // the hand-set Account Type, which is not tied to a mode.
+                        if (function_exists('gb_identity_render_listing_pill')) {
+                            gb_identity_render_listing_pill($cid);
+                        } else {
+                            ?><span class="<?php echo ($sub === 'active') ? 'pill-active' : 'pill-trial'; ?>"><?php echo esc_html($sub); ?></span><?php
+                        }
+                        ?>
+                    </td>
                     <td style="font-weight:700; color:#0f172a;">£<?php echo esc_html($rate); ?>/hr</td>
                     <td>
                         <?php if ($connect_status === 'active' && $charges_enabled): ?>

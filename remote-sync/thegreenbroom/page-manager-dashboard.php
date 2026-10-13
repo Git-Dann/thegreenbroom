@@ -1125,6 +1125,18 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         <a href="?tab=overview" class="gb-nav-item <?php echo $tab=='overview'||$tab=='dashboard'?'active':''; ?>"><span class="dashicons dashicons-dashboard"></span> Dashboard</a>
         <a href="?tab=bookings" class="gb-nav-item <?php echo $tab=='bookings'?'active':''; ?>"><span class="dashicons dashicons-calendar-alt"></span> Bookings</a>
         <a href="?tab=cleaners" class="gb-nav-item <?php echo $tab=='cleaners'?'active':''; ?>"><span class="dashicons dashicons-id"></span> Manage Cleaners</a>
+        <?php
+        /* Reviews wait here for approval (inc/reviews.php). The badge is the
+           number waiting, so a manager sees there is something to do from
+           any tab. Spam is not counted: it never joins the queue. */
+        $gb_pending_reviews = function_exists('gb_get_pending_review_count') ? gb_get_pending_review_count() : 0;
+        ?>
+        <a href="?tab=reviews" class="gb-nav-item <?php echo $tab=='reviews'?'active':''; ?>">
+            <span class="dashicons dashicons-star-filled"></span> Reviews
+            <?php if ($gb_pending_reviews > 0): ?>
+                <span class="gb-nav-badge" style="margin-left:auto; background:#f59e0b; color:#0f172a; font-size:11px; font-weight:800; line-height:1; padding:4px 8px; border-radius:999px;" title="<?php echo esc_attr($gb_pending_reviews . ' waiting for approval'); ?>"><?php echo (int) $gb_pending_reviews; ?><span class="screen-reader-text" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);"> waiting for approval</span></span>
+            <?php endif; ?>
+        </a>
         <a href="?tab=members" class="gb-nav-item <?php echo $tab=='members'?'active':''; ?>"><span class="dashicons dashicons-groups"></span> Members</a>
         <a href="?tab=pages" class="gb-nav-item <?php echo $tab=='pages'?'active':''; ?>"><span class="dashicons dashicons-welcome-write-blog"></span> Content</a>
         <a href="?tab=eco-products" class="gb-nav-item <?php echo $tab=='eco-products'?'active':''; ?>"><span class="dashicons dashicons-carrot"></span> Eco Products</a>

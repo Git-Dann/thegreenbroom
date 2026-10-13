@@ -27,6 +27,16 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
         } elseif ( email_exists($email) ) {
             gb_record_rate_limit_hit('register', HOUR_IN_SECONDS, $email);
             $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">⚠️ Email already registered.</div>';
+        } elseif ( $type === 'cleaner' && function_exists('gb_identity_email_belongs_to_account') && gb_identity_email_belongs_to_account($email) ) {
+            /*
+             * The same inbox written differently: J.Smith@gmail.com,
+             * jsmith+2@googlemail.com and jsmith@gmail.com all deliver to one
+             * person. A second cleaner account from it was how the free three
+             * months were being taken again, so it is refused here and they are
+             * pointed at the account they already have.
+             */
+            gb_record_rate_limit_hit('register', HOUR_IN_SECONDS, $email);
+            $msg = '<div class="gb-badge gb-badge-danger" style="display:block; margin-bottom:15px;">It looks like you already have an account. <a href="' . esc_url(home_url('/login/')) . '">Log in</a> or <a href="' . esc_url(home_url('/lost-password/')) . '">reset your password</a>.</div>';
         } else {
             gb_record_rate_limit_hit('register', HOUR_IN_SECONDS, $email);
             $uid = wp_create_user($email, $pass, $email);
@@ -54,6 +64,12 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
                     $pid = wp_insert_post(['post_title'=>$name, 'post_type'=>'gb_cleaner', 'post_status'=>'draft', 'post_author'=>$uid]);
                     update_post_meta($pid, 'hourly_rate', '15');
                     gb_sync_cleaner_verification_state($pid, 'draft');
+                    // Fingerprint them (sign-up IP included, which is only
+                    // known now) and flag a likely second account. Allowed
+                    // through either way: see inc/identity-guard.php.
+                    if (function_exists('gb_identity_on_cleaner_registered')) {
+                        gb_identity_on_cleaner_registered($uid);
+                    }
                     wp_set_current_user($uid); wp_set_auth_cookie($uid);
                     $verification_state = gb_prepare_new_user_email_verification($uid, home_url('/verify-profile'));
                     wp_safe_redirect($verification_state['redirect']); exit;

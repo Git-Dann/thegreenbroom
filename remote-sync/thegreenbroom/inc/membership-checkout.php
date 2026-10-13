@@ -243,10 +243,53 @@ function gb_membership_create_checkout_session( $user_id, $plan_key ) {
         'metadata[gb_plan_key]'   => $plan_key,
         'subscription_data[metadata][gb_user_id]'  => $user_id,
         'subscription_data[metadata][gb_plan_key]' => $plan_key,
+        /*
+         * Always take a card, trial or not. It is Stripe's default for a
+         * subscription checkout, but saying so means a later change of
+         * default cannot quietly turn the free months into a card-free sign
+         * up, and the card is what inc/identity-guard.php checks afterwards.
+         */
+        'payment_method_collection' => 'always',
     );
 
-    if ( (int) $plan['trial_days'] > 0 ) {
-        $params['subscription_data[trial_period_days]'] = (int) $plan['trial_days'];
+    /*
+     * One free trial per person, not one per checkout.
+     *
+     * Every checkout used to carry the free three months, so cancelling and
+     * subscribing again, or signing up again with jsmith+2@gmail.com, got
+     * another three months each time. The trial is now offered only when
+     * none of this person's fingerprints (email, phone, name and area, sign
+     * up details) are in the free trial registry, the account is not flagged
+     * as a possible duplicate, and neither this site nor Stripe has a cleaner
+     * subscription on record for them. Otherwise the listing is charged from
+     * today, and Stripe's page says why so it is not a surprise.
+     */
+    $gb_trial_days = (int) $plan['trial_days'];
+    $gb_trial_note = '';
+
+    if ( $gb_trial_days > 0 && $plan['audience'] === 'cleaner' && function_exists( 'gb_identity_trial_decision' ) ) {
+        $gb_decision = gb_identity_trial_decision( $user_id, true );
+
+        update_user_meta( $user_id, '_gb_trial_decision', array(
+            'at'     => current_time( 'mysql' ),
+            'reason' => $gb_decision['reason'],
+            'mode'   => gb_stripe_site_mode(),
+        ) );
+
+        if ( ! $gb_decision['eligible'] ) {
+            $gb_trial_days = 0;
+            $gb_trial_note = gb_identity_trial_used_message();
+        }
+
+        $params['subscription_data[metadata][gb_trial]'] = $gb_decision['eligible'] ? 'granted' : 'refused_' . $gb_decision['reason'];
+    }
+
+    if ( $gb_trial_days > 0 ) {
+        $params['subscription_data[trial_period_days]'] = $gb_trial_days;
+    }
+
+    if ( $gb_trial_note !== '' ) {
+        $params['custom_text[submit][message]'] = $gb_trial_note;
     }
 
     $response = gb_stripe_api_request( 'checkout/sessions', $params );
@@ -555,6 +598,13 @@ function gb_membership_apply_subscription( array $subscription ) {
     if ( $plan['audience'] === 'cleaner' ) {
         gb_membership_apply_cleaner_listing( $user_id, $status, $expires, $subscription, $cancels_at );
 
+        // Record the free trial against this person, and end it at once if
+        // the card has already had one on another account. Once per
+        // subscription, however many events arrive.
+        if ( function_exists( 'gb_identity_check_cleaner_subscription' ) ) {
+            gb_identity_check_cleaner_subscription( $subscription );
+        }
+
         return;
     }
 
@@ -781,6 +831,12 @@ function gb_membership_handle_stripe_event( $event_type, $event_object ) {
         case 'checkout.session.async_payment_succeeded':
             if ( ! empty( $event_object['mode'] ) && $event_object['mode'] === 'subscription' && ! empty( $event_object['subscription'] ) ) {
                 gb_membership_sync_subscription( $event_object['subscription'] );
+
+                // The session carries the SetupIntent that took the card on a
+                // free trial, which the subscription may not show yet.
+                if ( function_exists( 'gb_identity_check_after_checkout' ) ) {
+                    gb_identity_check_after_checkout( $event_object );
+                }
             }
             break;
 
@@ -833,8 +889,15 @@ function gb_membership_handle_stripe_event( $event_type, $event_object ) {
  * "we are setting it up" is honest either way.
  */
 function gb_membership_return_notice() {
+    /*
+     * A cleaner who has had the free months already is told before they
+     * press the button, not after: the panel above it still advertises three
+     * months free, and finding out on Stripe's page would feel like a trick.
+     */
+    $trial_note = function_exists( 'gb_identity_trial_panel_notice' ) ? gb_identity_trial_panel_notice() : '';
+
     if ( empty( $_GET['gb_membership'] ) ) {
-        return '';
+        return $trial_note;
     }
 
     $result = sanitize_key( wp_unslash( $_GET['gb_membership'] ) );
@@ -848,12 +911,12 @@ function gb_membership_return_notice() {
     );
 
     if ( ! isset( $messages[ $result ] ) ) {
-        return '';
+        return $trial_note;
     }
 
     list( $tone, $text ) = $messages[ $result ];
 
-    return '<div class="gb-membership-notice gb-membership-notice-' . esc_attr( $tone ) . '">' . esc_html( $text ) . '</div>';
+    return $trial_note . '<div class="gb-membership-notice gb-membership-notice-' . esc_attr( $tone ) . '">' . esc_html( $text ) . '</div>';
 }
 
 /* --------------------------------------------------------------------------

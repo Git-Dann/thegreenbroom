@@ -59,6 +59,19 @@ if ($booking_id) {
             $uses_stripe = get_post_meta($booking_id, '_gb_payment_provider', true) === 'stripe';
             $is_paid = !$uses_stripe || $payment_status === 'paid';
 
+            // A cancelled booking opened again from an email or the history:
+            // say so, and say what came back, rather than "Booking Confirmed!".
+            $is_cancelled   = get_post_status($booking_id) === 'trash' || get_post_meta($booking_id, '_gb_booking_status', true) === 'cancelled';
+            $refunded_gbp   = (float) get_post_meta($booking_id, '_gb_refund_amount_gbp', true);
+            $refund_state   = (string) get_post_meta($booking_id, '_gb_refund_status', true);
+            $refund_message = '';
+            if ($refunded_gbp > 0) {
+                $refund_message = ($refund_state === 'refunded' ? 'This booking has been refunded in full: ' : 'This booking has been partly refunded: ')
+                    . '£' . number_format($refunded_gbp, 2) . ' has gone back to your card. Refunds usually take 5 to 10 working days to show.';
+            } elseif ($is_cancelled && $refund_state === 'failed') {
+                $refund_message = 'Your refund is being sorted out by our team. You do not need to do anything.';
+            }
+
             if ($uses_stripe && !$is_paid && empty($payment_error) && empty($payment_notice)) {
                 $payment_notice = 'Payment is still processing. Your slot is held pending confirmation.';
             }
@@ -179,9 +192,9 @@ $b_none       = gb_page_text( '_gb_bs_not_found', 'No Booking Found', 'booking-s
     <div class="gb-success-card">
         
         <?php if($valid): ?>
-            <div class="gb-success-header" style="background:<?php echo $is_paid ? '#10b981' : '#f59e0b'; ?>;">
-                <div class="gb-icon-circle">✓</div>
-                <h1 style="margin:0; font-size:24px; font-weight:800;"><?php echo esc_html($is_paid ? $b_paid_title : $b_pend_title); ?></h1>
+            <div class="gb-success-header" style="background:<?php echo $is_cancelled ? '#64748b' : ($is_paid ? '#10b981' : '#f59e0b'); ?>;">
+                <div class="gb-icon-circle" style="<?php echo $is_cancelled ? 'color:#64748b;' : ''; ?>"><?php echo $is_cancelled ? '&times;' : '✓'; ?></div>
+                <h1 style="margin:0; font-size:24px; font-weight:800;"><?php echo esc_html($is_cancelled ? 'Booking Cancelled' : ($is_paid ? $b_paid_title : $b_pend_title)); ?></h1>
                 <p style="margin:10px 0 0; opacity:0.9;"><?php echo esc_html(str_replace('{name}', $name, $b_thanks)); ?></p>
             </div>
             
@@ -196,15 +209,24 @@ $b_none       = gb_page_text( '_gb_bs_not_found', 'No Booking Found', 'booking-s
                     </div>
                 <?php endif; ?>
 
+                <?php if ($refund_message !== ''): ?>
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:10px; padding:12px; margin-bottom:16px; font-size:13px;">
+                        <?php echo esc_html($refund_message); ?>
+                    </div>
+                <?php endif; ?>
+
                 <div class="gb-details-list">
                     <div class="gb-detail-row"><span>Service</span> <strong><?php echo esc_html($service); ?></strong></div>
                     <div class="gb-detail-row"><span>Professional</span> <strong><?php echo esc_html($cleaner_name); ?></strong></div>
                     <div class="gb-detail-row"><span>Date</span> <strong><?php echo date('l, M jS', strtotime($date)); ?></strong></div>
                     <div class="gb-detail-row"><span>Time</span> <strong><?php echo date('g:i A', strtotime($time)); ?> – <?php echo esc_html($end_time_display); ?></strong></div>
                     <div class="gb-detail-row"><span>Payment</span> <strong><?php echo $is_paid ? 'Paid' : 'Pending'; ?></strong></div>
+                    <?php if ($refunded_gbp > 0): ?>
+                        <div class="gb-detail-row"><span>Refunded</span> <strong>£<?php echo esc_html(number_format($refunded_gbp, 2)); ?></strong></div>
+                    <?php endif; ?>
                 </div>
 
-                <?php if ($is_paid): ?>
+                <?php if ($is_paid && !$is_cancelled): ?>
                     <div class="gb-cal-grid">
                         <a href="<?php echo esc_url($google_link); ?>" target="_blank" class="gb-btn-cal"><span class="dashicons dashicons-google"></span> Google Cal</a>
                         <a href="<?php echo esc_url(add_query_arg(['bid' => $booking_id, 't' => $access_token, 'download_ics' => 1], home_url('/booking-success'))); ?>" class="gb-btn-cal"><span class="dashicons dashicons-calendar-alt"></span> iCal</a>
