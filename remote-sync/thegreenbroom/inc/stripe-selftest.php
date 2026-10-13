@@ -220,6 +220,8 @@ function gb_stripe_selftest_check() {
         'used'            => function_exists( 'gb_get_request_ip' ) ? gb_get_request_ip() : '',
     );
 
+    $report['webhooks_received'] = array_slice( (array) get_option( 'gb_stripe_webhook_log', array() ), 0, 15 );
+
     $report['cleaner_payouts'] = gb_stripe_selftest_connect();
     $report['memberships']     = gb_stripe_selftest_membership_counts();
     $report['problems']        = gb_stripe_selftest_problems( $report );

@@ -1620,7 +1620,40 @@ function gb_extract_connected_account_id_from_event($event) {
     return '';
 }
 
+/**
+ * The last 25 webhook requests: when, which event, how it ended, how long it
+ * took, and any fatal error. Stripe's own delivery history is only in its
+ * dashboard, so without this a webhook that fails on the live server leaves
+ * no trace the site can report (the Stripe self-test prints it).
+ */
+function gb_stripe_webhook_log_start() {
+    $GLOBALS['gb_webhook_log'] = ['at' => time(), 'start' => microtime(true), 'type' => '', 'id' => ''];
+
+    register_shutdown_function(function () {
+        if (empty($GLOBALS['gb_webhook_log'])) {
+            return;
+        }
+        $entry = $GLOBALS['gb_webhook_log'];
+        $fatal = error_get_last();
+        $row = [
+            'at'     => gmdate('Y-m-d H:i:s', $entry['at']),
+            'type'   => $entry['type'],
+            'id'     => $entry['id'],
+            'status' => (int) http_response_code(),
+            'ms'     => (int) round((microtime(true) - $entry['start']) * 1000),
+            'fatal'  => ($fatal && in_array($fatal['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true))
+                ? $fatal['message'] . ' (' . basename($fatal['file']) . ':' . $fatal['line'] . ')'
+                : '',
+        ];
+        $log = get_option('gb_stripe_webhook_log', []);
+        $log = is_array($log) ? $log : [];
+        array_unshift($log, $row);
+        update_option('gb_stripe_webhook_log', array_slice($log, 0, 25), false);
+    });
+}
+
 function gb_handle_stripe_webhook() {
+    gb_stripe_webhook_log_start();
     $config = gb_get_stripe_config();
     $payload = file_get_contents('php://input');
     $signature = isset($_SERVER['HTTP_STRIPE_SIGNATURE']) ? $_SERVER['HTTP_STRIPE_SIGNATURE'] : '';
@@ -1660,6 +1693,8 @@ function gb_handle_stripe_webhook() {
     }
 
     $event_type = sanitize_text_field((string) $event['type']);
+    $GLOBALS['gb_webhook_log']['type'] = $event_type;
+    $GLOBALS['gb_webhook_log']['id']   = isset($event['id']) ? sanitize_text_field((string) $event['id']) : '';
     $event_object = isset($event['data']['object']) && is_array($event['data']['object']) ? $event['data']['object'] : null;
 
     // Connect v2 thin events: fetch and sync account status so dashboard stays current.
