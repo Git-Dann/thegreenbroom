@@ -35,6 +35,8 @@ get_header();
     $inbox_notice = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
     if ($inbox_notice === 'reply_sent'): ?>
         <div style="background:#f0fdf4; border:1px solid #dcfce7; color:#166534; padding:14px 16px; border-radius:8px; margin-bottom:16px;">✅ Reply sent and marked as replied.</div>
+    <?php elseif ($inbox_notice === 'reply_queued'): ?>
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Reply saved and marked as replied. The email service did not take it just now, so it is queued and will be retried automatically. There is no need to send it again.</div>
     <?php elseif ($inbox_notice === 'replied_nomail'): ?>
         <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Marked as replied, but the email could not be sent (no valid sender email, or mail is not configured yet).</div>
     <?php elseif ($inbox_notice === 'reply_error'): ?>

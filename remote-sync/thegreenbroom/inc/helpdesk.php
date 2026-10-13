@@ -229,6 +229,8 @@ function gb_password_notice_html() {
  * NOTE: delivery still depends on wp_mail being backed by a working mail
  * service. wp_mail() can report success even when the host silently drops the
  * message, so a "reply_sent" flag means "handed to wp_mail", not "delivered".
+ * "reply_queued" means every route refused it on the first try and the email
+ * queue will keep trying it, so there is no need to reply again.
  */
 add_action('init', function () {
     if (!isset($_POST['gb_reply_action']) || $_POST['gb_reply_action'] !== 'reply_message') {
@@ -295,7 +297,9 @@ add_action('init', function () {
             $reply_to = function_exists('gb_get_support_email') ? gb_get_support_email() : get_option('admin_email');
         }
 
-        $subject = 'Re: ' . get_the_title($mid);
+        // The raw title, not get_the_title(): that one is dressed for a web
+        // page, so "Can't" became "Can&#8217;t" in the customer's inbox.
+        $subject = 'Re: ' . html_entity_decode((string) get_post_field('post_title', $mid), ENT_QUOTES, 'UTF-8');
         $body = $reply_body . "\n\n—\n" . $from_name;
         $from_email = function_exists('gb_get_email_from_address') ? gb_get_email_from_address() : get_option('admin_email');
         $headers = ['From: ' . $from_name . ' <' . $from_email . '>'];
@@ -316,10 +320,17 @@ add_action('init', function () {
         );
     }
 
+    /*
+     * Every route refused it just now, but it is in the queue and will be
+     * sent automatically. That is not "could not be sent": told that, the
+     * manager replies again, and the customer ends up with both.
+     */
+    $queued = !$sent && is_email($to) && function_exists('gb_outbox_last_status') && gb_outbox_last_status() === 'retrying';
+
     update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
     update_post_meta($mid, '_gb_reply_body', $reply_body);
 
-    $bounce($sent ? 'reply_sent' : 'replied_nomail');
+    $bounce($sent ? 'reply_sent' : ($queued ? 'reply_queued' : 'replied_nomail'));
 }, 5);
 
 /**

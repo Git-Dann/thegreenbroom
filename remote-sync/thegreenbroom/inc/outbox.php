@@ -36,6 +36,7 @@ const GB_OUTBOX_DB_VERSION   = 2; // 2: Brevo message id and delivery outcome.
 const GB_OUTBOX_MAX_ATTEMPTS = 5;   // The first send plus four retries.
 const GB_OUTBOX_KEEP_DAYS    = 30;  // How long the log keeps a line about each email.
 const GB_OUTBOX_PAYLOAD_HOURS = 48; // How long a failed email's content is kept for resending.
+const GB_OUTBOX_STUCK_MINUTES = 15; // A line at "sending" this long belongs to a request that died.
 
 /**
  * Gaps between attempts, after the first failure, the second, and so on.
@@ -491,6 +492,42 @@ function gb_outbox_try_backup_route( $pre, $atts ) {
 }
 add_filter( 'pre_wp_mail', 'gb_outbox_try_backup_route', 20, 2 );
 
+/**
+ * The last word on pre_wp_mail: close a line somebody else's filter left open.
+ *
+ * Every route in this chain closes its own line before it stops wp_mail. But
+ * any plugin can answer pre_wp_mail as well, and when one does, wp_mail stops
+ * there: neither the success hook nor the failure hook fires, and the line
+ * would sit at "sending" with its content still attached. The queue then
+ * takes it for a send that died half way, tries again, the other filter
+ * answers again, and round it goes. So whatever that filter said is written
+ * down here, as the outcome of this attempt.
+ *
+ * Only the outer send is closed here. The backup mailbox attempt runs inside
+ * it, and its result is the outer send's business.
+ */
+function gb_outbox_close_short_circuit( $pre, $atts ) {
+    if ( $pre === null || ! empty( $GLOBALS['gb_outbox_inner'] ) || empty( $GLOBALS['gb_outbox_current'] ) ) {
+        return $pre;
+    }
+
+    $id = (int) $GLOBALS['gb_outbox_current'];
+    unset( $GLOBALS['gb_outbox_current'] );
+
+    if ( $pre ) {
+        // Said it was sent. There is no way to check, and sending it again
+        // would risk a second copy, so take its word.
+        gb_outbox_mark_sent( $id, 'other' );
+    } else {
+        $message = 'Another plugin on the site stopped this email being sent.';
+        gb_outbox_note_error( $id, 'other', $message );
+        gb_outbox_mark_failed( $id, $message );
+    }
+
+    return $pre;
+}
+add_filter( 'pre_wp_mail', 'gb_outbox_close_short_circuit', PHP_INT_MAX, 2 );
+
 add_action( 'wp_mail_succeeded', function ( $mail_data ) {
     $id = ! empty( $GLOBALS['gb_outbox_current'] ) ? (int) $GLOBALS['gb_outbox_current'] : 0;
 
@@ -811,7 +848,70 @@ function gb_backup_smtp_diagnose() {
    -------------------------------------------------------------------------- */
 
 /**
+ * Has this line sat at "sending" so long that whatever was sending it died?
+ *
+ * The same test the queue uses to pick such lines up, so the Resend button
+ * and the queue agree on when a send has been abandoned.
+ */
+function gb_outbox_is_stuck( $row ) {
+    if ( ! is_object( $row ) || ! isset( $row->status ) || $row->status !== 'sending' ) {
+        return false;
+    }
+
+    $updated = strtotime( (string) $row->updated_at . ' UTC' );
+
+    return $updated && $updated < time() - GB_OUTBOX_STUCK_MINUTES * MINUTE_IN_SECONDS;
+}
+
+/**
+ * Take a queued email for sending, so that nothing else sends it as well.
+ *
+ * The queue can be worked from several places at once: WP-cron, the end of
+ * an ordinary page load, the Resend button and a delivery report from Brevo.
+ * Reading the line and then writing "sending" left a gap in which two of
+ * them could both see "retrying" and both send it, and the customer got two
+ * copies. The lock on the queue does not close that gap either, because
+ * reading it and setting it are two separate steps too.
+ *
+ * This is one UPDATE that only changes the line if it is still waiting, and
+ * the database lets exactly one caller do that. Whoever changed it sends it;
+ * everybody else leaves it alone. The attempt is counted in the same step.
+ *
+ * A line is only taken from "sending" once it has been stuck there long
+ * enough that the request sending it must have died.
+ *
+ * @return bool Whether this caller now owns the send.
+ */
+function gb_outbox_claim( $id ) {
+    $id = (int) $id;
+
+    if ( $id < 1 || ! gb_outbox_ready() ) {
+        return false;
+    }
+
+    global $wpdb;
+
+    $changed = $wpdb->query( $wpdb->prepare(
+        'UPDATE ' . gb_outbox_table() . "
+            SET status = 'sending', attempts = attempts + 1, next_attempt_at = NULL, updated_at = %s
+          WHERE id = %d
+            AND payload IS NOT NULL
+            AND ( status IN ('retrying','dead') OR ( status = 'sending' AND updated_at < %s ) )",
+        gb_outbox_now(),
+        $id,
+        gb_outbox_now( -GB_OUTBOX_STUCK_MINUTES * MINUTE_IN_SECONDS )
+    ) );
+
+    return (int) $changed === 1;
+}
+
+/**
  * Send one queued email again, through the whole chain.
+ *
+ * Only a line that is waiting (retrying), has been given up on (dead) or is
+ * stuck at sending can be sent again, and only by one caller at a time: see
+ * gb_outbox_claim(). Anything else, including a line another request is
+ * sending right now, is left alone and reported as not sent by this call.
  *
  * @return bool Whether it went this time.
  */
@@ -831,10 +931,9 @@ function gb_outbox_retry_one( $id, $skip_brevo = false ) {
         return false;
     }
 
-    gb_outbox_update( $id, array(
-        'status'   => 'sending',
-        'attempts' => (int) $row->attempts + 1,
-    ) );
+    if ( ! gb_outbox_claim( $id ) ) {
+        return false;
+    }
 
     $GLOBALS['gb_outbox_retry'] = (int) $id;
     if ( $skip_brevo ) {
@@ -861,7 +960,17 @@ function gb_outbox_process_queue( $limit = 10 ) {
         return;
     }
 
-    // One runner at a time. A lock that outlives its runner expires by itself.
+    // Alerts held back by the throttle go out once it lifts, even if nothing
+    // new has gone wrong since. See the alert sender below.
+    gb_outbox_release_held_alerts();
+
+    /*
+     * One runner at a time, mostly. A lock that outlives its runner expires
+     * by itself. Reading and setting it are two steps, so two runners can
+     * still both get past it now and then; that only costs a little work,
+     * because each email is claimed by exactly one of them before it is sent
+     * (gb_outbox_claim).
+     */
     if ( get_transient( 'gb_outbox_lock' ) ) {
         return;
     }
@@ -869,14 +978,48 @@ function gb_outbox_process_queue( $limit = 10 ) {
 
     global $wpdb;
     $table = gb_outbox_table();
+    $stuck = gb_outbox_now( -GB_OUTBOX_STUCK_MINUTES * MINUTE_IN_SECONDS );
+
+    /*
+     * A line that has used all its attempts is not sent again automatically,
+     * however it got here. The usual way is a send that keeps being cut short
+     * the same way, for instance by another plugin's mail filter, so that
+     * neither "sent" nor "failed" is ever recorded: without this it would be
+     * picked up as stuck, tried, cut short and picked up again for ever. It
+     * stays resendable by hand from the dashboard.
+     */
+    $spent = $wpdb->get_results( $wpdb->prepare(
+        "SELECT id, status, kind, subject, to_email, attempts FROM {$table}
+          WHERE payload IS NOT NULL AND attempts >= %d
+            AND ( status = 'retrying' OR ( status = 'sending' AND updated_at < %s ) )",
+        GB_OUTBOX_MAX_ATTEMPTS,
+        $stuck
+    ) );
+    foreach ( (array) $spent as $row ) {
+        // Only if it is still as found, so a send that has just started is left be.
+        $given_up = $wpdb->query( $wpdb->prepare(
+            "UPDATE {$table} SET status = 'dead', next_attempt_at = NULL, updated_at = %s WHERE id = %d AND status = %s",
+            gb_outbox_now(),
+            (int) $row->id,
+            $row->status
+        ) );
+        if ( (int) $given_up !== 1 ) {
+            continue;
+        }
+        gb_outbox_note_error( (int) $row->id, 'queue', 'Stopped after ' . (int) $row->attempts . ' attempts without a clear result.' );
+        if ( ! in_array( $row->kind, array( 'alert', 'test' ), true ) ) {
+            gb_outbox_queue_alert( 'An email was stopped after ' . (int) $row->attempts . ' attempts without a clear result: "' . $row->subject . '" to ' . $row->to_email . '.' );
+        }
+    }
 
     // A request that died half way through a send leaves a line stuck at
     // "sending" with its content still attached. Pick those up too.
     $wpdb->query( $wpdb->prepare(
         "UPDATE {$table} SET status = 'retrying', next_attempt_at = %s
-          WHERE status = 'sending' AND payload IS NOT NULL AND updated_at < %s",
+          WHERE status = 'sending' AND payload IS NOT NULL AND updated_at < %s AND attempts < %d",
         gb_outbox_now(),
-        gb_outbox_now( -15 * MINUTE_IN_SECONDS )
+        $stuck,
+        GB_OUTBOX_MAX_ATTEMPTS
     ) );
 
     $ids = $wpdb->get_col( $wpdb->prepare(
@@ -958,8 +1101,8 @@ function gb_outbox_health_check() {
     if ( function_exists( 'gb_is_brevo_configured' ) && gb_is_brevo_configured() ) {
         $result = gb_brevo_api_request( 'account' );
         $health['brevo'] = is_wp_error( $result )
-            ? array( 'ok' => false, 'message' => $result->get_error_message() )
-            : array( 'ok' => true, 'message' => 'Connected.' );
+            ? array( 'ok' => false, 'configured' => true, 'message' => $result->get_error_message() )
+            : array( 'ok' => true, 'configured' => true, 'message' => 'Connected.' );
 
         // Connected is not the same as able to send what we need. Only worth
         // asking once Brevo is answering at all.
@@ -967,7 +1110,7 @@ function gb_outbox_health_check() {
             $health['caps'] = gb_brevo_capability_check( $result );
         }
     } else {
-        $health['brevo'] = array( 'ok' => false, 'message' => 'Not set up.' );
+        $health['brevo'] = array( 'ok' => false, 'configured' => false, 'message' => 'Not set up.' );
     }
 
     $health['backup'] = gb_backup_smtp_check();
@@ -975,9 +1118,30 @@ function gb_outbox_health_check() {
     $previous = gb_outbox_health();
     update_option( 'gb_email_health', $health, false );
 
-    // Say so when a route breaks, not every twelve hours while it stays broken.
+    /*
+     * Say so when a route breaks, not every twelve hours while it stays
+     * broken. A route that has never worked counts as breaking too: set up
+     * with a wrong password, it was "not set up" at the last check and is
+     * failing at this one, and only looking for "was working" would mean
+     * nobody was ever told.
+     */
     $was_ok = function ( $route ) use ( $previous ) {
-        return ! is_array( $previous ) || ! empty( $previous[ $route ]['ok'] );
+        if ( ! is_array( $previous ) || ! isset( $previous[ $route ] ) || ! is_array( $previous[ $route ] ) ) {
+            return true;
+        }
+
+        $before = $previous[ $route ];
+
+        if ( isset( $before['configured'] ) ) {
+            if ( ! $before['configured'] ) {
+                return true;
+            }
+        } elseif ( isset( $before['message'] ) && $before['message'] === 'Not set up.' ) {
+            // A check saved before 'configured' was recorded for Brevo.
+            return true;
+        }
+
+        return ! empty( $before['ok'] );
     };
     $problems = array();
     if ( function_exists( 'gb_is_brevo_configured' ) && gb_is_brevo_configured() && empty( $health['brevo']['ok'] ) && $was_ok( 'brevo' ) ) {
@@ -1277,21 +1441,72 @@ function gb_outbox_alert_recipients() {
     return $to;
 }
 
+/**
+ * Keep alert lines that could not go out yet, for the next alert that does.
+ *
+ * Alerts are throttled to one every few hours, and the lines raised in
+ * between used to be thrown away. Most of them are only raised once - the
+ * health check only speaks up when a route changes from working to broken,
+ * and an email is only given up on once - so a line dropped there was never
+ * heard of again. They wait here instead, in an option that is not loaded on
+ * every page, and are added to the next alert.
+ */
+function gb_outbox_hold_alerts( array $lines ) {
+    $held = get_option( 'gb_outbox_alerts_held', array() );
+    $held = array_values( array_unique( array_merge( is_array( $held ) ? $held : array(), $lines ) ) );
+
+    // A long outage can raise a line for every email; the latest matter most.
+    $held = array_slice( $held, -30 );
+
+    update_option( 'gb_outbox_alerts_held', $held, false );
+}
+
+/**
+ * Lines are waiting and the throttle has lifted: have this request send them,
+ * even if nothing new has gone wrong since. Called from the queue runner,
+ * which runs every few minutes, so the check costs ordinary pages nothing.
+ */
+function gb_outbox_release_held_alerts() {
+    if ( ! get_transient( 'gb_outbox_alert_sent' ) && get_option( 'gb_outbox_alerts_held' ) ) {
+        $GLOBALS['gb_outbox_alerts_release'] = true;
+    }
+}
+
 add_action( 'shutdown', function () {
-    if ( empty( $GLOBALS['gb_outbox_alerts'] ) ) {
+    if ( empty( $GLOBALS['gb_outbox_alerts'] ) && empty( $GLOBALS['gb_outbox_alerts_release'] ) ) {
         return;
     }
 
-    $lines = array_unique( (array) $GLOBALS['gb_outbox_alerts'] );
-    unset( $GLOBALS['gb_outbox_alerts'] );
+    $lines = array_values( array_unique( (array) ( isset( $GLOBALS['gb_outbox_alerts'] ) ? $GLOBALS['gb_outbox_alerts'] : array() ) ) );
+    unset( $GLOBALS['gb_outbox_alerts'], $GLOBALS['gb_outbox_alerts_release'] );
 
     // At most one every few hours: a flood of alerts is its own outage.
+    // What cannot go now is kept for the next one, not dropped.
     if ( get_transient( 'gb_outbox_alert_sent' ) ) {
+        if ( $lines ) {
+            gb_outbox_hold_alerts( $lines );
+        }
+
         return;
     }
 
     $to = gb_outbox_alert_recipients();
     if ( ! $to ) {
+        if ( $lines ) {
+            gb_outbox_hold_alerts( $lines );
+        }
+
+        return;
+    }
+
+    $held = get_option( 'gb_outbox_alerts_held', array() );
+    $held = is_array( $held ) ? $held : array();
+    if ( $held ) {
+        $lines = array_values( array_unique( array_merge( $held, $lines ) ) );
+        delete_option( 'gb_outbox_alerts_held' );
+    }
+
+    if ( ! $lines ) {
         return;
     }
 
@@ -1314,6 +1529,7 @@ add_action( 'shutdown', function () {
         'The Green Broom: email delivery needs a look',
         implode( "\n\n", array_merge(
             array( 'Something is wrong with how the site sends email.' ),
+            $held ? array( 'Some of this happened over the last few hours and was held back, because an alert had only just been sent.' ) : array(),
             $lines,
             array(
                 'Emails that failed are being retried automatically, and anything that could not be delivered can be resent by hand.',
@@ -1329,6 +1545,7 @@ function gb_outbox_route_label( $route ) {
         'brevo'       => 'Brevo',
         'smtp_backup' => 'the backup mailbox',
         'php_mail'    => 'the web server',
+        'other'       => 'another plugin',
     );
 
     return isset( $labels[ $route ] ) ? $labels[ $route ] : (string) $route;
@@ -1505,8 +1722,21 @@ function gb_brevo_apply_delivery_event( array $event ) {
             gb_outbox_update( (int) $row->id, array( 'delivery' => 'blocked' ) );
 
             if ( $row->route === 'brevo' && ! empty( $row->payload ) && $row->status === 'sent' ) {
-                // Back into the queue as a fresh attempt, skipping Brevo.
-                gb_outbox_update( (int) $row->id, array( 'status' => 'retrying' ) );
+                /*
+                 * Back into the queue as a fresh attempt, skipping Brevo. Only
+                 * if the line is still as it was read: Brevo can deliver the
+                 * same report twice, close together, and only one of them
+                 * should send it.
+                 */
+                $requeued = $wpdb->query( $wpdb->prepare(
+                    'UPDATE ' . gb_outbox_table() . " SET status = 'retrying', updated_at = %s
+                      WHERE id = %d AND status = 'sent' AND route = 'brevo'",
+                    gb_outbox_now(),
+                    (int) $row->id
+                ) );
+                if ( (int) $requeued !== 1 ) {
+                    return 'blocked';
+                }
                 $sent = gb_outbox_retry_one( (int) $row->id, true );
 
                 return $sent ? 'resent' : 'resend_failed';

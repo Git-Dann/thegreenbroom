@@ -157,6 +157,9 @@ function gb_email_html_to_text( $html ) {
 
     $html = preg_replace( '/<!--.*?-->/s', '', $html );
     $html = preg_replace( '/<(style|script)[^>]*>.*?<\/\1>/is', '', $html );
+    // Line breaks between tags are only how the file is laid out; the breaks
+    // that matter are added from the tags below.
+    $html = preg_replace( '/>[ \t\r\n]+</', '> <', $html );
     // The preheader is for the inbox preview, not the body.
     $html = preg_replace( '/<div[^>]*class="preheader"[^>]*>.*?<\/div>/is', '', $html );
 
@@ -177,10 +180,28 @@ function gb_email_html_to_text( $html ) {
         return ( $label === '' || $label === $url ) ? $url : $label . ' (' . $url . ')';
     }, $html );
 
-    $html = preg_replace( '/<br\s*\/?>/i', "\n", $html );
-    $html = preg_replace( '/<\/(p|div|h[1-6]|tr|li|table)>/i', "\n\n", $html );
+    /*
+     * Table cells side by side are a label and its value ("Service" next to
+     * "Deep clean"). Stripping the tags ran them together as "ServiceDeep
+     * clean", so mark the join between cells and turn it into "Service: Deep
+     * clean" once the text is out. A marker rather than ": " straight away,
+     * so a label that already ends in a colon, or an empty spacer cell, does
+     * not leave a stray one.
+     */
+    $html = preg_replace( '/<\/t[dh]>\s*(?=<t[dh][\s>])/i', "\x1F", $html );
+
+    // wpautop writes "<br />" and a newline; that is one line break, not two.
+    $html = preg_replace( '/<br\s*\/?>[ \t]*\r?\n?/i', "\n", $html );
+    // A block starts on a new line, so the logo's alt text and the strapline
+    // under it do not run into each other.
+    $html = preg_replace( '/<(p|div|h[1-6]|li|table)[\s>]/i', "\n$0", $html );
+    $html = preg_replace( '/<\/(p|div|h[1-6]|li|table)>/i', "\n\n", $html );
+    // One line per table row, so a list of details reads as a list.
+    $html = preg_replace( '/<\/tr>/i', "\n", $html );
 
     $text = html_entity_decode( wp_strip_all_tags( $html ), ENT_QUOTES, 'UTF-8' );
+    $text = preg_replace( '/^[ \t]*\x1F/m', '', $text );         // Nothing before it: drop it.
+    $text = preg_replace( '/:?[ \t]*\x1F[ \t]*/', ': ', $text ); // Label: value.
     $text = preg_replace( "/[ \t]+/", ' ', $text );
     $text = preg_replace( "/ *\n */", "\n", $text );
     $text = preg_replace( "/\n{3,}/", "\n\n", $text );
