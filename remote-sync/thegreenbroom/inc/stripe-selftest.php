@@ -87,6 +87,12 @@ function gb_stripe_selftest_handle() {
 
     // Single use: read it, then delete it, before looking at what was sent.
     $age  = time() - (int) filemtime( $file );
+    // The file is rewritten for every token, but PHP's opcode cache can hand
+    // back the copy it compiled last time; a second test inside the cache's
+    // window then reads the previous, already-spent token.
+    if ( function_exists( 'opcache_invalidate' ) ) {
+        opcache_invalidate( $file, true );
+    }
     $data = include $file;
     @unlink( $file );
 
@@ -261,7 +267,7 @@ function gb_stripe_selftest_webhooks( $secret ) {
     $wanted   = array(
         'checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed',
         'checkout.session.expired', 'customer.subscription.created', 'customer.subscription.updated',
-        'customer.subscription.deleted', 'customer.subscription.trial_will_end', 'invoice.payment_succeeded',
+        'customer.subscription.deleted', 'customer.subscription.trial_will_end', 'invoice.paid',
         'invoice.payment_failed',
     );
     $found    = array();
