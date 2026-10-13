@@ -50,7 +50,8 @@ function gb_email_selftest_handle() {
         gb_email_selftest_respond( 403, array( 'error' => 'No test has been set up on the server.' ) );
     }
 
-    // Single use: read it, then delete it, before looking at what was sent.
+    // Single use once it matches. A wrong guess must not delete it: anybody
+    // could otherwise break a test that is running by posting rubbish.
     $age  = time() - (int) filemtime( $file );
     // The file is rewritten for every token, but PHP's opcode cache can hand
     // back the copy it compiled last time; a second test inside the cache's
@@ -59,13 +60,17 @@ function gb_email_selftest_handle() {
         opcache_invalidate( $file, true );
     }
     $data = include $file;
-    @unlink( $file );
 
     $given = isset( $_POST['token'] ) ? (string) wp_unslash( $_POST['token'] ) : '';
 
     if ( ! is_array( $data ) || empty( $data['token'] ) || $age > 10 * MINUTE_IN_SECONDS || ! hash_equals( (string) $data['token'], $given ) ) {
+        if ( $age > 10 * MINUTE_IN_SECONDS ) {
+            @unlink( $file );
+        }
         gb_email_selftest_respond( 403, array( 'error' => 'Token refused.' ) );
     }
+
+    @unlink( $file );
 
     $to = isset( $_POST['to'] ) ? sanitize_email( wp_unslash( $_POST['to'] ) ) : '';
     if ( ! is_email( $to ) ) {

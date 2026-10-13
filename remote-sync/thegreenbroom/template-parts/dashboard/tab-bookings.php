@@ -148,7 +148,38 @@ $gb_payment_class = static function($payment_status) {
         'cancelled' => '#ef4444',
     ];
     $status_color = isset($status_color_map[$flow_status]) ? $status_color_map[$flow_status] : '#64748b';
+
+    /*
+     * Refunds (inc/refunds.php). Read from the booking's own meta, which the
+     * refund code and the Stripe webhook keep up to date, so opening a
+     * booking never waits on Stripe.
+     */
+    $gb_rf_status   = sanitize_key((string) get_post_meta($pid, '_gb_refund_status', true));
+    $gb_rf_amount   = (float) get_post_meta($pid, '_gb_refund_amount_gbp', true);
+    $gb_rf_id       = (string) get_post_meta($pid, '_gb_refund_id', true);
+    $gb_rf_at       = (string) get_post_meta($pid, '_gb_refund_at', true);
+    $gb_rf_error    = (string) get_post_meta($pid, '_gb_refund_error', true);
+    $gb_rf_note     = (string) get_post_meta($pid, '_gb_refund_note', true);
+    $gb_rf_by       = (string) get_post_meta($pid, '_gb_cancelled_by', true);
+    $gb_rf_label    = function_exists('gb_refund_status_label') ? gb_refund_status_label($gb_rf_status) : '';
+    $gb_rf_left     = max(0, round($booking_total - $gb_rf_amount, 2));
+    // Offered on cancelled bookings only: refunding one that is still going
+    // ahead is not something to do with a single click.
+    $gb_rf_can_top  = function_exists('gb_refund_booking') && $flow_status === 'cancelled' && $payment_status === 'paid' && $gb_rf_left > 0
+        && get_post_meta($pid, '_gb_stripe_payment_intent', true) !== '';
+    $gb_rf_notice   = isset($_GET['gb_refund']) ? sanitize_key(wp_unslash($_GET['gb_refund'])) : '';
+    $gb_rf_notices  = [
+        'done'    => ['#f0fdf4', '#166534', 'Refund sent. The customer has been emailed.'],
+        'failed'  => ['#fef2f2', '#991b1b', 'Stripe did not accept the refund. The error is shown below.'],
+        'nothing' => ['#f8fafc', '#475569', 'There was nothing left to refund on this booking.'],
+        'expired' => ['#fffbeb', '#92400e', 'That page had been open a while, so nothing was refunded. Please try again.'],
+    ];
 ?>
+    <?php if (isset($gb_rf_notices[$gb_rf_notice])): ?>
+        <div style="margin-bottom:16px; padding:12px 15px; border-radius:9px; font-size:13px; background:<?php echo esc_attr($gb_rf_notices[$gb_rf_notice][0]); ?>; color:<?php echo esc_attr($gb_rf_notices[$gb_rf_notice][1]); ?>;">
+            <?php echo esc_html($gb_rf_notices[$gb_rf_notice][2]); ?>
+        </div>
+    <?php endif; ?>
     <form method="post">
         <input type="hidden" name="post_id" value="<?php echo $pid; ?>">
         <input type="hidden" name="gb_save_action" value="save_booking">
@@ -167,10 +198,16 @@ $gb_payment_class = static function($payment_status) {
                 </div>
             </div>
             <div class="gb-header-actions">
+                <?php
+                // A customer cancelling only marks the booking cancelled; the
+                // post itself stays published. Show it as cancelled here too,
+                // or saving any other edit quietly confirmed it again.
+                $gb_bk_status = get_post_meta($pid, '_gb_booking_status', true) === 'cancelled' ? 'trash' : $post->post_status;
+                ?>
                 <select name="post_status" class="gb-header-select">
-                    <option value="publish" <?php selected($post->post_status, 'publish'); ?>>Confirm Booking</option>
-                    <option value="pending" <?php selected($post->post_status, 'pending'); ?>>Set to Pending</option>
-                    <option value="trash" <?php selected($post->post_status, 'trash'); ?>>Cancel Appointment</option>
+                    <option value="publish" <?php selected($gb_bk_status, 'publish'); ?>>Confirm Booking</option>
+                    <option value="pending" <?php selected($gb_bk_status, 'pending'); ?>>Set to Pending</option>
+                    <option value="trash" <?php selected($gb_bk_status, 'trash'); ?>>Cancel Appointment</option>
                 </select>
                 <button type="submit" class="gb-header-btn">
                     Update Appointment
@@ -203,6 +240,11 @@ $gb_payment_class = static function($payment_status) {
                 <?php endif; ?>
                 <?php if ($platform_fee_gbp > 0 || $cleaner_net_gbp > 0): ?>
                     <div style="margin-top:2px; font-size:10px; color:#94a3b8;">Fee £<?php echo number_format($platform_fee_gbp, 2); ?> / Net £<?php echo number_format($cleaner_net_gbp, 2); ?></div>
+                <?php endif; ?>
+                <?php if ($gb_rf_amount > 0): ?>
+                    <div style="margin-top:4px; font-size:11px; font-weight:700; color:#b45309;">Refunded £<?php echo esc_html(number_format($gb_rf_amount, 2)); ?></div>
+                <?php elseif ($gb_rf_status === 'failed'): ?>
+                    <div style="margin-top:4px; font-size:11px; font-weight:700; color:#991b1b;">Refund failed</div>
                 <?php endif; ?>
             </div>
         </div>
@@ -290,10 +332,51 @@ $gb_payment_class = static function($payment_status) {
                     <?php if ($destination_account_id !== ''): ?>
                         <div class="gb-log-item">Connected Account: <strong><?php echo esc_html($destination_account_id); ?></strong></div>
                     <?php endif; ?>
+                    <?php if ($payment_status === 'paid'): ?>
+                        <div class="gb-log-item">Paid: <strong>£<?php echo esc_html(number_format($booking_total, 2)); ?></strong></div>
+                        <div class="gb-log-item">Refunded: <strong>£<?php echo esc_html(number_format($gb_rf_amount, 2)); ?><?php echo $gb_rf_label !== '' ? ' (' . esc_html($gb_rf_label) . ')' : ''; ?></strong></div>
+                        <?php if ($gb_rf_at !== '' && $gb_rf_amount > 0): ?>
+                            <div class="gb-log-item">Last refund: <strong><?php echo esc_html(mysql2date('j M Y, H:i', $gb_rf_at)); ?></strong></div>
+                        <?php endif; ?>
+                        <?php if ($gb_rf_id !== ''): ?>
+                            <div class="gb-log-item">Refund ID: <strong><?php echo esc_html($gb_rf_id); ?></strong></div>
+                        <?php endif; ?>
+                        <?php if ($gb_rf_by !== ''): ?>
+                            <div class="gb-log-item">Cancelled by: <strong><?php echo esc_html($gb_rf_by === 'customer' ? 'The customer' : 'The team'); ?></strong></div>
+                        <?php endif; ?>
+                        <?php if ($gb_rf_status === 'failed' && $gb_rf_error !== ''): ?>
+                            <div style="margin-top:10px; padding:10px 12px; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; color:#991b1b; font-size:12px; line-height:1.5;">
+                                <strong>Last refund failed.</strong> Stripe said: <?php echo esc_html($gb_rf_error); ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($gb_rf_note !== ''): ?>
+                            <div style="margin-top:10px; padding:10px 12px; border-radius:8px; background:#fffbeb; border:1px solid #fde68a; color:#92400e; font-size:12px; line-height:1.5;">
+                                <?php echo esc_html($gb_rf_note); ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($gb_rf_can_top): ?>
+                            <?php
+                            // The button belongs to the separate form below
+                            // (form="..."), as forms cannot be nested and this
+                            // whole editor is the booking's save form.
+                            ?>
+                            <button type="submit" form="gb-refund-form-<?php echo esc_attr($pid); ?>" class="gb-qa-btn" style="width:100%; margin-top:12px; cursor:pointer;"
+                                onclick="return confirm('<?php echo esc_js('Refund the remaining £' . number_format($gb_rf_left, 2) . ' to the customer now? The cleaner\'s share is taken back from their Stripe account. This cannot be undone.'); ?>');">
+                                Refund the rest in full (£<?php echo esc_html(number_format($gb_rf_left, 2)); ?>)
+                            </button>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </form>
+    <?php if ($gb_rf_can_top): ?>
+        <form method="post" id="gb-refund-form-<?php echo esc_attr($pid); ?>" action="<?php echo esc_url(home_url('/manager-dashboard/?tab=bookings&action=edit&id=' . $pid)); ?>" style="display:none;">
+            <input type="hidden" name="gb_refund_action" value="refund_remaining">
+            <input type="hidden" name="gb_refund_booking_id" value="<?php echo esc_attr($pid); ?>">
+            <?php wp_nonce_field('gb_refund_remaining_' . $pid, 'gb_refund_nonce'); ?>
+        </form>
+    <?php endif; ?>
 
 <?php else: 
     // --- LIST VIEW (BASE FUNCTIONS PRESERVED) ---
@@ -382,7 +465,19 @@ $gb_payment_class = static function($payment_status) {
                             <?php echo esc_html($gb_flow_label($flow_status)); ?>
                         </span>
                     </td>
-                    <td><span class="<?php echo esc_attr($gb_payment_class($payment_status)); ?>"><?php echo esc_html($gb_payment_label($payment_status, $payment_provider)); ?></span></td>
+                    <td>
+                        <span class="<?php echo esc_attr($gb_payment_class($payment_status)); ?>"><?php echo esc_html($gb_payment_label($payment_status, $payment_provider)); ?></span>
+                        <?php
+                        $gb_row_refund        = (float) get_post_meta($bid, '_gb_refund_amount_gbp', true);
+                        $gb_row_refund_status = (string) get_post_meta($bid, '_gb_refund_status', true);
+                        ?>
+                        <?php if ($gb_row_refund > 0): ?>
+                            <div style="margin-top:4px; font-size:11px; font-weight:700; color:#b45309;">Refunded £<?php echo esc_html(number_format($gb_row_refund, 2)); ?></div>
+                        <?php endif; ?>
+                        <?php if ($gb_row_refund_status === 'failed'): ?>
+                            <div style="margin-top:4px; font-size:11px; font-weight:700; color:#991b1b;">Refund failed</div>
+                        <?php endif; ?>
+                    </td>
                     <td style="font-weight:700; color:#0f172a;"><?php echo $total_gbp > 0 ? '£' . number_format($total_gbp, 2) : '—'; ?></td>
                     <?php
                     $gb_del_confirm = ($payment_status === 'paid')

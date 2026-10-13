@@ -15,6 +15,19 @@ if ( ! defined( 'ABSPATH' ) ) {
    5. UTILITY & HELPDESK ENGINE
    ========================================================================== */
 
+/**
+ * A reply that was typed but bounced by an expired form, to put back in the
+ * box once. See the reply handler below.
+ */
+function gb_take_reply_draft($message_id) {
+    $key   = 'gb_reply_draft_' . get_current_user_id() . '_' . (int) $message_id;
+    $draft = get_transient($key);
+    if ($draft !== false) {
+        delete_transient($key);
+    }
+    return is_string($draft) ? $draft : '';
+}
+
 function gb_is_verified_client($email, $cleaner_id) {
     if (!$email || !$cleaner_id) return false;
     $bookings = new WP_Query([
@@ -229,16 +242,34 @@ function gb_password_notice_html() {
  * NOTE: delivery still depends on wp_mail being backed by a working mail
  * service. wp_mail() can report success even when the host silently drops the
  * message, so a "reply_sent" flag means "handed to wp_mail", not "delivered".
+ * "reply_queued" means every route refused it on the first try and the email
+ * queue will keep trying it, so there is no need to reply again.
  */
 add_action('init', function () {
     if (!isset($_POST['gb_reply_action']) || $_POST['gb_reply_action'] !== 'reply_message') {
         return;
     }
-    if (empty($_POST['gb_reply_nonce']) || !wp_verify_nonce($_POST['gb_reply_nonce'], 'gb_reply_message')) {
-        wp_die('Security check failed.');
-    }
     if (!is_user_logged_in()) {
         wp_safe_redirect(home_url('/login'));
+        exit;
+    }
+    /*
+     * An expired form used to end on a bare "Security check failed." page and
+     * the reply that had just been typed was gone. Keep the text for this
+     * person for an hour, go back to the message, and put it back in the box
+     * so it only needs sending again.
+     */
+    if (empty($_POST['gb_reply_nonce']) || !wp_verify_nonce($_POST['gb_reply_nonce'], 'gb_reply_message')) {
+        $gb_mid  = isset($_POST['message_id']) ? intval($_POST['message_id']) : 0;
+        $gb_body = isset($_POST['gb_reply_body']) ? sanitize_textarea_field(wp_unslash($_POST['gb_reply_body'])) : '';
+        if ($gb_mid && $gb_body !== '') {
+            set_transient('gb_reply_draft_' . get_current_user_id() . '_' . $gb_mid, $gb_body, HOUR_IN_SECONDS);
+        }
+        $gb_back = !empty($_POST['gb_reply_redirect']) ? wp_validate_redirect(esc_url_raw(wp_unslash($_POST['gb_reply_redirect'])), '') : '';
+        if ($gb_back === '') {
+            $gb_back = home_url('/manager-dashboard?tab=support&action=view_message&id=' . $gb_mid);
+        }
+        wp_safe_redirect(add_query_arg('msg', 'reply_expired', $gb_back));
         exit;
     }
 
@@ -295,7 +326,9 @@ add_action('init', function () {
             $reply_to = function_exists('gb_get_support_email') ? gb_get_support_email() : get_option('admin_email');
         }
 
-        $subject = 'Re: ' . get_the_title($mid);
+        // The raw title, not get_the_title(): that one is dressed for a web
+        // page, so "Can't" became "Can&#8217;t" in the customer's inbox.
+        $subject = 'Re: ' . html_entity_decode((string) get_post_field('post_title', $mid), ENT_QUOTES, 'UTF-8');
         $body = $reply_body . "\n\n—\n" . $from_name;
         $from_email = function_exists('gb_get_email_from_address') ? gb_get_email_from_address() : get_option('admin_email');
         $headers = ['From: ' . $from_name . ' <' . $from_email . '>'];
@@ -316,10 +349,17 @@ add_action('init', function () {
         );
     }
 
+    /*
+     * Every route refused it just now, but it is in the queue and will be
+     * sent automatically. That is not "could not be sent": told that, the
+     * manager replies again, and the customer ends up with both.
+     */
+    $queued = !$sent && is_email($to) && function_exists('gb_outbox_last_status') && gb_outbox_last_status() === 'retrying';
+
     update_post_meta($mid, '_gb_responded_date', current_time('mysql'));
     update_post_meta($mid, '_gb_reply_body', $reply_body);
 
-    $bounce($sent ? 'reply_sent' : 'replied_nomail');
+    $bounce($sent ? 'reply_sent' : ($queued ? 'reply_queued' : 'replied_nomail'));
 }, 5);
 
 /**

@@ -19,6 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
    misleading and looks fake. A rating (1-5) is now captured with the review
    and stored as comment meta, and the profile shows the real per-review score
    plus a computed average.
+
+   New reviews are written by gb_handle_review_submission() in
+   inc/reviews.php, always as pending, and approved from the Reviews tab in
+   Manager OS. Only approved reviews are counted below.
    ========================================================================== */
 
 function gb_get_cleaner_rating( $cleaner_id ) {
@@ -53,7 +57,11 @@ function gb_refresh_cleaner_rating( $cleaner_id ) {
     return $rating;
 }
 
-// Capture the star rating submitted alongside a review.
+// Capture the star rating submitted alongside a review through WordPress's
+// own comment route. That route is closed on cleaner profiles, so this only
+// matters for a review added another way (wp-admin, say). The public form in
+// inc/reviews.php uses wp_insert_comment(), which does not fire comment_post,
+// and stores the rating itself.
 add_action( 'comment_post', function ( $comment_id, $approved, $commentdata ) {
     $post_id = isset( $commentdata['comment_post_ID'] ) ? (int) $commentdata['comment_post_ID'] : 0;
     if ( ! $post_id || get_post_type( $post_id ) !== 'gb_cleaner' ) {

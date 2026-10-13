@@ -230,8 +230,39 @@ jobs:
           paid=0
           node .github/scripts/stripe-test-checkout.js "$URL" || paid=$?
 
-          echo "=== Test purchase: webhook, portal, cancel, clean up ==="
-          code=$(post --data-urlencode "token=$FINISH" --data-urlencode "phase=finish")
+          # Short check-ins, not one long wait: a request held open on this
+          # host blocks Stripe's webhooks behind it (see inc/stripe-selftest.php).
+          wait_for() {
+            want="$1"; waited=-1
+            for i in $(seq 0 5 180); do
+              code=$(post --data-urlencode "token=$FINISH" --data-urlencode "phase=status")
+              state=$(jq -r .membership result.json 2>/dev/null)
+              if [ "$want" = "on" ] && [ "$state" = "active" ]; then waited=$i; break; fi
+              if [ "$want" = "off" ] && [ "$state" != "active" ] && [ "$code" = "200" ]; then waited=$i; break; fi
+              sleep 5
+            done
+            echo "$waited"
+          }
+
+          echo "=== Test purchase: waiting for Stripe's webhook to switch the membership on ==="
+          ON=-1
+          [ "$paid" = "0" ] && ON=$(wait_for on)
+          echo "switched on after ${ON}s (-1 = not within 3 minutes)"
+
+          if [ "$ON" != "-1" ]; then
+            echo "=== Test purchase: subscription, invoice, portal; cancelling in Stripe ==="
+            code=$(post --data-urlencode "token=$FINISH" --data-urlencode "phase=verify")
+            echo "HTTP $code"; cat result.json; echo
+            echo "=== Test purchase: waiting for Stripe's webhook to switch it off ==="
+            OFF=$(wait_for off)
+            echo "switched off after ${OFF}s (-1 = not within 3 minutes)"
+          else
+            OFF=-1
+          fi
+
+          echo "=== Test purchase: report and clean up ==="
+          code=$(post --data-urlencode "token=$FINISH" --data-urlencode "phase=finish" \
+            --data-urlencode "activated_after=$ON" --data-urlencode "cancelled_after=$OFF")
           echo "HTTP $code"; cat result.json; echo
           [ "$paid" = "0" ] && [ "$code" = "200" ] && [ "$(jq -r .passed result.json)" = "true" ]
 

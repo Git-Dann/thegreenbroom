@@ -25,7 +25,10 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_login']) ) {
 
             if ( is_wp_error( $user ) ) {
                 gb_record_rate_limit_hit('login', 15 * MINUTE_IN_SECONDS, strtolower($login_identity));
-                $error_msg = '<div style="background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border: 1px solid #fee2e2; text-align: center;">❌ Invalid Username or Password</div>';
+                // The per-account lock (functions.php) says so plainly; any
+                // other failure stays the one vague message.
+                $gb_login_text = $user->get_error_code() === 'gb_login_locked' ? $user->get_error_message() : 'Invalid Username or Password';
+                $error_msg = '<div style="background: #fef2f2; color: #991b1b; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 20px; border: 1px solid #fee2e2; text-align: center;">❌ ' . esc_html($gb_login_text) . '</div>';
             } else {
                 gb_reset_rate_limit('login', strtolower($login_identity));
                 $redirect_url = gb_get_post_login_redirect_url( $user );

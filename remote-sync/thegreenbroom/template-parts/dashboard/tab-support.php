@@ -56,6 +56,10 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
         <div class="gb-card" style="margin-bottom:20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Reply sent and message marked as replied.</div>
     <?php elseif ($reply_notice === 'replied'): ?>
         <div class="gb-card" style="margin-bottom:20px; background:#f0fdf4; border-color:#dcfce7; color:#166534; padding:15px;">✅ Message marked as replied.</div>
+    <?php elseif ($reply_notice === 'reply_queued'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:15px;">Reply saved and marked as replied. The email service did not take it just now, so it is queued and will be retried automatically. There is no need to send it again.</div>
+    <?php elseif ($reply_notice === 'reply_expired'): ?>
+        <div class="gb-card" style="margin-bottom:20px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:15px;">That form had timed out, so nothing was sent. Your reply is back in the box below: press Send again.</div>
     <?php elseif ($reply_notice === 'replied_nomail'): ?>
         <div class="gb-card" style="margin-bottom:20px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:15px;">Message marked as replied, but the email could not be sent (no valid sender email, or mail is not configured yet). Your reply is saved below.</div>
     <?php elseif ($reply_notice === 'reply_error'): ?>
@@ -139,7 +143,7 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
             <input type="hidden" name="message_id" value="<?php echo (int) $mid; ?>">
             <input type="hidden" name="gb_reply_redirect" value="<?php echo esc_url(home_url('/manager-dashboard?tab=support&action=view_message&id=' . (int) $mid)); ?>">
             <?php wp_nonce_field('gb_reply_message', 'gb_reply_nonce'); ?>
-            <textarea name="gb_reply_body" class="gb-input" required style="width:100%; min-height:140px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;" placeholder="Type your reply…"><?php echo $existing_reply ? '' : ''; ?></textarea>
+            <textarea name="gb_reply_body" class="gb-input" required style="width:100%; min-height:140px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;" placeholder="Type your reply…"><?php echo esc_textarea(function_exists('gb_take_reply_draft') ? gb_take_reply_draft((int) $mid) : ''); ?></textarea>
             <div style="margin-top:15px; display:flex; gap:12px; align-items:center;">
                 <button type="submit" class="gb-header-btn" style="background:#2e7d32; color:#fff; border:none; height:44px; padding:0 24px; border-radius:8px; font-weight:700; cursor:pointer;">Send Reply</button>
                 <a href="mailto:<?php echo esc_attr($sender_email); ?>?subject=<?php echo rawurlencode('Re: ' . get_the_title($mid)); ?>" class="gb-btn-small-os">Reply in mail app instead ↗</a>

@@ -4,7 +4,10 @@ get_header();
 
 $cleaner_id   = get_the_ID();
 $rate         = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
-$verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
+// The same test as the sidebar and the listing card: every check on file, not
+// just "published". The header badge used to say Verified for a cleaner the
+// manager list showed as "Live - checks due".
+$verified     = function_exists('gb_cleaner_is_fully_verified') ? gb_cleaner_is_fully_verified($cleaner_id) : get_post_meta($cleaner_id, 'is_verified', true) === '1';
 $location     = function_exists('gb_get_cleaner_location') ? gb_get_cleaner_location($cleaner_id) : get_post_meta($cleaner_id, 'location', true);
 $member_since = get_the_date('Y', $cleaner_id);
 
@@ -163,6 +166,12 @@ if ( ! empty( $gb_selected_services ) ) {
     .gb-star-pick label { font-size: 26px; color: #d7dbe0; cursor: pointer; line-height: 1; transition: color .12s; }
     .gb-star-pick input:checked ~ label,
     .gb-star-pick label:hover, .gb-star-pick label:hover ~ label { color: #f59e0b; }
+    .gb-star-pick input:focus-visible + label { outline: 2px solid #2e7d32; outline-offset: 2px; border-radius: 4px; }
+
+    /* Result of sending a review (?review= flag from inc/reviews.php) */
+    .gb-review-notice { padding: 14px 16px; border-radius: 12px; margin-bottom: 18px; font-size: 14px; font-weight: 600; line-height: 1.5; border: 1px solid; }
+    .gb-review-notice.is-ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .gb-review-notice.is-error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 
     /* ---------- SIDEBAR ---------- */
     .gb-price-box { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e8ecf1; margin-bottom: 20px; }
@@ -273,7 +282,8 @@ if ( ! empty( $gb_selected_services ) ) {
             </div>
             <?php endif; ?>
 
-            <div class="gb-block" style="margin-bottom:0;">
+            <div class="gb-block" id="gb-reviews" style="margin-bottom:0; scroll-margin-top:90px;">
+                <?php echo function_exists( 'gb_render_review_notice' ) ? gb_render_review_notice() : ''; ?>
                 <h2 class="gb-section-title">Client Reviews<?php echo $rating['total'] ? ' (' . (int) $rating['total'] . ')' : ''; ?></h2>
 
                 <?php if ($rating['rated'] > 0): ?>
@@ -307,7 +317,7 @@ if ( ! empty( $gb_selected_services ) ) {
                                         <span class="gb-rev-verified" title="Booked with this cleaner">✓ Verified Client</span>
                                     <?php endif; ?>
                                 </div>
-                                <span class="gb-rev-date"><?php echo get_comment_date('j M Y', $comment); ?></span>
+                                <span class="gb-rev-date"><?php echo esc_html(get_comment_date('j M Y', $comment)); ?></span>
                             </div>
                             <?php if ($c_rating >= 1): ?>
                                 <?php echo gb_render_stars($c_rating, 14); ?>
@@ -316,36 +326,24 @@ if ( ! empty( $gb_selected_services ) ) {
                         </div>
                     <?php endforeach;
                     else : ?>
-                        <p style="color:#64748b;">No reviews yet — be the first to book and leave one.</p>
+                        <p style="color:#64748b;">No reviews yet. If you have booked with this cleaner, be the first to leave one.</p>
                     <?php endif; ?>
                 </div>
 
+                <?php
+                /*
+                 * Our own review form, not comment_form(). WordPress's comment
+                 * form is closed on cleaner profiles on purpose (it was a spam
+                 * target and published or held whatever it was sent), so
+                 * comment_form() printed nothing and nobody could leave a
+                 * review at all. The form and its handler live in
+                 * inc/reviews.php: every review is held for a manager to
+                 * approve in Manager OS, behind a honeypot, a timing check,
+                 * rate limits and spam scoring.
+                 */
+                ?>
                 <div style="margin-top:24px;">
-                    <button onclick="document.getElementById('gb-review-form-wrap').style.display='block'; this.style.display='none';" class="gb-btn-msg" style="width:auto; display:inline-block; font-size:13px; padding:10px 20px;">+ Write a Review</button>
-
-                    <div id="gb-review-form-wrap" style="display:none; margin-top:18px; background:#f7f9fb; padding:22px; border-radius:13px; border:1px solid #e8ecf1;">
-                        <?php
-                        $gb_star_field = '<p class="comment-form-rating" style="margin:0 0 16px;">'
-                            . '<label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#334155;">Your Rating</label>'
-                            . '<span class="gb-star-pick">';
-                        // Reversed order so the CSS sibling selector can fill stars to the left.
-                        for ($i = 5; $i >= 1; $i--) {
-                            $gb_star_field .= '<input type="radio" id="gb-star-' . $i . '" name="gb_rating" value="' . $i . '"' . ($i === 5 ? ' checked' : '') . '>'
-                                . '<label for="gb-star-' . $i . '" title="' . $i . ' star' . ($i === 1 ? '' : 's') . '">&#9733;</label>';
-                        }
-                        $gb_star_field .= '</span></p>';
-
-                        comment_form([
-                            'title_reply'         => '',
-                            'class_submit'        => 'gb-btn-book',
-                            'label_submit'        => 'Post Review',
-                            'comment_notes_after' => '',
-                            'comment_field'       => $gb_star_field
-                                . '<p class="comment-form-comment"><label for="comment" style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#334155;">Your Review</label>'
-                                . '<textarea id="comment" name="comment" cols="45" rows="4" required style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea></p>',
-                        ]);
-                        ?>
-                    </div>
+                    <?php if ( function_exists( 'gb_render_review_form' ) ) { gb_render_review_form( $cleaner_id ); } ?>
                 </div>
             </div>
 

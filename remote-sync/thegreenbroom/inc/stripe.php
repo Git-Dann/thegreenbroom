@@ -320,6 +320,18 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
         return true; // "Any professional" - nothing to check yet.
     }
 
+    // Only a live, approved cleaner can be paid. A draft, pending or withdrawn
+    // profile was still bookable by its /book-now/?cleaner= address.
+    if (get_post_status($cleaner_id) !== 'publish') {
+        return 'not_live';
+    }
+
+    // The cleaner has said they are taking no new work; the card already says
+    // "Fully booked", so the button should not take money regardless.
+    if (function_exists('gb_cleaner_is_fully_booked') && gb_cleaner_is_fully_booked($cleaner_id)) {
+        return 'fully_booked';
+    }
+
     $account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
 
     if ($account_id === '') {
@@ -328,6 +340,20 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
 
     if (get_post_meta($cleaner_id, '_gb_stripe_charges_enabled', true) !== '1') {
         return 'onboarding_incomplete';
+    }
+
+    /*
+     * With "Require a paid cleaner listing" switched on, a cleaner whose
+     * listing subscription is not running in the current Stripe mode is
+     * hidden from the directory, and an old /book-now/?cleaner= link must not
+     * still take money for them (see inc/identity-guard.php).
+     *
+     * Asked last on purpose: the cleaner's own dashboard explains the payout
+     * reasons above, and those are the ones to fix first.
+     */
+    if (function_exists('gb_listing_gate_enabled') && gb_listing_gate_enabled()
+        && function_exists('gb_cleaner_listing_is_paid') && !gb_cleaner_listing_is_paid($cleaner_id)) {
+        return 'listing_inactive';
     }
 
     return true;
@@ -347,6 +373,14 @@ function gb_cleaner_booking_block_message($cleaner_id) {
 
     if ($reason === true) {
         return '';
+    }
+
+    if ($reason === 'fully_booked') {
+        return 'This cleaner is fully booked at the moment. Browse other cleaners in your area, or message them to ask when they have space.';
+    }
+
+    if ($reason === 'listing_inactive') {
+        return 'This cleaner is not taking bookings through The Green Broom at the moment. Browse other cleaners in your area, or get in touch and we will help.';
     }
 
     return 'This cleaner is not set up to take bookings online just yet. Browse other cleaners in your area, or get in touch and we will help.';
@@ -674,17 +708,19 @@ function gb_get_stripe_config() {
         ? get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true)
         : get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true);
 
-    // Backward compatibility with legacy single-key fields.
-    if (empty($publishable_key)) {
+    // Backward compatibility with legacy single-key fields - in Test mode only.
+    // Those old fields held test keys, and in Live mode a blank live field
+    // used to fall back to them silently, running "live" on test keys.
+    if ($mode === 'test' && empty($publishable_key)) {
         $publishable_key = get_post_meta($settings_id, '_gb_stripe_publishable_key', true);
     }
-    if (empty($secret_key)) {
+    if ($mode === 'test' && empty($secret_key)) {
         $secret_key = get_post_meta($settings_id, '_gb_stripe_secret_key', true);
     }
-    if (empty($webhook_secret)) {
+    if ($mode === 'test' && empty($webhook_secret)) {
         $webhook_secret = get_post_meta($settings_id, '_gb_stripe_webhook_secret', true);
     }
-    if (empty($connect_webhook_secret)) {
+    if ($mode === 'test' && empty($connect_webhook_secret)) {
         $connect_webhook_secret = get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true);
     }
 
@@ -713,7 +749,13 @@ function gb_get_stripe_config() {
     ];
 }
 
-function gb_stripe_api_request($endpoint, $params = [], $method = 'POST') {
+/*
+ * $headers is optional and added to the request as given, for the few calls
+ * that need more than the defaults: a refund sends an Idempotency-Key so a
+ * double click or a retry can never refund twice (see inc/refunds.php).
+ * Authorization and Content-Type cannot be overridden through it.
+ */
+function gb_stripe_api_request($endpoint, $params = [], $method = 'POST', $headers = []) {
     $config = gb_require_stripe_config(['secret_key']);
     if (is_wp_error($config)) {
         return $config;
@@ -724,10 +766,10 @@ function gb_stripe_api_request($endpoint, $params = [], $method = 'POST') {
     $request_args = [
         'method'  => $method,
         'timeout' => 30,
-        'headers' => [
+        'headers' => array_merge(is_array($headers) ? $headers : [], [
             'Authorization' => 'Bearer ' . $config['secret_key'],
             'Content-Type'  => 'application/x-www-form-urlencoded',
-        ],
+        ]),
     ];
 
     if (!empty($params) && $method === 'GET') {
@@ -879,6 +921,11 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
     update_post_meta($booking_id, '_gb_stripe_checkout_session_id', sanitize_text_field($session['id']));
     update_post_meta($booking_id, '_gb_payment_status', $payment_status ?: 'pending');
     update_post_meta($booking_id, '_gb_stripe_payment_intent', $payment_intent_id);
+    // Which Stripe mode took the money. Payment ids only exist in that mode,
+    // so a refund must never be attempted in the other (inc/refunds.php).
+    if (isset($session['livemode'])) {
+        update_post_meta($booking_id, '_gb_stripe_mode', $session['livemode'] ? 'live' : 'test');
+    }
 
     if ($payment_intent_id !== '') {
         $payment_intent = gb_stripe_api_request('payment_intents/' . rawurlencode($payment_intent_id), [], 'GET');
@@ -908,6 +955,18 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
     if ($booking_total > 0) {
         $cleaner_net = max(0, $booking_total - $platform_fee);
         update_post_meta($booking_id, '_gb_cleaner_payout_estimate_gbp', number_format($cleaner_net, 2, '.', ''));
+    }
+
+    /*
+     * A booking that has been cancelled stays cancelled. Stripe retries
+     * checkout.session.completed, and the customer can reopen the success
+     * page from their history; either used to put a cancelled booking back
+     * to confirmed and send both "booking confirmed" emails again. The
+     * payment details above are still recorded, so a manager can see what
+     * was paid when they deal with the refund.
+     */
+    if (get_post_status($booking_id) === 'trash' || get_post_meta($booking_id, '_gb_booking_status', true) === 'cancelled') {
+        return $session;
     }
 
     if ($payment_status === 'paid') {
@@ -946,7 +1005,6 @@ function gb_send_booking_confirmation_emails($booking_id) {
     $cleaner_post_id  = (int) get_post_meta($booking_id, '_gb_booking_cleaner_id', true);
     $cleaner_name     = $cleaner_post_id ? get_the_title($cleaner_post_id) : 'TBC';
     $cleaner_user_id  = $cleaner_post_id ? (int) get_post_field('post_author', $cleaner_post_id) : 0;
-    $access_token     = (string) get_post_meta($booking_id, '_gb_booking_access_token_raw', true);
 
     $site_name  = get_bloginfo('name');
     $date_fmt   = $date ? date_i18n('l j F Y', strtotime($date)) : $date;
@@ -1562,7 +1620,45 @@ function gb_extract_connected_account_id_from_event($event) {
     return '';
 }
 
+/**
+ * The last 25 webhook requests: when, which event, how it ended, how long it
+ * took, and any fatal error. Stripe's own delivery history is only in its
+ * dashboard, so without this a webhook that fails on the live server leaves
+ * no trace the site can report (the Stripe self-test prints it).
+ */
+function gb_stripe_webhook_log_start() {
+    $GLOBALS['gb_webhook_log'] = ['at' => time(), 'start' => microtime(true), 'type' => '', 'id' => ''];
+
+    register_shutdown_function(function () {
+        if (empty($GLOBALS['gb_webhook_log'])) {
+            return;
+        }
+        $entry = $GLOBALS['gb_webhook_log'];
+        $fatal = error_get_last();
+        $row = [
+            'at'     => gmdate('Y-m-d H:i:s', $entry['at']),
+            'type'   => $entry['type'],
+            'id'     => $entry['id'],
+            'status' => (int) http_response_code(),
+            'ms'     => (int) round((microtime(true) - $entry['start']) * 1000),
+            'fatal'  => ($fatal && in_array($fatal['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true))
+                ? $fatal['message'] . ' (' . basename($fatal['file']) . ':' . $fatal['line'] . ')'
+                : '',
+        ];
+        // One option per request, not one shared list: Stripe sends several
+        // events at once, and a shared list read and rewritten by each lost
+        // all but one of them. Old rows are pruned to the newest 25.
+        global $wpdb;
+        add_option('gb_whlog_' . str_replace('.', '', sprintf('%.6f', microtime(true))) . '_' . wp_rand(100, 999), $row, '', 'no');
+        $names = $wpdb->get_col("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'gb\\_whlog\\_%' ORDER BY option_name DESC");
+        foreach (array_slice($names, 25) as $old) {
+            delete_option($old);
+        }
+    });
+}
+
 function gb_handle_stripe_webhook() {
+    gb_stripe_webhook_log_start();
     $config = gb_get_stripe_config();
     $payload = file_get_contents('php://input');
     $signature = isset($_SERVER['HTTP_STRIPE_SIGNATURE']) ? $_SERVER['HTTP_STRIPE_SIGNATURE'] : '';
@@ -1602,13 +1698,15 @@ function gb_handle_stripe_webhook() {
     }
 
     $event_type = sanitize_text_field((string) $event['type']);
+    $GLOBALS['gb_webhook_log']['type'] = $event_type;
+    $GLOBALS['gb_webhook_log']['id']   = isset($event['id']) ? sanitize_text_field((string) $event['id']) : '';
     $event_object = isset($event['data']['object']) && is_array($event['data']['object']) ? $event['data']['object'] : null;
 
     // Connect v2 thin events: fetch and sync account status so dashboard stays current.
-    if (
-        $event_type === 'v2.core.account[requirements].updated' ||
-        strpos($event_type, 'v2.core.account[') === 0
-    ) {
+    // Every v2 thin event, not only the bracketed kinds: v2.core.account.updated
+    // has no data.object, so it fell through to "invalid payload" and Stripe
+    // retried it for days.
+    if (strpos($event_type, 'v2.') === 0) {
         $account_id = gb_extract_connected_account_id_from_event($event);
 
         if ($account_id === '' && !empty($event['id'])) {
@@ -1649,7 +1747,13 @@ function gb_handle_stripe_webhook() {
 
         if ($booking_id && $session_id) {
             $synced = gb_sync_booking_from_checkout_session($booking_id, $session_id);
-            if (is_wp_error($synced)) {
+            /*
+             * Only ask Stripe to try again when trying again could help (it
+             * could not reach Stripe). A booking that no longer exists, or a
+             * session from another site on the same test account, will never
+             * sync; refusing it just had Stripe retry it for three days.
+             */
+            if (is_wp_error($synced) && !in_array($synced->get_error_code(), ['gb_invalid_booking', 'gb_mismatch_booking', 'gb_missing_session'], true)) {
                 status_header(400);
                 echo 'Stripe sync error.';
                 exit;
@@ -1670,6 +1774,13 @@ function gb_handle_stripe_webhook() {
     // events it cares about for itself.
     if (function_exists('gb_membership_handle_stripe_event')) {
         gb_membership_handle_stripe_event($event_type, $event_object);
+    }
+
+    // Booking refunds (charge.refunded, refund.updated, refund.failed), so a
+    // refund made by hand in the Stripe dashboard shows on the booking too.
+    // inc/refunds.php; it never fails the webhook.
+    if (function_exists('gb_refund_handle_stripe_event')) {
+        gb_refund_handle_stripe_event($event_type, $event_object);
     }
 
     status_header(200);

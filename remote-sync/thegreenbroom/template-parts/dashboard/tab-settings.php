@@ -212,7 +212,12 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <div class="gb-link-row">
                         <div class="gb-form-row">
                             <label class="gb-label">Cancellation Window (Hours)</label>
-                            <input type="number" name="_gb_cancel_window" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_cancel_window', true) ?: '48'); ?>">
+                            <?php
+                            // Read through the same function the refunds use,
+                            // so a saved 0 shows as 0 rather than the default.
+                            $gb_refund_policy = function_exists('gb_refund_policy_settings') ? gb_refund_policy_settings() : ['window_hours' => 48, 'partial_percent' => 50];
+                            ?>
+                            <input type="number" name="_gb_cancel_window" class="gb-input" min="0" step="1" value="<?php echo esc_attr($gb_refund_policy['window_hours']); ?>">
                         </div>
                         <div class="gb-form-row">
                             <label class="gb-label">Eco-Standard Agreement</label>
@@ -222,6 +227,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             </select>
                         </div>
                     </div>
+                    <div class="gb-link-row" style="margin-top: 20px;">
+                        <div class="gb-form-row">
+                            <label class="gb-label">Refund if cancelled inside the window (%)</label>
+                            <input type="number" name="_gb_cancel_partial_percent" class="gb-input" min="0" max="100" step="1" value="<?php echo esc_attr($gb_refund_policy['partial_percent']); ?>">
+                        </div>
+                    </div>
+                    <p style="margin:8px 0 0; color:#64748b; font-size:12px; line-height:1.6;">
+                        When a customer cancels more than the window before the clean, they get a full refund. Inside the window, they get this percentage back. Once the clean has started, there is no refund. If the cleaner or the team cancels, the customer is always refunded in full. Refunds go back to the customer's card automatically, and the cleaner's share is taken back from their Stripe account in proportion.
+                    </p>
                 </div>
             </div>
 
@@ -562,7 +576,17 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                         default:
                                             $gb_pill = ['idle', 'Sending'];
                                     }
-                                    $gb_can_resend = !empty($gb_row->resendable) && in_array($gb_state, ['retrying', 'dead', 'sending'], true);
+                                    /*
+                                     * "Sending" means another request is sending it right now, and
+                                     * resending it then is how a customer gets two copies. Only once
+                                     * it has been stuck there long enough that the send must have
+                                     * died (the same test the queue uses) is it offered again.
+                                     */
+                                    $gb_stuck = $gb_state === 'sending' && function_exists('gb_outbox_is_stuck') && gb_outbox_is_stuck($gb_row);
+                                    if ($gb_stuck) {
+                                        $gb_pill = ['warn', 'Stuck while sending'];
+                                    }
+                                    $gb_can_resend = !empty($gb_row->resendable) && (in_array($gb_state, ['retrying', 'dead'], true) || $gb_stuck);
                                     ?>
                                     <tr>
                                         <td style="white-space:nowrap; color:#64748b;"><?php echo esc_html(get_date_from_gmt($gb_row->created_at, 'j M, H:i')); ?></td>
@@ -753,6 +777,43 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
                             Do not switch this on before Stripe is connected. With no way to buy a membership, turning it on would lock out every customer
                             and leave them no route back in.
+                        </p>
+                    </div>
+                    <?php
+                    /*
+                     * The cleaner side of the same switch. A cleaner's listing
+                     * subscription was only ever displayed, so somebody who
+                     * cancelled, or never paid, stayed listed and bookable.
+                     * With this on, only cleaners whose listing is paid or on
+                     * its free months in the CURRENT Stripe mode are shown and
+                     * can be booked (inc/identity-guard.php). Off until go-live,
+                     * like the gate above: switched on with no live listings
+                     * yet, it would empty Find a Cleaner.
+                     */
+                    $gb_lgate_on      = get_post_meta($settings_id, '_gb_listing_gate', true) === '1';
+                    $gb_lgate_summary = function_exists('gb_listing_gate_summary') ? gb_listing_gate_summary() : null;
+                    ?>
+                    <div class="gb-form-row" style="margin-bottom:22px;">
+                        <label class="gb-label">Require a paid cleaner listing to appear and take bookings</label>
+                        <select name="_gb_listing_gate" class="gb-input" style="height:45px;">
+                            <option value="0" <?php selected(!$gb_lgate_on); ?>>No: every live cleaner is shown and can be booked</option>
+                            <option value="1" <?php selected($gb_lgate_on); ?>>Yes: only cleaners with a paid or free trial listing are shown and can be booked</option>
+                        </select>
+                        <?php if ($gb_lgate_summary): ?>
+                            <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
+                                Right now <strong><?php echo (int) $gb_lgate_summary['shown']; ?> of <?php echo (int) $gb_lgate_summary['live']; ?></strong> live cleaners have a listing that counts in
+                                <?php echo esc_html(function_exists('gb_stripe_site_mode') && gb_stripe_site_mode() === 'live' ? 'live' : 'test'); ?> mode<?php echo $gb_lgate_on ? '' : ', so that is how many would stay on show if you switched this on'; ?>.
+                                Subscriptions made in test mode do not count once Stripe is live.
+                            </p>
+                            <?php if ($gb_lgate_on && !$gb_lgate_summary['can_buy']): ?>
+                                <div style="margin:10px 0 0; padding:12px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:13px; line-height:1.6;">
+                                    <strong>This is on, but cleaners cannot buy a listing right now.</strong> The cleaner plan is not set up in Stripe for this mode,
+                                    so nobody new can appear until it is. Set it up under Membership plans, or switch this off.
+                                </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">
+                            Managers always see every cleaner. A cleaner can still see their own profile, and you can give somebody a free listing from their record under Cleaners.
                         </p>
                     </div>
                     <div style="padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; color:#475569; font-size:12.5px; line-height:1.6;">

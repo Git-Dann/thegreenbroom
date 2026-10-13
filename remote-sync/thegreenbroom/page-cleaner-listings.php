@@ -181,7 +181,11 @@ $listings_sub = get_post_meta(get_the_ID(), '_gb_listings_sub', true) ?: 'Find t
  */
 $listings_none = get_post_meta(get_the_ID(), '_gb_listings_none', true) ?: 'No cleaners match that search yet.';
 $listings_none_sub = get_post_meta(get_the_ID(), '_gb_listings_none_sub', true) ?: 'We are adding cleaners across Merseyside every week. Try a nearby postcode, or see everyone on the platform.';
-$listings_none_btn = get_post_meta(get_the_ID(), '_gb_listings_none_btn', true) ?: 'See all cleaners';
+// "Leave blank for no button", says the editor, so a saved empty value is kept
+// empty. The default is only for a page that has never saved this field.
+$listings_none_btn = metadata_exists('post', get_the_ID(), '_gb_listings_none_btn')
+    ? (string) get_post_meta(get_the_ID(), '_gb_listings_none_btn', true)
+    : 'See all cleaners';
 
 /*
  * Paid-social traffic lands here, so the page opens with a proper hero lockup
@@ -224,13 +228,28 @@ $listings_link_2 = get_post_meta(get_the_ID(), '_gb_listings_link_2', true) ?: '
  * away still needs the case made, so the page carries the pitch itself rather
  * than relying on the visitor going off to read other pages. Every string is
  * editable; a blank heading hides its whole section.
+ *
+ * Pass $blank_hides for a field the editor says can be cleared to hide
+ * something. Its default then only stands in when the field has never been
+ * saved; a saved empty value stays empty. Before, an empty heading came back
+ * as the default, so "Clear the heading to hide" never hid anything. Fields
+ * without that promise still fall back to the default when empty.
+ *
+ * The step and card fields only count as "cleared on purpose" once the page
+ * has been saved with them shown filled in (_gb_listings_cards_set). Earlier
+ * saves stored them empty because the editor showed them empty, and those
+ * still mean "use the standard wording".
  */
-$gb_l = function ($key, $default = '') {
+$gb_l = function ($key, $default = '', $blank_hides = false) {
+    if ($blank_hides && metadata_exists('post', get_the_ID(), $key)) {
+        return trim((string) get_post_meta(get_the_ID(), $key, true));
+    }
     $value = trim((string) get_post_meta(get_the_ID(), $key, true));
     return $value === '' ? $default : $value;
 };
+$gb_cards_set = get_post_meta(get_the_ID(), '_gb_listings_cards_set', true) === '1';
 
-$hiw_head = $gb_l('_gb_listings_hiw_head', 'Booking a cleaner takes two minutes');
+$hiw_head = $gb_l('_gb_listings_hiw_head', 'Booking a cleaner takes two minutes', true);
 $hiw_steps = array();
 $hiw_defaults = array(
     array('Search your postcode', 'See the verified cleaners who cover your street, with their hourly rate shown up front.'),
@@ -240,12 +259,12 @@ $hiw_defaults = array(
 foreach ($hiw_defaults as $i => $d) {
     $n = $i + 1;
     $hiw_steps[] = array(
-        'title' => $gb_l("_gb_listings_hiw_{$n}_title", $d[0]),
-        'text'  => $gb_l("_gb_listings_hiw_{$n}_text", $d[1]),
+        'title' => $gb_l("_gb_listings_hiw_{$n}_title", $d[0], $gb_cards_set),
+        'text'  => $gb_l("_gb_listings_hiw_{$n}_text", $d[1], $gb_cards_set),
     );
 }
 
-$why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom');
+$why_head = $gb_l('_gb_listings_why_head', 'Why book through The Green Broom', true);
 $why_cards = array();
 $why_defaults = array(
     array('Properly vetted', 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.'),
@@ -256,8 +275,8 @@ $why_defaults = array(
 foreach ($why_defaults as $i => $d) {
     $n = $i + 1;
     $why_cards[] = array(
-        'title' => $gb_l("_gb_listings_why_{$n}_title", $d[0]),
-        'text'  => $gb_l("_gb_listings_why_{$n}_text", $d[1]),
+        'title' => $gb_l("_gb_listings_why_{$n}_title", $d[0], $gb_cards_set),
+        'text'  => $gb_l("_gb_listings_why_{$n}_text", $d[1], $gb_cards_set),
     );
 }
 
@@ -267,13 +286,13 @@ foreach ($why_defaults as $i => $d) {
  * whole section is skipped. Nothing here is ever invented - a fabricated
  * testimonial on a cleaning marketplace is both a lie and a legal risk.
  */
-$reviews_head    = $gb_l('_gb_listings_reviews_head', 'What customers say');
+$reviews_head    = $gb_l('_gb_listings_reviews_head', 'What customers say', true);
 $reviews         = function_exists('gb_get_recent_reviews') ? gb_get_recent_reviews(3, 4) : array();
 $platform_rating = function_exists('gb_get_platform_rating') ? gb_get_platform_rating() : array('average' => 0, 'count' => 0);
 
-$lcta_title = $gb_l('_gb_listings_cta_title', 'Ready for a cleaner home?');
-$lcta_sub   = $gb_l('_gb_listings_cta_sub', 'Find a verified, eco-friendly cleaner covering your postcode today.');
-$lcta_btn   = $gb_l('_gb_listings_cta_btn', 'Search cleaners near you');
+$lcta_title = $gb_l('_gb_listings_cta_title', 'Ready for a cleaner home?', true);
+$lcta_sub   = $gb_l('_gb_listings_cta_sub', 'Find a verified, eco-friendly cleaner covering your postcode today.', true);
+$lcta_btn   = $gb_l('_gb_listings_cta_btn', 'Search cleaners near you', true);
 $lcta_link  = $gb_l('_gb_listings_cta_link', '#gb-dir-search-head');
 
 $verified_link  = get_post_meta(get_the_ID(), '_gb_listings_verified_link', true) ?: 'What does Verified mean?';

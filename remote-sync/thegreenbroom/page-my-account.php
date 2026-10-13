@@ -48,9 +48,112 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
         $booking_email = sanitize_email((string) get_post_meta($bid, '_gb_customer_email', true));
         $can_cancel = ($booking_owner_id === $user_id) || ($booking_email !== '' && $booking_email === $user_email);
 
-        if (get_post_type($bid) === 'gb_booking' && $can_cancel) {
+        /*
+         * The refund the customer was shown next to the Cancel button. The
+         * quote is worked out again here, from Stripe, and if it has gone
+         * DOWN since the page was drawn (the page sat open past the window,
+         * or past the start) nothing is cancelled: they are shown the new
+         * figure and asked again, with a button carrying that figure. A
+         * customer should never get less back than the page told them.
+         */
+        $gb_c_expected = isset($_POST['gb_cancel_expected']) && is_numeric($_POST['gb_cancel_expected']) ? (int) $_POST['gb_cancel_expected'] : -1;
+        $gb_c_quote    = null;
+        if (get_post_type($bid) === 'gb_booking' && $can_cancel && function_exists('gb_booking_refund_quote')) {
+            $gb_c_quote = gb_booking_refund_quote($bid);
+        }
+
+        if ($gb_c_quote && $gb_c_expected >= 0 && $gb_c_quote['amount_pence'] < $gb_c_expected && get_post_meta($bid, '_gb_booking_status', true) !== 'cancelled') {
+            $msg = '<div class="gb-card" style="background:#fffbeb; color:#92400e; padding:15px; margin-bottom:20px;">'
+                . '<strong>Nothing has been cancelled yet.</strong> The refund for this booking has changed since the page was opened. '
+                . esc_html(gb_refund_quote_summary($gb_c_quote))
+                . '<form method="post" action="' . esc_url(home_url('/my-account/')) . '" style="margin-top:12px;">'
+                . '<input type="hidden" name="gb_cancel_id" value="' . esc_attr($bid) . '">'
+                . '<input type="hidden" name="gb_cancel_expected" value="' . esc_attr($gb_c_quote['amount_pence']) . '">'
+                . wp_nonce_field('gb_cancel_booking', 'gb_cancel_nonce', true, false)
+                . '<button class="gb-btn gb-btn-danger gb-btn-sm">Cancel anyway</button>'
+                . '</form></div>';
+        } elseif (get_post_type($bid) === 'gb_booking' && $can_cancel && get_post_meta($bid, '_gb_booking_status', true) !== 'cancelled') {
+            /*
+             * Marked as the customer's own cancellation BEFORE the status
+             * changes. inc/refunds.php watches for bookings becoming
+             * cancelled and refunds team cancellations in full; this mark
+             * tells it to leave this one alone, as the policy refund is made
+             * just below. Without it a customer inside the window would get
+             * their partial refund and then a second refund of the rest.
+             */
+            update_post_meta($bid, '_gb_cancelled_by', 'customer');
+            update_post_meta($bid, '_gb_cancelled_at', current_time('mysql'));
             update_post_meta($bid, '_gb_booking_status', 'cancelled');
-            $msg = '<div class="gb-card" style="background:var(--color-success); color:var(--text-success); padding:15px; margin-bottom:20px;">Booking cancelled.</div>';
+
+            $gb_c_refund_due   = $gb_c_quote ? (int) $gb_c_quote['amount_pence'] : 0;
+            $gb_c_refund_error = '';
+            $gb_c_refunded     = 0;
+            if ($gb_c_refund_due > 0) {
+                $gb_c_result = gb_refund_booking($bid, $gb_c_refund_due, 'Cancelled by the customer: ' . gb_refund_quote_reason_text($gb_c_quote));
+                if (is_wp_error($gb_c_result)) {
+                    $gb_c_refund_error = $gb_c_result->get_error_message();
+                } else {
+                    $gb_c_refunded = (int) $gb_c_result['amount_pence'];
+                }
+            }
+
+            /*
+             * Tell the cleaner and the team. This used to change one field and
+             * nothing else: the cleaner still turned up, and a paid booking
+             * stayed paid with nobody prompted to refund it.
+             */
+            $gb_c_date    = (string) get_post_meta($bid, '_gb_booking_date', true);
+            $gb_c_time    = (string) get_post_meta($bid, '_gb_booking_time', true);
+            $gb_c_service = (string) get_post_meta($bid, '_gb_booking_service', true);
+            $gb_c_cleaner = (int) get_post_meta($bid, '_gb_booking_cleaner_id', true);
+            $gb_c_paid    = get_post_meta($bid, '_gb_payment_status', true) === 'paid';
+            $gb_c_when    = trim($gb_c_service . ' on ' . $gb_c_date . ' at ' . $gb_c_time);
+            $gb_c_subject = 'Booking #' . $bid . ' cancelled by the customer';
+
+            if ($gb_c_refunded > 0) {
+                $gb_c_money = 'It was paid through Stripe and ' . gb_refund_money($gb_c_refunded) . ' has been refunded automatically (' . gb_refund_quote_reason_text($gb_c_quote) . '). The cleaner\'s share of that has been taken back from their Stripe account.';
+            } elseif ($gb_c_refund_error !== '') {
+                $gb_c_money = 'REFUND FAILED. ' . gb_refund_money($gb_c_refund_due) . ' was due (' . gb_refund_quote_reason_text($gb_c_quote) . "), but Stripe did not accept it:\n\n" . $gb_c_refund_error . "\n\nPlease refund it by hand in Stripe, or use \"Refund the rest in full\" on the booking once the problem is fixed. The customer has been told the team will sort it.";
+            } elseif ($gb_c_paid && $gb_c_quote) {
+                $gb_c_money = 'It was paid through Stripe. No refund was due under the cancellation policy (' . gb_refund_quote_reason_text($gb_c_quote) . ').';
+            } else {
+                $gb_c_money = $gb_c_paid ? 'It was paid through Stripe. Nothing has been refunded automatically: check it in Stripe.' : 'It was not paid.';
+            }
+
+            $gb_c_cleaner_user = $gb_c_cleaner ? get_userdata((int) get_post_field('post_author', $gb_c_cleaner)) : false;
+            if ($gb_c_cleaner_user && is_email($gb_c_cleaner_user->user_email)) {
+                wp_mail(
+                    $gb_c_cleaner_user->user_email,
+                    $gb_c_subject,
+                    "Hi,\n\nThe customer has cancelled this booking:\n\n{$gb_c_when}\n\nThere is no need to attend. The team will be in touch if anything else is needed.\n\nThe Green Broom"
+                );
+            }
+
+            if (function_exists('gb_get_support_email') && is_email(gb_get_support_email())) {
+                wp_mail(
+                    gb_get_support_email(),
+                    $gb_c_subject . ($gb_c_refund_error !== '' ? ' - REFUND FAILED, action needed' : ($gb_c_refunded > 0 ? ' - refunded ' . gb_refund_money($gb_c_refunded) : '')),
+                    "Booking #{$bid} ({$gb_c_when}) was cancelled by the customer from their account.\n\n"
+                    . $gb_c_money . "\n\n"
+                    . 'Open it in Manager OS: ' . home_url('/manager-dashboard/?tab=bookings&action=edit&id=' . $bid)
+                );
+            }
+
+            // The customer's own word on the money, by email as well as on
+            // the page, so they have it in writing.
+            if ($gb_c_refunded > 0) {
+                gb_refund_email_customer($bid, $gb_c_refunded, gb_refund_customer_why($gb_c_quote));
+                $gb_c_notice = 'Booking cancelled. We have refunded ' . gb_refund_money($gb_c_refunded) . ' to your card (' . gb_refund_quote_reason_text($gb_c_quote) . '). It usually takes 5 to 10 working days to show. We have emailed you a copy.';
+            } elseif ($gb_c_refund_error !== '') {
+                $gb_c_notice = 'Booking cancelled. We could not send your ' . gb_refund_money($gb_c_refund_due) . ' refund automatically, so our team has been told and will sort it out for you. You do not need to do anything.';
+            } elseif ($gb_c_paid && $gb_c_quote && $gb_c_quote['reason'] === 'none') {
+                $gb_c_notice = 'Booking cancelled. No refund is due (' . gb_refund_quote_reason_text($gb_c_quote) . ').';
+            } else {
+                $gb_c_notice = 'Booking cancelled.';
+            }
+            $msg = $gb_c_refund_error !== ''
+                ? '<div class="gb-card" style="background:#fffbeb; color:#92400e; padding:15px; margin-bottom:20px;">' . esc_html($gb_c_notice) . '</div>'
+                : '<div class="gb-card" style="background:var(--color-success); color:var(--text-success); padding:15px; margin-bottom:20px;">' . esc_html($gb_c_notice) . '</div>';
         }
     }
 }
@@ -96,7 +199,9 @@ if (!empty($booking_ids)) {
             'status'=> $flow_status,
             'status_label' => $status_display['label'],
             'status_class' => $status_display['class'],
-            'ts'=>$ts
+            'ts'=>$ts,
+            'refunded' => (float) get_post_meta($id, '_gb_refund_amount_gbp', true),
+            'refund_status' => (string) get_post_meta($id, '_gb_refund_status', true),
         ];
 
         if($ts >= current_time('timestamp')) {
@@ -269,13 +374,37 @@ $gb_has_notices = trim($gb_notices) !== '';
                                 <td><strong><?php echo $job['date']; ?></strong><br><small><?php echo $job['time']; ?></small></td>
                                 <td><?php echo esc_html($job['service']); ?></td>
                                 <td><?php echo esc_html($job['cleaner']); ?></td>
-                                <td><span class="gb-badge <?php echo esc_attr($job['status_class']); ?>"><?php echo esc_html($job['status_label']); ?></span></td>
+                                <td>
+                                    <span class="gb-badge <?php echo esc_attr($job['status_class']); ?>"><?php echo esc_html($job['status_label']); ?></span>
+                                    <?php if ($job['status'] === 'cancelled' && $job['refunded'] > 0): ?>
+                                        <br><small style="color:#166534;">Refunded £<?php echo esc_html(number_format($job['refunded'], 2)); ?></small>
+                                    <?php elseif ($job['status'] === 'cancelled' && $job['refund_status'] === 'failed'): ?>
+                                        <br><small style="color:#92400e;">Refund being sorted by our team</small>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if(!in_array($job['status'], ['cancelled'], true)): ?>
-                                        <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" onsubmit="return confirm('Cancel this booking?');">
-                                            <input type="hidden" name="gb_cancel_id" value="<?php echo $job['id']; ?>">
+                                        <?php
+                                        /*
+                                         * What they get back, said before they press it.
+                                         * Worked out from the booking's own records
+                                         * (no call to Stripe for every row); the cancel
+                                         * itself checks Stripe and will not give back
+                                         * less than this without asking again.
+                                         */
+                                        $gb_job_quote = function_exists('gb_booking_refund_quote') ? gb_booking_refund_quote($job['id'], null, false) : null;
+                                        $gb_job_offer = $gb_job_quote ? gb_refund_quote_summary($gb_job_quote) : '';
+                                        ?>
+                                        <form method="post" action="<?php echo esc_url(home_url('/my-account/')); ?>" onsubmit="return confirm('<?php echo esc_js(trim('Cancel this booking? ' . $gb_job_offer)); ?>');">
+                                            <input type="hidden" name="gb_cancel_id" value="<?php echo esc_attr($job['id']); ?>">
+                                            <?php if ($gb_job_quote): ?>
+                                                <input type="hidden" name="gb_cancel_expected" value="<?php echo esc_attr($gb_job_quote['amount_pence']); ?>">
+                                            <?php endif; ?>
                                             <?php wp_nonce_field('gb_cancel_booking', 'gb_cancel_nonce'); ?>
                                             <button class="gb-btn gb-btn-danger gb-btn-sm">Cancel</button>
+                                            <?php if ($gb_job_offer !== ''): ?>
+                                                <small style="display:block; margin-top:6px; max-width:220px; color:#64748b; line-height:1.4;"><?php echo esc_html($gb_job_offer); ?></small>
+                                            <?php endif; ?>
                                         </form>
                                     <?php else: ?>
                                         <span class="text-muted" style="font-size:0.8rem;">—</span>
@@ -303,7 +432,14 @@ $gb_has_notices = trim($gb_notices) !== '';
                                 <td><?php echo $job['date']; ?></td>
                                 <td><?php echo esc_html($job['service']); ?></td>
                                 <td><?php echo esc_html($job['cleaner']); ?></td>
-                                <td><span class="gb-badge <?php echo esc_attr($job['status_class']); ?>"><?php echo esc_html($job['status_label']); ?></span></td>
+                                <td>
+                                    <span class="gb-badge <?php echo esc_attr($job['status_class']); ?>"><?php echo esc_html($job['status_label']); ?></span>
+                                    <?php if ($job['status'] === 'cancelled' && $job['refunded'] > 0): ?>
+                                        <br><small style="color:#166534;">Refunded £<?php echo esc_html(number_format($job['refunded'], 2)); ?></small>
+                                    <?php elseif ($job['status'] === 'cancelled' && $job['refund_status'] === 'failed'): ?>
+                                        <br><small style="color:#92400e;">Refund being sorted by our team</small>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>

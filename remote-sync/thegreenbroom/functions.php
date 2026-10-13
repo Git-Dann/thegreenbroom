@@ -97,9 +97,8 @@ function gb_refresh_manager_dashboard_auth_cookie_policy() {
     }
 
     $token = wp_get_session_token();
-    if ( $token !== '' ) {
-        gb_extend_active_session( get_current_user_id(), $token );
-        wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
+    if ( $token !== '' && gb_extend_active_session( get_current_user_id(), $token ) ) {
+        wp_set_auth_cookie( get_current_user_id(), gb_session_is_remembered( get_current_user_id(), $token ), is_ssl(), $token );
     }
 }
 add_action( 'template_redirect', 'gb_refresh_manager_dashboard_auth_cookie_policy', -200 );
@@ -115,28 +114,75 @@ add_action( 'template_redirect', 'gb_refresh_manager_dashboard_auth_cookie_polic
  * the site found nobody signed in, sent them to the login page, and the work
  * was gone. Nick reported exactly that on the Standard page.
  *
- * Now each visit by a signed-in user pushes the end date out to 14 days from
- * today, so a login only ends after two weeks of not being used at all. It is
- * written at most once a day, so this costs nothing on ordinary page views.
+ * Now each visit by a signed-in user pushes the end date out again, so a login
+ * only ends once it stops being used. It is written at most once a day, so
+ * this costs nothing on ordinary page views.
+ *
+ * Two limits keep that honest. A login made without "remember me" is kept to
+ * two days from the last visit and its cookie still ends with the browser
+ * session - it used to be quietly turned into a two-week remembered login,
+ * which on a shared computer is the opposite of what was asked for. And no
+ * login is extended past 60 days from signing in, so one cannot live forever
+ * by being used every fortnight.
+ *
+ * @return bool Whether the login is still within its 60 days and was extended
+ *              (or did not need to be).
  */
+const GB_SESSION_MAX_AGE = 60 * DAY_IN_SECONDS;
+
+function gb_session_is_remembered( $user_id, $token ) {
+    if ( ! class_exists( 'WP_Session_Tokens' ) || $token === '' ) {
+        return false;
+    }
+
+    $session = WP_Session_Tokens::get_instance( (int) $user_id )->get( $token );
+
+    return is_array( $session ) && ! empty( $session['gb_remember'] );
+}
+
 function gb_extend_active_session( $user_id, $token ) {
     if ( ! $user_id || $token === '' || ! class_exists( 'WP_Session_Tokens' ) ) {
-        return;
+        return false;
     }
 
     $sessions = WP_Session_Tokens::get_instance( (int) $user_id );
     $session  = $sessions->get( $token );
 
     if ( ! is_array( $session ) ) {
-        return;
+        return false;
     }
 
-    $target = time() + 14 * DAY_IN_SECONDS;
+    $login = ! empty( $session['login'] ) ? (int) $session['login'] : time();
 
-    if ( empty( $session['expiration'] ) || (int) $session['expiration'] < $target - DAY_IN_SECONDS ) {
+    if ( time() - $login > GB_SESSION_MAX_AGE ) {
+        return false;
+    }
+
+    /*
+     * Whether this was a "remember me" login, worked out once from how long
+     * WordPress first gave it (14 days, against 2) and kept with the login,
+     * because the end date itself is about to be moved.
+     */
+    $changed = false;
+
+    if ( ! isset( $session['gb_remember'] ) ) {
+        $session['gb_remember'] = ! empty( $session['expiration'] ) && ( (int) $session['expiration'] - $login ) > 3 * DAY_IN_SECONDS;
+        $changed = true;
+    }
+
+    $length = $session['gb_remember'] ? 14 * DAY_IN_SECONDS : 2 * DAY_IN_SECONDS;
+    $target = min( time() + $length, $login + GB_SESSION_MAX_AGE );
+
+    if ( empty( $session['expiration'] ) || (int) $session['expiration'] < $target - DAY_IN_SECONDS / 2 ) {
         $session['expiration'] = $target;
+        $changed = true;
+    }
+
+    if ( $changed ) {
         $sessions->update( $token, $session );
     }
+
+    return true;
 }
 
 /*
@@ -155,15 +201,19 @@ add_action( 'template_redirect', function () {
         return;
     }
 
-    gb_extend_active_session( get_current_user_id(), $token );
+    if ( ! gb_extend_active_session( get_current_user_id(), $token ) ) {
+        return;
+    }
 
-    // A cookie that was issued for the old, shorter login would still run
-    // out on its own; issue a fresh one to match, unless the manager
-    // dashboard hook above already did.
-    $cookie = function_exists( 'wp_parse_auth_cookie' ) ? wp_parse_auth_cookie( '', 'logged_in' ) : false;
+    // A cookie carries its own end date and would still run out on its own;
+    // issue a fresh one, of the same kind as before (remembered, or ending
+    // with the browser), once it is within a day of that end.
+    $remember = gb_session_is_remembered( get_current_user_id(), $token );
+    $cookie   = function_exists( 'wp_parse_auth_cookie' ) ? wp_parse_auth_cookie( '', 'logged_in' ) : false;
+    $renew_at = time() + ( $remember ? 13 : 1 ) * DAY_IN_SECONDS;
     if ( ! headers_sent() && is_array( $cookie ) && ! empty( $cookie['expiration'] )
-        && (int) $cookie['expiration'] < time() + 13 * DAY_IN_SECONDS ) {
-        wp_set_auth_cookie( get_current_user_id(), true, is_ssl(), $token );
+        && (int) $cookie['expiration'] < $renew_at ) {
+        wp_set_auth_cookie( get_current_user_id(), $remember, is_ssl(), $token );
     }
 }, -150 );
 
@@ -638,6 +688,13 @@ function gb_apply_content_audit_fixes() {
  * still printing its own comment form on them - an open, unmoderated posting
  * box on a public profile page. The platform has its own review system; this
  * was only ever a spam target.
+ *
+ * Deliberately still closed for gb_cleaner now that reviews are open to the
+ * public again. Reviews come in through the form and handler in
+ * inc/reviews.php, which hold every one for a manager's approval and run the
+ * anti-spam checks; wp-comments-post.php does neither, so it stays shut.
+ * wp_insert_comment() does not consult this filter, so it does not get in
+ * the way of that handler.
  */
 function gb_close_comments_on_directory_types( $open, $post_id ) {
     $type = get_post_type( $post_id );
@@ -1507,7 +1564,9 @@ function gb_notify_support_message( $message_id, $context = 'Contact' ) {
     $sender_name  = (string) get_post_meta( $message_id, '_gb_sender_name', true );
     $sender_email = (string) get_post_meta( $message_id, '_gb_sender_email', true );
     $post         = get_post( $message_id );
-    $subject_line = $post ? $post->post_title : 'New message';
+    // The stored title can hold entities (kses turns a typed & into &amp;),
+    // which a subject line would show literally.
+    $subject_line = $post ? html_entity_decode( $post->post_title, ENT_QUOTES, 'UTF-8' ) : 'New message';
     $body_text    = $post ? $post->post_content : '';
 
     $dashboard_url = home_url( '/manager-dashboard?tab=support&action=view_message&id=' . $message_id );
@@ -2208,7 +2267,11 @@ function gb_resolve_meta_description() {
     $descriptions = gb_get_default_meta_descriptions();
 
     if ( is_front_page() ) {
-        $description = 'Find trusted eco-friendly cleaners across Merseyside and West Lancashire with The Green Broom.';
+        // The "Google description" field on Home in Manager OS, when filled in.
+        $description = (string) get_post_meta( (int) get_option( 'page_on_front' ), '_gb_seo_meta_desc', true );
+        if ( trim( $description ) === '' ) {
+            $description = 'Find trusted eco-friendly cleaners across Merseyside and West Lancashire with The Green Broom.';
+        }
     } elseif ( is_home() || is_post_type_archive( 'post' ) || is_category() || gb_is_virtual_blog_request() ) {
         // The blog is a virtual route rather than a real page, so it never
         // reached the is_singular() branch and carried no snippet at all.
@@ -2357,35 +2420,49 @@ function gb_send_page_cache_headers() {
 
     header( 'Cache-Control: public, max-age=300', true );
     header( 'Expires: ' . gmdate( 'D, d M Y H:i:s', time() + 300 ) . ' GMT', true );
+    // The browser's copy is the logged-out page; once a sign-in cookie exists
+    // it must ask again, or the header still says "Log in" for five minutes.
+    header( 'Vary: Cookie', false );
 }
 add_action( 'send_headers', 'gb_send_page_cache_headers', 20 );
 
+/**
+ * The visitor's IP, for rate limits.
+ *
+ * It used to take CF-Connecting-IP, X-Forwarded-For or Client-IP first. The
+ * site is not behind Cloudflare, and the visitor writes all three headers
+ * themselves, so any IP-based limit (lost password, registration, contact
+ * forms, messages) could be reset by sending a new made-up address with each
+ * request.
+ *
+ * Now REMOTE_ADDR is trusted whenever it is a public address, which is the
+ * real connection. Only when it is a private one - the host's own front
+ * server passing the request on - is X-Forwarded-For used, and then its LAST
+ * public entry: the one that front server added, not anything the visitor put
+ * at the start.
+ */
 function gb_get_request_ip() {
-    $candidates = [];
-    foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'REMOTE_ADDR' ] as $key ) {
-        if ( empty( $_SERVER[ $key ] ) ) {
-            continue;
-        }
+    $public = static function ( $ip ) {
+        return (bool) filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+    };
 
-        $parts = array_map( 'trim', explode( ',', (string) wp_unslash( $_SERVER[ $key ] ) ) );
-        foreach ( $parts as $part ) {
-            if ( filter_var( $part, FILTER_VALIDATE_IP ) ) {
-                $candidates[] = $part;
+    $remote = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+    if ( $remote !== '' && $public( $remote ) ) {
+        return $remote;
+    }
+
+    if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+        $hops = array_reverse( array_map( 'trim', explode( ',', (string) wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) ) );
+
+        foreach ( $hops as $hop ) {
+            if ( $public( $hop ) ) {
+                return $hop;
             }
         }
     }
 
-    if ( empty( $candidates ) ) {
-        return '0.0.0.0';
-    }
-
-    foreach ( $candidates as $candidate ) {
-        if ( filter_var( $candidate, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-            return $candidate;
-        }
-    }
-
-    return $candidates[0];
+    return filter_var( $remote, FILTER_VALIDATE_IP ) ? $remote : '0.0.0.0';
 }
 
 function gb_get_rate_limit_storage_key( $action, $identity = '' ) {
@@ -2471,55 +2548,144 @@ function gb_get_rate_limit_message( $state, $default = 'Too many attempts. Pleas
 }
 
 /*
- * The same limit on WordPress's own login screen.
+ * Password guessing: a limit per ACCOUNT, on every way in.
  *
- * /login/ allows 8 wrong passwords per account in 15 minutes, but
- * wp-login.php is still reachable (administrators use it) and had no limit at
- * all, so anybody guessing passwords could simply go there instead. It now
- * shares the /login/ counter, so switching between the two buys nothing.
- * /login/ records its own failures, so only wp-login.php is counted here.
+ * Counted per account (and per account from each address), never per address
+ * alone, so changing address does not buy more guesses at one account.
+ *
+ * It runs inside WordPress's own 'authenticate' filter, so /login/,
+ * wp-login.php and xmlrpc.php all share it, and an email address counts as the
+ * account it belongs to. Attempts are counted as they arrive, in one database
+ * statement, so a burst of simultaneous guesses cannot all slip under the
+ * limit before any of them is recorded; a successful sign-in clears the count
+ * for that address.
+ *
+ * Once over the limit, even the right password is refused until the window
+ * passes, so the answer gives nothing away.
  */
-function gb_is_wp_login_screen() {
-    return isset( $GLOBALS['pagenow'] ) && $GLOBALS['pagenow'] === 'wp-login.php';
+const GB_LOGIN_ATTEMPT_LIMIT  = 8;
+const GB_LOGIN_ACCOUNT_LIMIT  = 40;
+const GB_LOGIN_ATTEMPT_WINDOW = 900;
+
+/*
+ * Two counts per account. Eight tries from one address stops somebody
+ * guessing. Forty from all addresses together stops a guesser who keeps
+ * changing address, without letting a stranger lock the real owner out with a
+ * handful of deliberate failures from somewhere else.
+ */
+function gb_login_attempt_options( $username ) {
+    $account = strtolower( trim( (string) $username ) );
+
+    if ( is_email( $account ) ) {
+        $user = get_user_by( 'email', $account );
+        if ( $user ) {
+            $account = strtolower( $user->user_login );
+        }
+    }
+
+    // A fixed fifteen-minute window, named in the option, so each one starts
+    // from nothing without a separate expiry to manage.
+    $window = (int) floor( time() / GB_LOGIN_ATTEMPT_WINDOW );
+    $ip     = function_exists( 'gb_get_request_ip' ) ? gb_get_request_ip() : '';
+
+    return array(
+        'here' => 'gb_login_tries_' . md5( $account . '|' . $ip ) . '_' . $window,
+        'all'  => 'gb_login_tries_' . md5( $account ) . '_' . $window,
+    );
+}
+
+function gb_login_count_attempt( $option ) {
+    global $wpdb;
+
+    $wpdb->query( $wpdb->prepare(
+        "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, '1', 'no')
+         ON DUPLICATE KEY UPDATE option_value = option_value + 1",
+        $option
+    ) );
+
+    return (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $option ) );
 }
 
 add_filter( 'authenticate', function ( $user, $username ) {
-    if ( ! gb_is_wp_login_screen() || (string) $username === '' ) {
+    if ( (string) $username === '' ) {
         return $user;
     }
 
-    $state = gb_rate_limit_check( 'login', 8, 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+    $options = gb_login_attempt_options( $username );
 
-    return $state['blocked'] ? new WP_Error( 'gb_login_limited', gb_get_rate_limit_message( $state ) ) : $user;
+    $GLOBALS['gb_login_attempt'] = array(
+        'options' => $options,
+        'here'    => gb_login_count_attempt( $options['here'] ),
+        'all'     => gb_login_count_attempt( $options['all'] ),
+    );
+
+    return $user;
+}, 1, 2 );
+
+add_filter( 'authenticate', function ( $user, $username ) {
+    global $wpdb;
+
+    if ( (string) $username === '' || empty( $GLOBALS['gb_login_attempt'] ) ) {
+        return $user;
+    }
+
+    $attempt = $GLOBALS['gb_login_attempt'];
+    unset( $GLOBALS['gb_login_attempt'] );
+
+    if ( $attempt['here'] > GB_LOGIN_ATTEMPT_LIMIT || $attempt['all'] > GB_LOGIN_ACCOUNT_LIMIT ) {
+        return new WP_Error(
+            'gb_login_locked',
+            'Too many sign-in attempts for this account. Please wait 15 minutes and try again, or reset your password.'
+        );
+    }
+
+    if ( $user instanceof WP_User ) {
+        $wpdb->delete( $wpdb->options, array( 'option_name' => $attempt['options']['here'] ) );
+    }
+
+    return $user;
 }, 100, 2 );
 
-add_action( 'wp_login_failed', function ( $username ) {
-    if ( gb_is_wp_login_screen() && (string) $username !== '' ) {
-        gb_record_rate_limit_hit( 'login', 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+/*
+ * Last window's counters are only clutter once it has passed. Cleared daily
+ * rather than on every attempt, so a sign-in never waits on it.
+ */
+add_action( 'gb_clear_login_attempts', function () {
+    global $wpdb;
+
+    $current = (int) floor( time() / GB_LOGIN_ATTEMPT_WINDOW );
+    $rows    = $wpdb->get_col( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'gb\\_login\\_tries\\_%'" );
+
+    foreach ( $rows as $name ) {
+        if ( (int) substr( strrchr( $name, '_' ), 1 ) < $current ) {
+            $wpdb->delete( $wpdb->options, array( 'option_name' => $name ) );
+        }
     }
 } );
 
-add_action( 'wp_login', function ( $user_login ) {
-    if ( gb_is_wp_login_screen() ) {
-        gb_reset_rate_limit( 'login', strtolower( (string) $user_login ) );
+add_action( 'init', function () {
+    if ( ! wp_next_scheduled( 'gb_clear_login_attempts' ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'gb_clear_login_attempts' );
     }
 } );
 
 /*
  * wp-login.php said "The username X is not registered" for a wrong username
  * and something different for a wrong password, which tells a stranger which
- * accounts exist. Both now get the one message /login/ already uses.
+ * accounts exist. Both now get the one message /login/ already uses. Only on
+ * the sign-in form itself: the reset and registration forms have their own
+ * wording, and "invalid_email" there means something else.
  */
 add_filter( 'login_errors', function ( $message ) {
     global $errors;
 
-    if ( ! ( $errors instanceof WP_Error ) ) {
+    $action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : 'login';
+
+    if ( ! ( $errors instanceof WP_Error ) || ! in_array( $action, array( 'login', '' ), true ) ) {
         return $message;
     }
 
-    $codes = $errors->get_error_codes();
-
-    if ( array_intersect( $codes, array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
+    if ( array_intersect( $errors->get_error_codes(), array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
         return 'Invalid username or password.';
     }
 
@@ -2539,6 +2705,7 @@ require_once get_template_directory() . '/inc/email-render.php';
 require_once get_template_directory() . '/inc/email-selftest.php';
 require_once get_template_directory() . '/inc/stripe-selftest.php';
 require_once get_template_directory() . '/inc/cleaner-profiles.php';
+require_once get_template_directory() . '/inc/reviews.php';
 require_once get_template_directory() . '/inc/roles.php';
 require_once get_template_directory() . '/inc/post-types.php';
 require_once get_template_directory() . '/inc/bookings.php';
@@ -2546,11 +2713,13 @@ require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
 require_once get_template_directory() . '/inc/connect-modes.php';
 require_once get_template_directory() . '/inc/stripe.php';
+require_once get_template_directory() . '/inc/refunds.php';
 require_once get_template_directory() . '/inc/cleaner-availability.php';
 require_once get_template_directory() . '/inc/cleaner-stats.php';
 require_once get_template_directory() . '/inc/pricing-panels.php';
 require_once get_template_directory() . '/inc/stripe-subscriptions.php';
 require_once get_template_directory() . '/inc/membership-checkout.php';
+require_once get_template_directory() . '/inc/identity-guard.php';
 
 /* ==========================================================================
    ONE-TIME MIGRATIONS

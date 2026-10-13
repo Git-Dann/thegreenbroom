@@ -63,6 +63,16 @@ if ($cleaner_id && get_post_type($cleaner_id) !== 'gb_cleaner') {
     $cleaner_id = 0;
 }
 
+/*
+ * A booking needs a cleaner. "Any Professional" took payment with no cleaner
+ * attached, so nobody was told about the job and the money had nowhere to go.
+ * Without one, send them to choose.
+ */
+if (!$cleaner_id) {
+    wp_safe_redirect(home_url('/cleaner-listings/'));
+    exit;
+}
+
 $cleaner_name = $cleaner_id ? get_the_title($cleaner_id) : 'Any Professional';
 $base_rate = $cleaner_id ? gb_get_cleaner_rate($cleaner_id) : 15;
 $today_ymd = current_time('Y-m-d');
@@ -160,9 +170,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
         $new_start = strtotime($form_data['date'] . ' ' . $form_data['time']);
         $new_end = $new_start + ($form_data['duration'] * 3600);
 
+        /*
+         * Confirmed bookings, plus anybody still at the Stripe checkout for
+         * this cleaner (pending, made in the last 30 minutes) - otherwise two
+         * people could pay for the same slot. Cancelled ones free the slot.
+         */
         $existing = new WP_Query([
             'post_type'      => 'gb_booking',
-            'post_status'    => ['publish'],
+            'post_status'    => ['publish', 'pending'],
             'posts_per_page' => -1,
             'meta_query'     => [
                 'relation' => 'AND',
@@ -174,6 +189,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
         if ($existing->have_posts()) {
             while ($existing->have_posts()) {
                 $existing->the_post();
+                if (get_post_meta(get_the_ID(), '_gb_booking_status', true) === 'cancelled') {
+                    continue;
+                }
+                if (get_post_status() === 'pending' && (time() - (int) get_post_time('U', true)) > 30 * MINUTE_IN_SECONDS) {
+                    continue;
+                }
                 $ex_time = get_post_meta(get_the_ID(), '_gb_booking_time', true);
                 $ex_duration = (int) get_post_meta(get_the_ID(), '_gb_booking_duration', true);
                 $ex_start = strtotime($form_data['date'] . ' ' . $ex_time);

@@ -35,6 +35,10 @@ get_header();
     $inbox_notice = isset($_GET['msg']) ? sanitize_key(wp_unslash($_GET['msg'])) : '';
     if ($inbox_notice === 'reply_sent'): ?>
         <div style="background:#f0fdf4; border:1px solid #dcfce7; color:#166534; padding:14px 16px; border-radius:8px; margin-bottom:16px;">✅ Reply sent and marked as replied.</div>
+    <?php elseif ($inbox_notice === 'reply_expired'): ?>
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">That form had timed out, so nothing was sent. Your reply is back in its box below: press Send again.</div>
+    <?php elseif ($inbox_notice === 'reply_queued'): ?>
+        <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Reply saved and marked as replied. The email service did not take it just now, so it is queued and will be retried automatically. There is no need to send it again.</div>
     <?php elseif ($inbox_notice === 'replied_nomail'): ?>
         <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:8px; margin-bottom:16px;">Marked as replied, but the email could not be sent (no valid sender email, or mail is not configured yet).</div>
     <?php elseif ($inbox_notice === 'reply_error'): ?>
@@ -81,7 +85,7 @@ get_header();
                     <input type="hidden" name="message_id" value="<?php echo get_the_ID(); ?>">
                     <input type="hidden" name="gb_reply_redirect" value="<?php echo esc_url(home_url('/inbox')); ?>">
                     <?php wp_nonce_field('gb_reply_message', 'gb_reply_nonce'); ?>
-                    <textarea name="gb_reply_body" required placeholder="Type your reply&hellip;" style="width:100%; min-height:90px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;"></textarea>
+                    <textarea name="gb_reply_body" required placeholder="Type your reply&hellip;" style="width:100%; min-height:90px; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:14px; box-sizing:border-box; line-height:1.5;"><?php echo esc_textarea(function_exists('gb_take_reply_draft') ? gb_take_reply_draft(get_the_ID()) : ''); ?></textarea>
                     <button type="submit" style="margin-top:8px; background:#2e7d32; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer;">Send Reply</button>
                 </form>
                 <?php else: ?>

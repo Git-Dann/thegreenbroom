@@ -83,6 +83,24 @@ function gb_membership_from_other_mode( $user_id ) {
         && gb_membership_stripe_mode( $user_id ) !== gb_stripe_site_mode();
 }
 
+/**
+ * Has a membership's end date really gone?
+ *
+ * The date is stored without a time, and it used to count as over from
+ * midnight. Stripe renews at the moment the period began - 6pm, say - so on
+ * every renewal day a paying member was "expired" from midnight until Stripe
+ * caught up: locked out of booking and messaging, and the nightly sweep wrote
+ * them down as expired. The date now runs to the end of that day, plus a day
+ * for Stripe's renewal and its webhook to land. A failed renewal still ends
+ * it, through Stripe's own subscription events.
+ */
+function gb_membership_date_has_passed( $expires ) {
+    $expires = trim( (string) $expires );
+    $end     = $expires !== '' ? strtotime( $expires . ' 23:59:59' ) : false;
+
+    return $end && ( $end + DAY_IN_SECONDS ) < current_time( 'timestamp' );
+}
+
 function gb_get_membership( $user_id ) {
     $user_id = (int) $user_id;
     if ( $user_id < 1 ) {
@@ -106,7 +124,7 @@ function gb_get_membership( $user_id ) {
 
     // Read-time expiry, so a lapsed membership is never reported as current
     // just because the nightly sweep has not run yet.
-    if ( $status === 'active' && $expires !== '' && strtotime( $expires ) && strtotime( $expires ) < current_time( 'timestamp' ) ) {
+    if ( $status === 'active' && gb_membership_date_has_passed( $expires ) ) {
         $status = 'expired';
     }
 
@@ -441,7 +459,7 @@ function gb_expire_memberships() {
         if ( $expires === '' || ! strtotime( $expires ) ) {
             continue;
         }
-        if ( strtotime( $expires ) < current_time( 'timestamp' ) ) {
+        if ( gb_membership_date_has_passed( $expires ) ) {
             gb_set_membership( $user_id, 'expired', (string) get_user_meta( $user_id, GB_MEMBER_PLAN, true ), $expires, (string) get_user_meta( $user_id, GB_MEMBER_SOURCE, true ), 'Membership period ended' );
         }
     }

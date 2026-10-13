@@ -111,7 +111,7 @@ https://thegreenbroom.uk/wp-admin/admin-post.php?action=gb_stripe_webhook
 They have to be three separate endpoints because Stripe will not mix v1
 snapshot events and v2 thin events on one destination.
 
-**a. Memberships and bookings** — 10 events:
+**a. Memberships and bookings** — 11 events:
 
 ```
 checkout.session.completed
@@ -124,6 +124,7 @@ customer.subscription.deleted
 customer.subscription.trial_will_end
 invoice.paid
 invoice.payment_failed
+charge.refunded
 ```
 
 **b. Connect** — `account.updated`, with **"Listen to events on connected

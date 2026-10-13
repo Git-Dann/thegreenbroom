@@ -45,10 +45,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.querySelectorAll('.menu-item-has-children').forEach(function (item) {
-        item.addEventListener('mouseleave', function (event) {
-            // Touch screens fire mouseleave on the next tap anywhere; the
-            // outside-click handler above already covers that.
-            if (event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) {
+        item.addEventListener('pointerleave', function (event) {
+            // A real mouse, and only in the desktop bar. In the stacked phone
+            // menu (the burger button is showing) the submenu sits in the
+            // flow, so closing it as the pointer moves down would pull the
+            // links below up under the cursor mid-click.
+            if (event.pointerType !== 'mouse' || toggle.offsetParent !== null) {
                 return;
             }
             closeMenu(item);

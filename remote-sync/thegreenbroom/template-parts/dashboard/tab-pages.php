@@ -201,7 +201,24 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
             '_gb_listings_btn_2'  => '',
             '_gb_listings_link_2' => '/what-cleaners-do',
             '_gb_listings_hiw_head'     => 'Booking a cleaner takes two minutes',
+            // The steps and cards below used to have no default here, so the
+            // editor showed them empty while the page printed its own wording.
+            // These match page-cleaner-listings.php word for word.
+            '_gb_listings_hiw_1_title'  => 'Search your postcode',
+            '_gb_listings_hiw_1_text'   => 'See the verified cleaners who cover your street, with their hourly rate shown up front.',
+            '_gb_listings_hiw_2_title'  => 'Choose your cleaner',
+            '_gb_listings_hiw_2_text'   => 'Read their profile, their checks and their reviews, then pick the day and time that suits you.',
+            '_gb_listings_hiw_3_title'  => 'Sit back',
+            '_gb_listings_hiw_3_text'   => 'They arrive with plant-based products. You pay securely online — no cash, no contracts, no awkwardness.',
             '_gb_listings_why_head'     => 'Why book through The Green Broom',
+            '_gb_listings_why_1_title'  => 'Properly vetted',
+            '_gb_listings_why_1_text'   => 'Every cleaner is ID-checked, DBS-checked and insured before they can accept a single booking.',
+            '_gb_listings_why_2_title'  => 'Genuinely eco',
+            '_gb_listings_why_2_text'   => 'Plant-based, non-toxic products. Safer for your home, your children and your pets.',
+            '_gb_listings_why_3_title'  => 'Fair to cleaners',
+            '_gb_listings_why_3_text'   => 'Independent local cleaners set their own rates and keep the bulk of what you pay. Better paid people do better work.',
+            '_gb_listings_why_4_title'  => 'No contracts',
+            '_gb_listings_why_4_text'   => 'Book a one-off clean or a regular slot. Change it or cancel it whenever you need to.',
             '_gb_listings_reviews_head' => 'What customers say',
             '_gb_listings_cta_title'    => 'Ready for a cleaner home?',
             '_gb_listings_cta_sub'      => 'Find a verified, eco-friendly cleaner covering your postcode today.',
@@ -305,26 +322,79 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
         ];
     }
 
-    $gb_field_value = function($meta_key, $fallback = '') use ($pid, $gb_page_defaults) {
+    /*
+     * Fields where an empty box means "hide this", as the help text beside
+     * each one promises.
+     *
+     * Everywhere else an empty box falls back to the standard wording, here
+     * and on the page, and that stays as it was. For these keys a value that
+     * has been saved, even an empty one, is what the manager chose, so it is
+     * shown as it is rather than refilled. Only a key that has never been
+     * saved gets the default. The page templates read them the same way, so
+     * the box and the live page cannot disagree.
+     *
+     * The Find a Cleaner step and card fields only join the list once the
+     * page has been saved with them filled in (_gb_listings_cards_set). Before
+     * that this editor showed them empty and saved them empty, so on a page
+     * saved earlier an empty one means "never filled in", not "hide".
+     */
+    $gb_blank_hides = [
+        '_gb_trust_banner',
+        '_gb_diff_head', '_gb_diff_1_head', '_gb_diff_1_list', '_gb_diff_2_head', '_gb_diff_2_list',
+        '_gb_listings_none_btn', '_gb_listings_reviews_head', '_gb_listings_hiw_head', '_gb_listings_why_head',
+        '_gb_listings_cta_title', '_gb_listings_cta_sub', '_gb_listings_cta_btn',
+    ];
+    if ($slug === 'cleaner-listings' && get_post_meta($pid, '_gb_listings_cards_set', true) === '1') {
+        for ($gb_n = 1; $gb_n <= 4; $gb_n++) {
+            if ($gb_n <= 3) {
+                $gb_blank_hides[] = "_gb_listings_hiw_{$gb_n}_title";
+                $gb_blank_hides[] = "_gb_listings_hiw_{$gb_n}_text";
+            }
+            $gb_blank_hides[] = "_gb_listings_why_{$gb_n}_title";
+            $gb_blank_hides[] = "_gb_listings_why_{$gb_n}_text";
+        }
+    }
+
+    $gb_field_value = function($meta_key, $fallback = '') use ($pid, $gb_page_defaults, $gb_blank_hides) {
         if (empty($meta_key)) {
             return $fallback;
         }
 
         $stored = get_post_meta($pid, $meta_key, true);
+        if (in_array($meta_key, $gb_blank_hides, true) && metadata_exists('post', $pid, $meta_key)) {
+            return $stored;
+        }
         if ($stored !== '' && $stored !== null) {
             return $stored;
         }
 
-        if ($meta_key === '_gb_trust_banner') {
-            return 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners';
-        }
-
+        // No special case for the trust bar any more. It used to fall back to
+        // "Trusted by 500+ Homes..." on every page, so saving Join, What
+        // Cleaners Do or Find a Cleaner published that claim there, and
+        // clearing it refilled it. Only the homepage has it as a default now.
         if (array_key_exists($meta_key, $gb_page_defaults)) {
             return $gb_page_defaults[$meta_key];
         }
 
         return $fallback;
     };
+
+    /*
+     * Textarea contents, decoded once before escaping.
+     *
+     * Saving runs every field through wp_kses_post, which stores "&" as
+     * "&amp;" and "<" as "&lt;". esc_textarea then encodes the "&" again, so
+     * the box showed "&amp;" after the first save and grew a layer each time.
+     * Decoding first shows exactly what was typed; saving it again stores the
+     * same "&amp;" as before, so nothing drifts. Single-line inputs do not need
+     * this: esc_attr leaves existing entities alone.
+     */
+    $gb_textarea = static function ($value) {
+        return esc_textarea(html_entity_decode((string) $value, ENT_QUOTES, 'UTF-8'));
+    };
+
+    // Only these templates print a trust bar, so only they get the field.
+    $gb_has_trust_bar = $is_front || in_array($slug, ['join', 'what-cleaners-do', 'cleaner-listings'], true);
 
     $gb_render_media_field = static function($field_name, $label, $value) {
         $field_value = is_scalar($value) ? (string) $value : '';
@@ -373,7 +443,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                 <label class="gb-label">Quick Jump</label>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                     <a href="#hero" class="gb-btn-small-os" style="text-align:left;">🦸 Hero</a>
-                    <a href="#trust" class="gb-btn-small-os" style="text-align:left;">⭐ Trust Bar</a>
+                    <?php if ($gb_has_trust_bar): ?><a href="#trust" class="gb-btn-small-os" style="text-align:left;">⭐ Trust Bar</a><?php endif; ?>
                     <a href="#modules" class="gb-btn-small-os" style="text-align:left;">🧩 Modules</a>
                     <a href="#cta" class="gb-btn-small-os" style="text-align:left;">📣 Bottom CTA</a>
                 </div>
@@ -416,7 +486,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                         <?php endif; ?>
                         <?php if ($h_title_k && $h_sub_k): ?>
                             <div class="gb-form-row"><label class="gb-label">Headline</label><input type="text" name="<?php echo esc_attr($h_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($h_title_k)); ?>"></div>
-                            <div class="gb-form-row"><label class="gb-label">Subtitle</label><textarea name="<?php echo esc_attr($h_sub_k); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($h_sub_k)); ?></textarea></div>
+                            <div class="gb-form-row"><label class="gb-label">Subtitle</label><textarea name="<?php echo esc_attr($h_sub_k); ?>" class="gb-textarea"><?php echo $gb_textarea($gb_field_value($h_sub_k)); ?></textarea></div>
                             <?php if ($is_front): ?>
                                 <div class="gb-link-row">
                                     <div class="gb-form-row">
@@ -445,19 +515,22 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                     </div>
                 </div>
 
+                <?php if ($gb_has_trust_bar): ?>
                 <div id="trust" class="gb-editor-section">
                     <div class="gb-editor-header"><span class="dashicons dashicons-awards"></span> Trust & Social Proof</div>
                     <div class="gb-editor-body">
-                        <div class="gb-form-row">
+                        <div class="gb-form-row" style="margin-bottom:0;">
                             <label class="gb-label">Hero Trust Bar Content</label>
-                            <input type="text" 
-                                name="_gb_trust_banner" 
+                            <input type="text"
+                                name="_gb_trust_banner"
                                 class="gb-input"
-                                value="<?php echo esc_attr($gb_field_value('_gb_trust_banner')); ?>" 
-                                placeholder="e.g. Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners">
+                                value="<?php echo esc_attr($gb_field_value('_gb_trust_banner')); ?>"
+                                placeholder="e.g. Every cleaner ID and DBS checked">
+                            <p class="gb-media-help">The green strip under the header. Leave it empty and no strip is shown. Only state what you can back up.</p>
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div id="modules">
                     <?php if ($is_front): ?>
@@ -466,7 +539,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-editor-body">
                                 <?php $gb_render_media_field('_gb_split_img', 'Image', $gb_field_value('_gb_split_img')); ?>
                                 <div class="gb-form-row"><label class="gb-label">Heading</label><input type="text" name="_gb_split_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_split_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Body Text</label><textarea name="_gb_split_body" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_split_body')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Body Text</label><textarea name="_gb_split_body" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_split_body')); ?></textarea></div>
                                 <div class="gb-form-row"><label class="gb-label">Bullet Items</label>
                                     <div class="gb-link-row"><?php for($i=1;$i<=4;$i++): ?><input type="text" name="_gb_split_list_<?php echo $i; ?>" class="gb-input" placeholder="Prop <?php echo $i; ?>" value="<?php echo esc_attr($gb_field_value("_gb_split_list_{$i}")); ?>"><?php endfor; ?></div>
                                 </div>
@@ -477,10 +550,10 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-editor-header"><span class="dashicons dashicons-search"></span> How It Works (Steps)</div>
                             <div class="gb-editor-body">
                                 <div class="gb-form-row"><label class="gb-label">Section Heading</label><input type="text" name="_gb_hiw_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_hiw_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_hiw_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_hiw_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_hiw_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_hiw_sub')); ?></textarea></div>
                                 <?php for($i=1;$i<=3;$i++): ?>
                                     <div class="gb-sub-head">Step <?php echo $i; ?></div>
-                                    <div class="gb-form-row"><input type="text" name="_gb_step<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_step{$i}_title")); ?>"><textarea name="_gb_step<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_step{$i}_text")); ?></textarea></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_step<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_step{$i}_title")); ?>"><textarea name="_gb_step<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value("_gb_step{$i}_text")); ?></textarea></div>
                                 <?php endfor; ?>
                             </div>
                         </div>
@@ -497,7 +570,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                     <div class="gb-sub-head"><?php echo esc_html($gb_feat_slots[$i]); ?></div>
                                     <div class="gb-form-row">
                                         <input type="text" name="_gb_feat<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_feat{$i}_title")); ?>">
-                                        <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
+                                        <textarea name="_gb_feat<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value("_gb_feat{$i}_text")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
                                 <div class="gb-sub-head">Why We Are Different</div>
@@ -509,12 +582,12 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                 <div class="gb-form-row">
                                     <label class="gb-label">Left column heading</label>
                                     <input type="text" name="_gb_diff_1_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_diff_1_head')); ?>">
-                                    <textarea name="_gb_diff_1_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value('_gb_diff_1_list')); ?></textarea>
+                                    <textarea name="_gb_diff_1_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value('_gb_diff_1_list')); ?></textarea>
                                 </div>
                                 <div class="gb-form-row">
                                     <label class="gb-label">Right column heading</label>
                                     <input type="text" name="_gb_diff_2_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_diff_2_head')); ?>">
-                                    <textarea name="_gb_diff_2_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value('_gb_diff_2_list')); ?></textarea>
+                                    <textarea name="_gb_diff_2_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value('_gb_diff_2_list')); ?></textarea>
                                 </div>
 
                                 <div class="gb-sub-head">Cleaner Showcase</div>
@@ -525,7 +598,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                 </div>
                                 <div class="gb-form-row">
                                     <label class="gb-label">Section sub-heading</label>
-                                    <textarea name="_gb_testi_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_testi_sub')); ?></textarea>
+                                    <textarea name="_gb_testi_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_testi_sub')); ?></textarea>
                                 </div>
                                 <div class="gb-form-row">
                                     <label class="gb-label">Button text</label>
@@ -585,8 +658,8 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-editor-header"><span class="dashicons dashicons-book-alt"></span> Story & Vetting</div>
                             <div class="gb-editor-body">
                                 <div class="gb-form-row"><label class="gb-label">Story Headline</label><input type="text" name="_gb_story_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_story_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Story Lead Paragraph</label><textarea name="_gb_story_lead" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_story_lead')); ?></textarea></div>
-                                <div class="gb-form-row"><label class="gb-label">Story Body</label><textarea name="_gb_story_body" class="gb-textarea" style="height:150px;"><?php echo esc_textarea($gb_field_value('_gb_story_body')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Story Lead Paragraph</label><textarea name="_gb_story_lead" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_story_lead')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Story Body</label><textarea name="_gb_story_body" class="gb-textarea" style="height:150px;"><?php echo $gb_textarea($gb_field_value('_gb_story_body')); ?></textarea></div>
                                 <?php $gb_render_media_field('_gb_story_img', 'Story image', $gb_field_value('_gb_story_img')); ?>
 
                                 <div class="gb-sub-head">Stats Bar</div>
@@ -605,11 +678,11 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
 
                                 <div class="gb-sub-head">Vetting Intro</div>
                                 <div class="gb-form-row"><label class="gb-label">Vetting Section Heading</label><input type="text" name="_gb_vet_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_vet_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Vetting Section Subheading</label><textarea name="_gb_vet_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_vet_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Vetting Section Subheading</label><textarea name="_gb_vet_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_vet_sub')); ?></textarea></div>
                                 <?php // Three steps since the Green Interview was dropped. ?>
                                 <?php for($i=1;$i<=3;$i++): ?>
                                     <div class="gb-sub-head">Vetting Step <?php echo $i; ?><?php echo $i === 3 ? ' (shown centred beneath the other two)' : ''; ?></div>
-                                    <div class="gb-form-row"><input type="text" name="_gb_vet_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_vet_s{$i}_title")); ?>"><textarea name="_gb_vet_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_vet_s{$i}_desc")); ?></textarea></div>
+                                    <div class="gb-form-row"><input type="text" name="_gb_vet_s<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_vet_s{$i}_title")); ?>"><textarea name="_gb_vet_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value("_gb_vet_s{$i}_desc")); ?></textarea></div>
                                 <?php endfor; ?>
                             </div>
                         </div>
@@ -619,13 +692,13 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-editor-header"><span class="dashicons dashicons-forms"></span> Service Packages & Mission</div>
                             <div class="gb-editor-body">
                                 <div class="gb-form-row"><label class="gb-label">Services Section Heading</label><input type="text" name="_gb_svc_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Services Section Subheading</label><textarea name="_gb_svc_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_svc_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Services Section Subheading</label><textarea name="_gb_svc_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_svc_sub')); ?></textarea></div>
                                 <?php for($i=1;$i<=3;$i++): ?>
                                     <div class="gb-sub-head">Package <?php echo $i; ?></div>
                                     <div class="gb-form-row">
                                         <input type="text" name="_gb_svc_<?php echo $i; ?>_title" class="gb-input" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_title")); ?>">
-                                        <textarea name="_gb_svc_<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo esc_textarea($gb_field_value("_gb_svc_{$i}_desc")); ?></textarea>
-                                        <textarea name="_gb_svc_<?php echo $i; ?>_list" class="gb-textarea" style="margin-top:8px;" placeholder="Bullet list (line by line)"><?php echo esc_textarea($gb_field_value("_gb_svc_{$i}_list")); ?></textarea>
+                                        <textarea name="_gb_svc_<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value("_gb_svc_{$i}_desc")); ?></textarea>
+                                        <textarea name="_gb_svc_<?php echo $i; ?>_list" class="gb-textarea" style="margin-top:8px;" placeholder="Bullet list (line by line)"><?php echo $gb_textarea($gb_field_value("_gb_svc_{$i}_list")); ?></textarea>
                                         <input type="text" name="_gb_svc_<?php echo $i; ?>_btn" class="gb-input" style="margin-top:8px;" placeholder="Button text" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_btn")); ?>">
                                         <input type="text" name="_gb_svc_<?php echo $i; ?>_link" class="gb-input" style="margin-top:8px;" placeholder="Button link" value="<?php echo esc_attr($gb_field_value("_gb_svc_{$i}_link")); ?>">
                                     </div>
@@ -633,8 +706,8 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                 <div class="gb-sub-head">Our Mission</div>
                                 <?php $gb_render_media_field('_gb_svc_mis_img', 'Mission image', $gb_field_value('_gb_svc_mis_img')); ?>
                                 <div class="gb-form-row"><label class="gb-label">Mission Headline</label><input type="text" name="_gb_svc_mis_title" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_title')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Mission Subheading</label><textarea name="_gb_svc_mis_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_sub')); ?></textarea></div>
-                                <div class="gb-form-row"><label class="gb-label">Mission Body</label><textarea name="_gb_svc_mis_body" class="gb-textarea" style="height:120px;"><?php echo esc_textarea($gb_field_value('_gb_svc_mis_body')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Mission Subheading</label><textarea name="_gb_svc_mis_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_svc_mis_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Mission Body</label><textarea name="_gb_svc_mis_body" class="gb-textarea" style="height:120px;"><?php echo $gb_textarea($gb_field_value('_gb_svc_mis_body')); ?></textarea></div>
                                 <div class="gb-link-row">
                                     <div class="gb-form-row"><label class="gb-label">Mission Button Text</label><input type="text" name="_gb_svc_mis_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_btn')); ?>"></div>
                                     <div class="gb-form-row"><label class="gb-label">Mission Button Link</label><input type="text" name="_gb_svc_mis_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_svc_mis_link')); ?>"></div>
@@ -660,12 +733,12 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-editor-header"><span class="dashicons dashicons-heart"></span> Benefits ("Why Join")</div>
                             <div class="gb-editor-body">
                                 <div class="gb-form-row"><label class="gb-label">Section Heading</label><input type="text" name="_gb_join_ben_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_join_ben_head')); ?>"></div>
-                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_join_ben_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_join_ben_sub')); ?></textarea></div>
+                                <div class="gb-form-row"><label class="gb-label">Section Subheading</label><textarea name="_gb_join_ben_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_join_ben_sub')); ?></textarea></div>
                                 <?php for($i=1;$i<=4;$i++): ?>
                                     <div class="gb-sub-head">Benefit <?php echo $i; ?></div>
                                     <div class="gb-form-row">
                                         <input type="text" name="_gb_join_b<?php echo $i; ?>_title" class="gb-input" placeholder="Title" value="<?php echo esc_attr($gb_field_value("_gb_join_b{$i}_title")); ?>">
-                                        <textarea name="_gb_join_b<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_b{$i}_text")); ?></textarea>
+                                        <textarea name="_gb_join_b<?php echo $i; ?>_text" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo $gb_textarea($gb_field_value("_gb_join_b{$i}_text")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
                             </div>
@@ -689,7 +762,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                     <div class="gb-sub-head">Step <?php echo $i; ?></div>
                                     <div class="gb-form-row">
                                         <input type="text" name="_gb_join_s<?php echo $i; ?>_title" class="gb-input" placeholder="Title" value="<?php echo esc_attr($gb_field_value("_gb_join_s{$i}_title")); ?>">
-                                        <textarea name="_gb_join_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo esc_textarea($gb_field_value("_gb_join_s{$i}_desc")); ?></textarea>
+                                        <textarea name="_gb_join_s<?php echo $i; ?>_desc" class="gb-textarea" style="margin-top:8px;" placeholder="Description"><?php echo $gb_textarea($gb_field_value("_gb_join_s{$i}_desc")); ?></textarea>
                                     </div>
                                 <?php endfor; ?>
                             </div>
@@ -716,7 +789,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                         ?>
                         <?php if ($c_title_k && $c_sub_k): ?>
                             <div class="gb-form-row"><label class="gb-label">CTA Headline</label><input type="text" name="<?php echo esc_attr($c_title_k); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($c_title_k)); ?>"></div>
-                            <div class="gb-form-row"><label class="gb-label">CTA Description</label><textarea name="<?php echo esc_attr($c_sub_k); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($c_sub_k)); ?></textarea></div>
+                            <div class="gb-form-row"><label class="gb-label">CTA Description</label><textarea name="<?php echo esc_attr($c_sub_k); ?>" class="gb-textarea"><?php echo $gb_textarea($gb_field_value($c_sub_k)); ?></textarea></div>
                             <?php if ($is_front): ?>
                                 <div class="gb-link-row">
                                     <div class="gb-form-row"><label class="gb-label">Primary CTA Button Text</label><input type="text" name="_gb_cta_btn_1" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_cta_btn_1')); ?>"></div>
@@ -757,7 +830,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                     <div class="gb-editor-header"><span class="dashicons dashicons-yes-alt"></span> Eco Products Page</div>
                     <div class="gb-editor-body">
                         <p style="margin:0 0 18px; color:#64748b; font-size:13px;">The heading uses the page title above. This controls the intro line below it.</p>
-                        <div class="gb-form-row" style="margin-bottom:0;"><label class="gb-label">Intro line (under the heading)</label><textarea name="_gb_eco_hero_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_eco_hero_sub')); ?></textarea></div>
+                        <div class="gb-form-row" style="margin-bottom:0;"><label class="gb-label">Intro line (under the heading)</label><textarea name="_gb_eco_hero_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_eco_hero_sub')); ?></textarea></div>
                         <p style="margin:18px 0 0; padding:12px 14px; background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; color:#166534; font-size:13px;">
                             The product cards on this page are managed in
                             <a href="?tab=eco-products" style="color:#166534; font-weight:700;">Eco Products</a>
@@ -837,7 +910,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             <div class="gb-form-row"<?php echo $i === count($gb_wording_fields) - 1 ? ' style="margin-bottom:0;"' : ''; ?>>
                                 <label class="gb-label"><?php echo esc_html($gb_label); ?></label>
                                 <?php if ($gb_type === 'textarea'): ?>
-                                    <textarea name="<?php echo esc_attr($gb_key); ?>" class="gb-textarea"><?php echo esc_textarea($gb_field_value($gb_key)); ?></textarea>
+                                    <textarea name="<?php echo esc_attr($gb_key); ?>" class="gb-textarea"><?php echo $gb_textarea($gb_field_value($gb_key)); ?></textarea>
                                 <?php else: ?>
                                     <input type="text" name="<?php echo esc_attr($gb_key); ?>" class="gb-input" value="<?php echo esc_attr($gb_field_value($gb_key)); ?>">
                                 <?php endif; ?>
@@ -851,10 +924,12 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                     <div class="gb-editor-header"><span class="dashicons dashicons-editor-paragraph"></span> Body Text Content</div>
                     <div class="gb-editor-body">
                         <?php if($slug == 'cleaner-listings'): ?>
+                            <?php // Tells the page and this editor that the step and card boxes were shown filled in when this was saved, so an empty one now means "hide". See $gb_blank_hides. ?>
+                            <input type="hidden" name="_gb_listings_cards_set" value="1">
                             <div class="gb-form-row"><label class="gb-label">Eyebrow label above the headline (optional)</label><input type="text" name="_gb_listings_eyebrow" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_eyebrow')); ?>" placeholder="e.g. Liverpool &amp; Merseyside"></div>
                             <div class="gb-form-row">
                                 <label class="gb-label">Selling points in the header (one per line)</label>
-                                <textarea name="_gb_listings_usps" class="gb-textarea" style="min-height:110px;" placeholder="Leave blank to use the standard three."><?php echo esc_textarea($gb_field_value('_gb_listings_usps')); ?></textarea>
+                                <textarea name="_gb_listings_usps" class="gb-textarea" style="min-height:110px;" placeholder="Leave blank to use the standard three."><?php echo $gb_textarea($gb_field_value('_gb_listings_usps')); ?></textarea>
                                 <p style="margin-top:8px; color:#94a3b8; font-size:12px;">Shown as a ticked row under the subtitle. Three short lines works best.</p>
                             </div>
                             <div class="gb-link-row">
@@ -889,7 +964,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                             </div>
 
                             <div class="gb-form-row"><label class="gb-label">No Results Heading</label><input type="text" name="_gb_listings_none" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none')); ?>"></div>
-                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><textarea name="_gb_listings_none_sub" class="gb-textarea"><?php echo esc_textarea($gb_field_value('_gb_listings_none_sub')); ?></textarea><p class="gb-media-help">Shown when a search finds nobody. Name the areas you actually cover &mdash; this is the most common thing a visitor sees while the directory is small.</p></div>
+                            <div class="gb-form-row"><label class="gb-label">No Results Message</label><textarea name="_gb_listings_none_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_listings_none_sub')); ?></textarea><p class="gb-media-help">Shown when a search finds nobody. Name the areas you actually cover &mdash; this is the most common thing a visitor sees while the directory is small.</p></div>
                             <div class="gb-form-row"><label class="gb-label">No Results Button</label><input type="text" name="_gb_listings_none_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_listings_none_btn')); ?>"><p class="gb-media-help">Clears the search and shows every cleaner. Leave blank for no button.</p></div>
                             <div style="margin:22px 0 0; padding-top:18px; border-top:1px solid #f1f5f9;">
                                 <h4 style="margin:0 0 4px; font-size:13px; color:#0f172a;">Customer reviews strip</h4>
@@ -956,7 +1031,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                 </div>
                                 <div class="gb-form-row" style="margin-bottom:0;">
                                     <label class="gb-label">Pop-up text</label>
-                                    <textarea name="_gb_listings_verified_body" class="gb-textarea" style="min-height:190px;" placeholder="Leave blank to use the standard explanation of our vetting checks."><?php echo esc_textarea($gb_field_value('_gb_listings_verified_body')); ?></textarea>
+                                    <textarea name="_gb_listings_verified_body" class="gb-textarea" style="min-height:190px;" placeholder="Leave blank to use the standard explanation of our vetting checks."><?php echo $gb_textarea($gb_field_value('_gb_listings_verified_body')); ?></textarea>
                                     <p style="margin-top:8px; color:#94a3b8; font-size:12px;">Leave a blank line between paragraphs. Several lines in a row become a ticked list; end a line with a colon to make it the list&rsquo;s intro. Leave the whole box empty to use the standard wording describing our actual checks.</p>
                                 </div>
                             </div>
@@ -975,7 +1050,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                     <div class="gb-editor-body">
                         <div class="gb-form-row" style="margin-bottom:0;">
                             <label class="gb-label">Google description</label>
-                            <textarea name="_gb_seo_meta_desc" class="gb-textarea" style="min-height:90px;" maxlength="160" placeholder="One or two sentences describing this page."><?php echo esc_textarea(get_post_meta($p_obj->ID, '_gb_seo_meta_desc', true)); ?></textarea>
+                            <textarea name="_gb_seo_meta_desc" class="gb-textarea" style="min-height:90px;" maxlength="160" placeholder="One or two sentences describing this page."><?php echo $gb_textarea(get_post_meta($p_obj->ID, '_gb_seo_meta_desc', true)); ?></textarea>
                             <p style="margin-top:8px; color:#94a3b8; font-size:12px;">The grey text under the page title in Google results. Aim for 120&ndash;155 characters. Leave blank and Google writes its own.</p>
                         </div>
                     </div>

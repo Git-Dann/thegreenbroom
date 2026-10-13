@@ -908,19 +908,27 @@ function gb_promote_ongoing_monitoring() {
  * undo a decision made since.
  */
 function gb_retire_how_we_do_it() {
+    // Once only: a later migration must not draft it again after somebody has
+    // deliberately brought it back.
+    if ( get_option( 'gb_how_we_do_it_retired' ) ) {
+        return;
+    }
+
     $page = get_page_by_path( 'how-we-do-it' );
 
     if ( $page instanceof WP_Post && $page->post_status === 'publish' ) {
         wp_update_post( array( 'ID' => $page->ID, 'post_status' => 'draft' ) );
     }
+
+    update_option( 'gb_how_we_do_it_retired', 1, false );
 }
 
 /**
  * Old links to How We Do It land on The Green Broom Standard, which now says
  * how cleaners are checked, instead of a "page not found".
  *
- * Only while the page is not published, so republishing it in Manager OS
- * is all it takes to bring it back.
+ * Only while the page is not published, so publishing it again (in
+ * WordPress admin, Pages) is all it takes to bring it back.
  */
 add_action( 'template_redirect', function () {
     $path = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ), '/' );
@@ -945,11 +953,17 @@ add_action( 'template_redirect', function () {
  * two names for one page. Renamed only while it still has the old title.
  */
 function gb_rename_listings_page() {
+    if ( get_option( 'gb_listings_page_renamed' ) ) {
+        return;
+    }
+
     $page = get_page_by_path( 'cleaner-listings' );
 
     if ( $page instanceof WP_Post && $page->post_title === 'Cleaner Listings' ) {
         wp_update_post( array( 'ID' => $page->ID, 'post_title' => 'Find a Cleaner' ) );
     }
+
+    update_option( 'gb_listings_page_renamed', 1, false );
 }
 
 /**
