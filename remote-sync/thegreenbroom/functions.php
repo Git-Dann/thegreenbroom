@@ -2477,6 +2477,7 @@ require_once get_template_directory() . '/inc/anti-spam.php';
 require_once get_template_directory() . '/inc/outbox.php';
 require_once get_template_directory() . '/inc/email-render.php';
 require_once get_template_directory() . '/inc/email-selftest.php';
+require_once get_template_directory() . '/inc/stripe-selftest.php';
 require_once get_template_directory() . '/inc/cleaner-profiles.php';
 require_once get_template_directory() . '/inc/roles.php';
 require_once get_template_directory() . '/inc/post-types.php';

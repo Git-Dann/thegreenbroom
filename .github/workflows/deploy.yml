@@ -30,6 +30,12 @@ on:
         description: "Optional: after deploying, send test emails to this address and print what each route did"
         required: false
         default: ""
+      stripe_test:
+        description: "Optional Stripe self-test: 'check' = read-only health check; 'full' = check plus a Test-mode purchase with Stripe's test card, then cancel and clean up"
+        required: false
+        type: choice
+        options: ["none", "check", "full"]
+        default: "none"
 
 jobs:
   deploy:
@@ -163,3 +169,76 @@ jobs:
           cat result.json
           echo
           [ "$code" = "200" ]
+
+      # Optional Stripe self-test (see inc/stripe-selftest.php).
+      #
+      # 'check' reads the Stripe set-up in both modes and lists anything that
+      # would stop somebody paying. 'full' then buys the cheapest customer plan
+      # in Test mode through the real Stripe Checkout page, with Stripe's test
+      # card, in a real browser; waits for Stripe's webhook to switch the
+      # membership on; cancels; waits for the webhook to switch it off; and
+      # deletes the throwaway account. The site refuses the purchase outright
+      # in Live mode. Same one-time-token lock as the email self-test.
+      - name: Stripe self-test
+        if: inputs.stripe_test == 'check' || inputs.stripe_test == 'full'
+        env:
+          SSHPASS: ${{ inputs.ssh_password }}
+          HOST: ${{ steps.conn.outputs.host }}
+          SSH_LOGIN: ${{ steps.conn.outputs.user }}
+          USE_PASSWORD: ${{ steps.conn.outputs.use_password }}
+          FULL: ${{ inputs.stripe_test == 'full' }}
+        run: |
+          place_token() {
+            TOKEN="$(openssl rand -hex 24)"
+            echo "::add-mask::$TOKEN"
+            printf "<?php return array( 'token' => '%s' );\n" "$TOKEN" > .gb-stripe-selftest-token.php
+            if [ "$USE_PASSWORD" = "true" ]; then
+              sshpass -e rsync -az -e "ssh -p 22 -o StrictHostKeyChecking=no" \
+                .gb-stripe-selftest-token.php "$SSH_LOGIN@$HOST:themes/thegreenbroom/.gb-stripe-selftest-token.php"
+            else
+              rsync -az -e "ssh -i ~/.ssh/greenbroom -p 22" \
+                .gb-stripe-selftest-token.php "$SSH_LOGIN@$HOST:themes/thegreenbroom/.gb-stripe-selftest-token.php"
+            fi
+            rm -f .gb-stripe-selftest-token.php
+          }
+          post() {
+            curl -sS -o result.json -w '%{http_code}' -X POST --max-time 170 "$@" \
+              "https://thegreenbroom.uk/?gb_stripe_selftest=1"
+          }
+
+          echo "=== Health check ==="
+          place_token
+          code=$(post --data-urlencode "token=$TOKEN" --data-urlencode "phase=check")
+          echo "HTTP $code"; cat result.json; echo
+          [ "$code" = "200" ] || exit 1
+
+          [ "$FULL" = "true" ] || exit 0
+
+          echo "=== Test purchase: start ==="
+          place_token
+          code=$(post --data-urlencode "token=$TOKEN" --data-urlencode "phase=start")
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then cat result.json; echo; exit 1; fi
+          URL=$(jq -r .checkout_url result.json)
+          FINISH=$(jq -r .finish_token result.json)
+          echo "::add-mask::$FINISH"
+          echo "Checkout page created for plan $(jq -r .plan result.json)"
+
+          echo "=== Test purchase: paying with the test card ==="
+          npm install --no-save --silent playwright@1.47.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          paid=0
+          node .github/scripts/stripe-test-checkout.js "$URL" || paid=$?
+
+          echo "=== Test purchase: webhook, portal, cancel, clean up ==="
+          code=$(post --data-urlencode "token=$FINISH" --data-urlencode "phase=finish")
+          echo "HTTP $code"; cat result.json; echo
+          [ "$paid" = "0" ] && [ "$code" = "200" ] && [ "$(jq -r .passed result.json)" = "true" ]
+
+      - name: Keep the checkout screenshot if the test purchase failed
+        if: failure() && inputs.stripe_test == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-checkout
+          path: stripe-checkout.png
+          if-no-files-found: ignore
