@@ -167,10 +167,16 @@ $gb_payment_class = static function($payment_status) {
                 </div>
             </div>
             <div class="gb-header-actions">
+                <?php
+                // A customer cancelling only marks the booking cancelled; the
+                // post itself stays published. Show it as cancelled here too,
+                // or saving any other edit quietly confirmed it again.
+                $gb_bk_status = get_post_meta($pid, '_gb_booking_status', true) === 'cancelled' ? 'trash' : $post->post_status;
+                ?>
                 <select name="post_status" class="gb-header-select">
-                    <option value="publish" <?php selected($post->post_status, 'publish'); ?>>Confirm Booking</option>
-                    <option value="pending" <?php selected($post->post_status, 'pending'); ?>>Set to Pending</option>
-                    <option value="trash" <?php selected($post->post_status, 'trash'); ?>>Cancel Appointment</option>
+                    <option value="publish" <?php selected($gb_bk_status, 'publish'); ?>>Confirm Booking</option>
+                    <option value="pending" <?php selected($gb_bk_status, 'pending'); ?>>Set to Pending</option>
+                    <option value="trash" <?php selected($gb_bk_status, 'trash'); ?>>Cancel Appointment</option>
                 </select>
                 <button type="submit" class="gb-header-btn">
                     Update Appointment

@@ -15,20 +15,35 @@ if ( ! defined( 'ABSPATH' ) ) {
    3. BOOKING ENGINE LOGIC
    ========================================================================== */
 
+/*
+ * A booking can hold more than one valid link. One is made when the booking is
+ * created (it rides in Stripe's return address) and another for the
+ * confirmation email. This used to overwrite the stored hash, so confirming a
+ * booking - usually by webhook, before the customer's browser was back from
+ * Stripe - broke the link they were on: "No Booking Found", no account form,
+ * no calendar file. Each new link is now added alongside the others.
+ */
 function gb_generate_booking_access_token($booking_id) {
     $raw_token = wp_generate_password(48, false, false);
-    update_post_meta($booking_id, '_gb_booking_access_token', wp_hash($raw_token));
+    add_post_meta($booking_id, '_gb_booking_access_token', wp_hash($raw_token));
 
     return $raw_token;
 }
 
 function gb_booking_token_is_valid($booking_id, $raw_token) {
-    $stored_hash = get_post_meta($booking_id, '_gb_booking_access_token', true);
-    if (!$stored_hash || !$raw_token) {
+    if (!$raw_token) {
         return false;
     }
 
-    return hash_equals($stored_hash, wp_hash($raw_token));
+    $given = wp_hash($raw_token);
+
+    foreach ((array) get_post_meta($booking_id, '_gb_booking_access_token', false) as $stored_hash) {
+        if ($stored_hash && hash_equals((string) $stored_hash, $given)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function gb_find_service_post($identifier) {

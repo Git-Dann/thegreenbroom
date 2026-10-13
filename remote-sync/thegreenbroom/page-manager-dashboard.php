@@ -439,6 +439,27 @@ if (isset($_POST['gb_save_action'])) {
         }
 
         /*
+         * Going live from this form gets the same hard check as the Approve
+         * action: ID, DBS, references, phone and signed terms all on file.
+         * Before, the status box defaulted to "Verified (Live)" for a new or
+         * draft profile, so saving any edit published a cleaner with none of
+         * the checks done (and purged whatever documents they had sent). A
+         * profile that is already live is left alone. The rest of the edit
+         * still saves; only the status stays where it was.
+         */
+        $gb_publish_blocked = false;
+        $gb_previous_status = $pid ? (string) get_post_status($pid) : '';
+        if ($cleaner_status === 'publish' && $gb_previous_status !== 'publish') {
+            $gb_missing = ($pid && function_exists('gb_cleaner_verification_missing'))
+                ? gb_cleaner_verification_missing($pid)
+                : ['ID, DBS, references and signed terms'];
+            if (!empty($gb_missing)) {
+                $cleaner_status = in_array($gb_previous_status, ['pending', 'draft'], true) ? $gb_previous_status : 'pending';
+                $gb_publish_blocked = true;
+            }
+        }
+
+        /*
          * Availability. Handled here rather than by the global meta saver
          * above: that only picks up _gb_ keys, and an all-unticked grid submits
          * nothing at all, so it could never be cleared.
@@ -513,7 +534,7 @@ if (isset($_POST['gb_save_action'])) {
             }
         }
         
-        wp_redirect(home_url('/manager-dashboard?tab=cleaners&action=edit&id='.$pid.'&msg=saved')); exit;
+        wp_redirect(home_url('/manager-dashboard?tab=cleaners&action=edit&id='.$pid.'&msg=' . ($gb_publish_blocked ? 'incomplete' : 'saved'))); exit;
     }
 
     // D. SAVE BOOKINGS

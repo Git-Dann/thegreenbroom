@@ -86,6 +86,16 @@
         <input type="hidden" name="gb_save_action" value="save_cleaner">
         <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
 
+        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'incomplete'): ?>
+            <?php $gb_still_missing = function_exists('gb_cleaner_verification_missing') ? gb_cleaner_verification_missing($pid) : []; ?>
+            <div class="gb-card" style="margin-bottom:16px; background:#fffbeb; border-color:#fde68a; color:#92400e; padding:12px 14px;">
+                Saved, but <strong>not made live</strong>: this cleaner cannot go live until everything is on file.
+                <?php if (!empty($gb_still_missing)): ?>
+                    Still missing: <?php echo esc_html(implode(', ', $gb_still_missing)); ?>.
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <?php if ($connect_notice === 'error' && $connect_notice_msg !== ''): ?>
             <div class="gb-card" style="margin-bottom:16px; background:#fef2f2; border-color:#fee2e2; color:#991b1b; padding:12px 14px;">
                 Stripe Connect: <?php echo esc_html($connect_notice_msg); ?>
@@ -103,9 +113,15 @@
                 <p style="margin:5px 0 0; color:#64748b; font-size:14px;">Update cleaner profile content, subscription status, and performance data.</p>
             </div>
             <div style="display:flex; gap:12px;">
+                <?php
+                // A new or draft profile starts on Pending, never on Live:
+                // the browser picks the first option when none is selected.
+                $gb_status_now = ($post && in_array($post->post_status, ['publish', 'pending', 'draft'], true)) ? $post->post_status : 'pending';
+                ?>
                 <select name="post_status" class="gb-os-input" style="width:170px;">
-                    <option value="publish" <?php selected($post->post_status, 'publish'); ?>>Verified (Live)</option>
-                    <option value="pending" <?php selected($post->post_status, 'pending'); ?>>Pending Approval</option>
+                    <option value="pending" <?php selected($gb_status_now, 'pending'); ?>>Pending Approval</option>
+                    <option value="draft" <?php selected($gb_status_now, 'draft'); ?>>Draft (not applied)</option>
+                    <option value="publish" <?php selected($gb_status_now, 'publish'); ?>>Verified (Live)</option>
                 </select>
                 <button type="submit" class="gb-header-btn" style="background:#2e7d32; color:#fff; border:none; padding:0 24px; height:42px; border-radius:8px; font-weight:700; cursor:pointer;">Save Changes</button>
             </div>

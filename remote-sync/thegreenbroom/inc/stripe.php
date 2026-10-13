@@ -320,6 +320,18 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
         return true; // "Any professional" - nothing to check yet.
     }
 
+    // Only a live, approved cleaner can be paid. A draft, pending or withdrawn
+    // profile was still bookable by its /book-now/?cleaner= address.
+    if (get_post_status($cleaner_id) !== 'publish') {
+        return 'not_live';
+    }
+
+    // The cleaner has said they are taking no new work; the card already says
+    // "Fully booked", so the button should not take money regardless.
+    if (function_exists('gb_cleaner_is_fully_booked') && gb_cleaner_is_fully_booked($cleaner_id)) {
+        return 'fully_booked';
+    }
+
     $account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
 
     if ($account_id === '') {
@@ -347,6 +359,10 @@ function gb_cleaner_booking_block_message($cleaner_id) {
 
     if ($reason === true) {
         return '';
+    }
+
+    if ($reason === 'fully_booked') {
+        return 'This cleaner is fully booked at the moment. Browse other cleaners in your area, or message them to ask when they have space.';
     }
 
     return 'This cleaner is not set up to take bookings online just yet. Browse other cleaners in your area, or get in touch and we will help.';
@@ -910,6 +926,18 @@ function gb_sync_booking_from_checkout_session($booking_id, $session_id) {
         update_post_meta($booking_id, '_gb_cleaner_payout_estimate_gbp', number_format($cleaner_net, 2, '.', ''));
     }
 
+    /*
+     * A booking that has been cancelled stays cancelled. Stripe retries
+     * checkout.session.completed, and the customer can reopen the success
+     * page from their history; either used to put a cancelled booking back
+     * to confirmed and send both "booking confirmed" emails again. The
+     * payment details above are still recorded, so a manager can see what
+     * was paid when they deal with the refund.
+     */
+    if (get_post_status($booking_id) === 'trash' || get_post_meta($booking_id, '_gb_booking_status', true) === 'cancelled') {
+        return $session;
+    }
+
     if ($payment_status === 'paid') {
         $was_already_confirmed = get_post_meta($booking_id, '_gb_booking_status', true) === 'confirmed';
         wp_update_post(['ID' => $booking_id, 'post_status' => 'publish']);
@@ -946,7 +974,6 @@ function gb_send_booking_confirmation_emails($booking_id) {
     $cleaner_post_id  = (int) get_post_meta($booking_id, '_gb_booking_cleaner_id', true);
     $cleaner_name     = $cleaner_post_id ? get_the_title($cleaner_post_id) : 'TBC';
     $cleaner_user_id  = $cleaner_post_id ? (int) get_post_field('post_author', $cleaner_post_id) : 0;
-    $access_token     = (string) get_post_meta($booking_id, '_gb_booking_access_token_raw', true);
 
     $site_name  = get_bloginfo('name');
     $date_fmt   = $date ? date_i18n('l j F Y', strtotime($date)) : $date;

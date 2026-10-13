@@ -4,7 +4,10 @@ get_header();
 
 $cleaner_id   = get_the_ID();
 $rate         = get_post_meta($cleaner_id, 'hourly_rate', true) ?: '15';
-$verified     = get_post_meta($cleaner_id, 'is_verified', true) === '1';
+// The same test as the sidebar and the listing card: every check on file, not
+// just "published". The header badge used to say Verified for a cleaner the
+// manager list showed as "Live - checks due".
+$verified     = function_exists('gb_cleaner_is_fully_verified') ? gb_cleaner_is_fully_verified($cleaner_id) : get_post_meta($cleaner_id, 'is_verified', true) === '1';
 $location     = function_exists('gb_get_cleaner_location') ? gb_get_cleaner_location($cleaner_id) : get_post_meta($cleaner_id, 'location', true);
 $member_since = get_the_date('Y', $cleaner_id);
 

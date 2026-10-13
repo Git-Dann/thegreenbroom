@@ -48,8 +48,42 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
         $booking_email = sanitize_email((string) get_post_meta($bid, '_gb_customer_email', true));
         $can_cancel = ($booking_owner_id === $user_id) || ($booking_email !== '' && $booking_email === $user_email);
 
-        if (get_post_type($bid) === 'gb_booking' && $can_cancel) {
+        if (get_post_type($bid) === 'gb_booking' && $can_cancel && get_post_meta($bid, '_gb_booking_status', true) !== 'cancelled') {
             update_post_meta($bid, '_gb_booking_status', 'cancelled');
+
+            /*
+             * Tell the cleaner and the team. This used to change one field and
+             * nothing else: the cleaner still turned up, and a paid booking
+             * stayed paid with nobody prompted to refund it.
+             */
+            $gb_c_date    = (string) get_post_meta($bid, '_gb_booking_date', true);
+            $gb_c_time    = (string) get_post_meta($bid, '_gb_booking_time', true);
+            $gb_c_service = (string) get_post_meta($bid, '_gb_booking_service', true);
+            $gb_c_cleaner = (int) get_post_meta($bid, '_gb_booking_cleaner_id', true);
+            $gb_c_paid    = get_post_meta($bid, '_gb_payment_status', true) === 'paid';
+            $gb_c_when    = trim($gb_c_service . ' on ' . $gb_c_date . ' at ' . $gb_c_time);
+            $gb_c_subject = 'Booking #' . $bid . ' cancelled by the customer';
+
+            $gb_c_cleaner_user = $gb_c_cleaner ? get_userdata((int) get_post_field('post_author', $gb_c_cleaner)) : false;
+            if ($gb_c_cleaner_user && is_email($gb_c_cleaner_user->user_email)) {
+                wp_mail(
+                    $gb_c_cleaner_user->user_email,
+                    $gb_c_subject,
+                    "Hi,\n\nThe customer has cancelled this booking:\n\n{$gb_c_when}\n\nThere is no need to attend. The team will be in touch if anything else is needed.\n\nThe Green Broom"
+                );
+            }
+
+            if (function_exists('gb_get_support_email') && is_email(gb_get_support_email())) {
+                wp_mail(
+                    gb_get_support_email(),
+                    $gb_c_subject . ($gb_c_paid ? ' - refund to check' : ''),
+                    "Booking #{$bid} ({$gb_c_when}) was cancelled by the customer from their account.\n\n"
+                    . ($gb_c_paid
+                        ? "It was PAID through Stripe. Nothing has been refunded automatically: check the cancellation policy and refund it in Stripe if due.\n\n"
+                        : "It was not paid.\n\n")
+                    . 'Open it in Manager OS: ' . home_url('/manager-dashboard/?tab=bookings&action=edit&id=' . $bid)
+                );
+            }
             $msg = '<div class="gb-card" style="background:var(--color-success); color:var(--text-success); padding:15px; margin-bottom:20px;">Booking cancelled.</div>';
         }
     }

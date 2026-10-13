@@ -26,6 +26,17 @@ function gb_send_cleaner_message() {
     }
 
     $cleaner_id = intval($_POST['cleaner_id']);
+
+    /*
+     * Only to a live, approved cleaner. Any profile used to do, including a
+     * draft one the sender had just made by registering as a cleaner - who
+     * could then "reply" from their inbox and have the site email any address
+     * they had typed in as the sender, from the site's own verified domain.
+     */
+    if (get_post_type($cleaner_id) !== 'gb_cleaner' || get_post_status($cleaner_id) !== 'publish') {
+        wp_send_json_error(['message' => 'That cleaner is not available to message.']);
+    }
+
     $name = sanitize_text_field($_POST['sender_name']);
     $email = sanitize_email($_POST['sender_email']);
     $body = sanitize_textarea_field($_POST['message_body']);

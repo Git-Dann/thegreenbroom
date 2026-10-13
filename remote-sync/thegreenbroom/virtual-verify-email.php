@@ -36,12 +36,19 @@ if ( isset( $_GET['uid'], $_GET['token'] ) ) {
     $token = sanitize_text_field( wp_unslash( $_GET['token'] ) );
     $token_user = get_user_by( 'id', $user_id );
 
-    if ( $token_user instanceof WP_User && $token_user->exists() ) {
+    /*
+     * Only a link that checks out may show whose account it is. This used to
+     * fill in the account and its email address from ?uid= before the token
+     * was looked at, so /verify-email/?uid=1&token=x printed the admin's
+     * address, and counting up the uid listed every account on the site.
+     */
+    $verify_result = gb_verify_user_email_token( $user_id, $token );
+
+    if ( ! is_wp_error( $verify_result ) && $token_user instanceof WP_User && $token_user->exists() ) {
         $view_user = $token_user;
         $verification_email = $token_user->user_email;
     }
 
-    $verify_result = gb_verify_user_email_token( $user_id, $token );
     if ( is_wp_error( $verify_result ) ) {
         $email_status = $verify_result->get_error_code() === 'gb_expired_verification' ? 'expired' : 'invalid';
         $status_tone = 'error';

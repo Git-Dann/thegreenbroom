@@ -40,22 +40,6 @@ add_action( 'init', function () {
     gb_stripe_selftest_handle();
 }, 2 );
 
-/*
- * Nothing the site sends to the throwaway account goes anywhere. The address
- * does not exist, and a bounce from it would count against the domain.
- */
-add_filter( 'pre_wp_mail', function ( $return, $atts ) {
-    $to = isset( $atts['to'] ) ? (array) $atts['to'] : array();
-
-    foreach ( $to as $address ) {
-        if ( stripos( (string) $address, GB_STRIPE_SELFTEST_EMAIL ) !== false ) {
-            return true;
-        }
-    }
-
-    return $return;
-}, 1, 2 );
-
 function gb_stripe_selftest_token_file() {
     return get_template_directory() . '/.gb-stripe-selftest-token.php';
 }
@@ -85,7 +69,8 @@ function gb_stripe_selftest_handle() {
         gb_stripe_selftest_respond( 403, array( 'error' => 'No test has been set up on the server.' ) );
     }
 
-    // Single use: read it, then delete it, before looking at what was sent.
+    // Single use once it matches. A wrong guess must not delete it: anybody
+    // could otherwise break a test that is running by posting rubbish.
     $age  = time() - (int) filemtime( $file );
     // The file is rewritten for every token, but PHP's opcode cache can hand
     // back the copy it compiled last time; a second test inside the cache's
@@ -94,11 +79,15 @@ function gb_stripe_selftest_handle() {
         opcache_invalidate( $file, true );
     }
     $data = include $file;
-    @unlink( $file );
 
     if ( ! is_array( $data ) || empty( $data['token'] ) || $age > 10 * MINUTE_IN_SECONDS || ! hash_equals( (string) $data['token'], $given ) ) {
+        if ( $age > 10 * MINUTE_IN_SECONDS ) {
+            @unlink( $file );
+        }
         gb_stripe_selftest_respond( 403, array( 'error' => 'Token refused.' ) );
     }
+
+    @unlink( $file );
 
     if ( $phase === 'start' ) {
         gb_stripe_selftest_start();
@@ -607,12 +596,18 @@ function gb_stripe_selftest_wait( $seconds, callable $test ) {
 
 function gb_stripe_selftest_finish( $given ) {
     $run = get_option( 'gb_stripe_selftest_run' );
-    delete_option( 'gb_stripe_selftest_run' );
 
+    // A wrong token changes nothing, so it cannot be used to break a test in
+    // progress; an expired run is tidied away.
     if ( ! is_array( $run ) || empty( $run['hash'] ) || time() > (int) $run['expires'] || ! wp_check_password( $given, $run['hash'] ) ) {
-        gb_stripe_selftest_cleanup();
+        if ( is_array( $run ) && time() > (int) $run['expires'] ) {
+            delete_option( 'gb_stripe_selftest_run' );
+            gb_stripe_selftest_cleanup();
+        }
         gb_stripe_selftest_respond( 403, array( 'error' => 'Finish token refused.' ) );
     }
+
+    delete_option( 'gb_stripe_selftest_run' );
 
     @set_time_limit( 150 );
 
