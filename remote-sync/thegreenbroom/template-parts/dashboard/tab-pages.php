@@ -1054,7 +1054,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
         $pages_by_slug[$page_obj->post_name] = $page_obj;
     }
 
-    $core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleaner-listings', 'join', 'eco-products', 'the-green-broom-standard'];
+    $core_slugs = ['home', 'what-cleaners-do', 'cleaner-listings', 'join', 'eco-products', 'the-green-broom-standard'];
     $legal_slugs = ['privacy', 'terms', 'cookies', 'gdpr', 'subscribers-terms-of-association'];
     // Customer-facing pages whose wording is editable but which are not part of
     // the marketing core. Previously these sat in the collapsed "Other Pages"

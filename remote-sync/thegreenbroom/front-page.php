@@ -58,20 +58,7 @@ $feat2_text    = get_post_meta(get_the_ID(), '_gb_feat2_text', true)    ?: 'Mess
 $feat3_title   = get_post_meta(get_the_ID(), '_gb_feat3_title', true)   ?: 'Eco-Friendly';
 $feat3_text    = get_post_meta(get_the_ID(), '_gb_feat3_text', true)    ?: 'Every cleaner uses non-toxic, sustainable products safe for pets and kids.';
 
-// F. Why we are different
-$diff_head     = get_post_meta(get_the_ID(), '_gb_diff_head', true)     ?: 'Why The Green Broom Is Different';
-$diff_1_head   = get_post_meta(get_the_ID(), '_gb_diff_1_head', true)   ?: 'Traditional Agency';
-$diff_1_list   = get_post_meta(get_the_ID(), '_gb_diff_1_list', true)   ?: "Agency commissions with every clean\nAgency controls the relationship\nLess flexibility\nCleaner receives less money on every clean";
-$diff_2_head   = get_post_meta(get_the_ID(), '_gb_diff_2_head', true)   ?: 'The Green Broom';
-$diff_2_list   = get_post_meta(get_the_ID(), '_gb_diff_2_list', true)   ?: "Small subscription fee\nDirect relationship with your cleaner\nNo ongoing commissions";
-
-$gb_diff_lines = static function ( $raw ) {
-    $lines = array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) $raw ) );
-
-    return array_values( array_filter( $lines, static function ( $line ) {
-        return $line !== '';
-    } ) );
-};
+// F. Why we are different: gb_render_difference_panel() reads it.
 
 // G. Testimonials
 $testi_head    = get_post_meta(get_the_ID(), '_gb_testi_head', true)    ?: 'Meet some of our cleaners';
@@ -139,10 +126,17 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
     .gb-hero-media, .gb-hero-overlay { position:absolute; inset:0; }
     .gb-hero-media img { width:100%; height:100%; object-fit:cover; }
     .gb-hero-media { z-index:0; }
-    .gb-hero-overlay { z-index:1; background:rgba(0, 0, 0, 0.58); }
+    /*
+     * Shade only where the words are. A flat 58% wash over the whole photo
+     * kept the text readable but left the picture looking murky, and
+     * brightening the image itself barely showed through it. The middle is
+     * still dark enough for white text; the edges let the photo through, and
+     * the heavier text shadow makes up the difference.
+     */
+    .gb-hero-overlay { z-index:1; background:radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.16) 100%); }
     .gb-hero-content { position:relative; z-index:2; }
-    .gb-hero h1 { font-size: 3.5rem; font-weight: 800; color: white !important; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-    .gb-hero p { font-size: 1.4rem; color: rgba(255,255,255,0.95); margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto; }
+    .gb-hero h1 { font-size: 3.5rem; font-weight: 800; color: white !important; margin-bottom: 20px; text-shadow: 0 2px 16px rgba(0,0,0,0.55); }
+    .gb-hero p { font-size: 1.4rem; color: #fff; margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto; text-shadow: 0 1px 10px rgba(0,0,0,0.6); }
 
     /* TRUST BAR */
     .gb-trust-bar { background: #e8f5e9; padding: 20px 0; text-align: center; border-bottom: 1px solid #c8e6c9; }
@@ -286,34 +280,9 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
     </section>
 
     <?php
-    $gb_diff_1 = $gb_diff_lines( $diff_1_list );
-    $gb_diff_2 = $gb_diff_lines( $diff_2_list );
+    // Shared with Find a Cleaner; see inc/pricing-panels.php.
+    gb_render_difference_panel();
     ?>
-    <?php if ( trim( (string) $diff_head ) !== '' && ( $gb_diff_1 || $gb_diff_2 ) ) : ?>
-    <section class="gb-section gb-bg-light">
-        <div class="gb-container">
-            <div class="gb-text-center"><h2 class="gb-heading-md"><?php echo esc_html( $diff_head ); ?></h2></div>
-            <div class="gb-diff-grid">
-                <div class="gb-diff-card gb-diff-them">
-                    <h3><?php echo esc_html( $diff_1_head ); ?></h3>
-                    <ul>
-                        <?php foreach ( $gb_diff_1 as $gb_diff_line ) : ?>
-                            <li><span aria-hidden="true">&times;</span> <?php echo esc_html( $gb_diff_line ); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <div class="gb-diff-card gb-diff-us">
-                    <h3><?php echo esc_html( $diff_2_head ); ?></h3>
-                    <ul>
-                        <?php foreach ( $gb_diff_2 as $gb_diff_line ) : ?>
-                            <li><span aria-hidden="true">&#10003;</span> <?php echo esc_html( $gb_diff_line ); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-    <?php endif; ?>
 
     <?php
     /*

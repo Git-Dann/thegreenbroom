@@ -148,6 +148,10 @@ $gb_std_join     = get_page_by_path( 'join' );
     #gb-standard .gb-std-split h2 { text-align:left; margin-left:0; }
     #gb-standard .gb-std-split h2::after { margin-left:0; }
     #gb-standard .gb-std-split .gb-std-copy > *:first-child { margin-top:0; }
+    /* A logo or icon is shown whole and modest, not cropped into a photo frame
+       and blown up to fill half the page. */
+    #gb-standard .gb-std-split-media.is-logo { display:flex; justify-content:center; align-items:center; }
+    #gb-standard .gb-std-split-media.is-logo img { width:auto; max-width:200px; max-height:200px; aspect-ratio:auto; object-fit:contain; border-radius:0; box-shadow:none; }
 
     /* A list of checks reads better as a grid of small cards. */
     #gb-standard .gb-std-tiles { display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; margin-top:26px; }
@@ -184,6 +188,7 @@ $gb_std_join     = get_page_by_path( 'join' );
         /* Image above the copy on every one of them, rather than leapfrogging
            depending on which side it was on. */
         #gb-standard .gb-std-split.is-flipped .gb-std-split-media { order:0; }
+        #gb-standard .gb-std-split-media.is-logo img { max-width:140px; max-height:140px; }
         #gb-standard .gb-std-split h2, #gb-standard .gb-std-split h2::after { text-align:center; margin-left:auto; margin-right:auto; }
         #gb-standard .gb-std-tiles { grid-template-columns:1fr; gap:16px; }
     }
@@ -234,7 +239,8 @@ $gb_std_join     = get_page_by_path( 'join' );
                                 <?php // The copy exactly as written; only the column around it changes. ?>
                                 <div class="gb-std-card gb-std-copy"><?php echo wp_kses_post( $gb_std_section['body'] ); ?></div>
                             </div>
-                            <div class="gb-std-split-media">
+                            <?php $gb_std_is_logo = (bool) preg_match( '/(logo|icon|badge)[^\/]*$/i', (string) wp_parse_url( $gb_std_section['image'], PHP_URL_PATH ) ); ?>
+                            <div class="gb-std-split-media<?php echo $gb_std_is_logo ? ' is-logo' : ''; ?>">
                                 <img src="<?php echo esc_url( $gb_std_section['image'] ); ?>" alt="" loading="lazy">
                             </div>
                         </div>

@@ -283,3 +283,69 @@ function gb_render_cleaner_pricing_panel() {
     </section>
     <?php
 }
+
+/**
+ * "Why The Green Broom Is Different": the agency's way against ours.
+ *
+ * Shown on the homepage and, at the client's request, on Find a Cleaner
+ * between the pricing panel and the search, where somebody is deciding
+ * whether the subscription is worth it. Both read the wording stored on the
+ * homepage, so it is edited once, under Home in Manager OS, and the two can
+ * never disagree.
+ *
+ * Prints nothing if the heading or both lists have been cleared.
+ *
+ * @param string $band 'light' (grey band, as on the homepage) or 'white',
+ *                     for a page whose next section is already grey.
+ */
+function gb_render_difference_panel( $band = 'light' ) {
+    $home_id = (int) get_option( 'page_on_front' );
+    if ( ! $home_id ) {
+        $home    = get_page_by_path( 'home' );
+        $home_id = $home ? (int) $home->ID : 0;
+    }
+
+    $field = static function ( $key, $default ) use ( $home_id ) {
+        $value = $home_id ? trim( (string) get_post_meta( $home_id, $key, true ) ) : '';
+        return $value === '' ? $default : $value;
+    };
+
+    $lines = static function ( $raw ) {
+        return array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) $raw ) ), 'strlen' ) );
+    };
+
+    $head   = $field( '_gb_diff_head', 'Why The Green Broom Is Different' );
+    $them_h = $field( '_gb_diff_1_head', 'Traditional Agency' );
+    $them   = $lines( $field( '_gb_diff_1_list', "Agency commissions with every clean\nAgency controls the relationship\nLess flexibility\nCleaner receives less money on every clean" ) );
+    $us_h   = $field( '_gb_diff_2_head', 'The Green Broom' );
+    $us     = $lines( $field( '_gb_diff_2_list', "Small subscription fee\nDirect relationship with your cleaner\nNo ongoing commissions" ) );
+
+    if ( $head === '' || ( ! $them && ! $us ) ) {
+        return;
+    }
+    ?>
+    <section class="gb-diff-section<?php echo $band === 'white' ? ' is-white' : ''; ?>">
+        <div class="gb-container">
+            <h2 class="gb-diff-title"><?php echo esc_html( $head ); ?></h2>
+            <div class="gb-diff-grid">
+                <div class="gb-diff-card gb-diff-them">
+                    <h3><?php echo esc_html( $them_h ); ?></h3>
+                    <ul>
+                        <?php foreach ( $them as $line ) : ?>
+                            <li><span aria-hidden="true">&times;</span> <?php echo esc_html( $line ); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <div class="gb-diff-card gb-diff-us">
+                    <h3><?php echo esc_html( $us_h ); ?></h3>
+                    <ul>
+                        <?php foreach ( $us as $line ) : ?>
+                            <li><span aria-hidden="true">&#10003;</span> <?php echo esc_html( $line ); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    <?php
+}
