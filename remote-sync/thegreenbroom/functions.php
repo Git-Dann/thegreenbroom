@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
 /* ==========================================================================
    0. THEME SETUP & ASSETS
    ========================================================================== */
@@ -2465,6 +2469,62 @@ function gb_get_rate_limit_message( $state, $default = 'Too many attempts. Pleas
 
     return sprintf( 'Too many attempts. Please wait about %d minutes and try again.', (int) ceil( $retry_after / 60 ) );
 }
+
+/*
+ * The same limit on WordPress's own login screen.
+ *
+ * /login/ allows 8 wrong passwords per account in 15 minutes, but
+ * wp-login.php is still reachable (administrators use it) and had no limit at
+ * all, so anybody guessing passwords could simply go there instead. It now
+ * shares the /login/ counter, so switching between the two buys nothing.
+ * /login/ records its own failures, so only wp-login.php is counted here.
+ */
+function gb_is_wp_login_screen() {
+    return isset( $GLOBALS['pagenow'] ) && $GLOBALS['pagenow'] === 'wp-login.php';
+}
+
+add_filter( 'authenticate', function ( $user, $username ) {
+    if ( ! gb_is_wp_login_screen() || (string) $username === '' ) {
+        return $user;
+    }
+
+    $state = gb_rate_limit_check( 'login', 8, 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+
+    return $state['blocked'] ? new WP_Error( 'gb_login_limited', gb_get_rate_limit_message( $state ) ) : $user;
+}, 100, 2 );
+
+add_action( 'wp_login_failed', function ( $username ) {
+    if ( gb_is_wp_login_screen() && (string) $username !== '' ) {
+        gb_record_rate_limit_hit( 'login', 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+    }
+} );
+
+add_action( 'wp_login', function ( $user_login ) {
+    if ( gb_is_wp_login_screen() ) {
+        gb_reset_rate_limit( 'login', strtolower( (string) $user_login ) );
+    }
+} );
+
+/*
+ * wp-login.php said "The username X is not registered" for a wrong username
+ * and something different for a wrong password, which tells a stranger which
+ * accounts exist. Both now get the one message /login/ already uses.
+ */
+add_filter( 'login_errors', function ( $message ) {
+    global $errors;
+
+    if ( ! ( $errors instanceof WP_Error ) ) {
+        return $message;
+    }
+
+    $codes = $errors->get_error_codes();
+
+    if ( array_intersect( $codes, array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
+        return 'Invalid username or password.';
+    }
+
+    return $message;
+} );
 
 /* ==========================================================================
    The rest of the theme's PHP, split by subject.

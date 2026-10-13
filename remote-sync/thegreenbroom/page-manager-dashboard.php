@@ -940,7 +940,10 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             .gb-main .gb-grid-overview,
             .gb-main .gb-quick-action-grid,
             .gb-main .gb-media-field {
-                grid-template-columns: 1fr !important;
+                /* minmax(0, 1fr), not 1fr: a plain 1fr column still grows to
+                   fit the widest table inside it, which pushed the cleaner
+                   editor 500px off the side of a phone. */
+                grid-template-columns: minmax(0, 1fr) !important;
             }
 
             /* Media picker: stack the field, let its buttons wrap instead of
