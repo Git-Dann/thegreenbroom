@@ -22,7 +22,7 @@ $connected_cleaners = get_posts([
     .gb-services-summary { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
     .gb-services-summary span { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #e2e8f0; border-radius:999px; background:#fff; color:#64748b; font-size:11px; font-weight:700; }
     .gb-services-summary strong { color:#0f172a; }
-    .gb-service-table-wrap { overflow-x:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 1px 3px rgba(15,23,42,.04); }
+    .gb-service-table-wrap { position:relative; overflow-x:auto; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 1px 3px rgba(15,23,42,.04); }
     .gb-services-table { width:100%; min-width:980px; border-collapse:collapse; table-layout:fixed; }
     .gb-services-table th { padding:13px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:10px; font-weight:800; letter-spacing:.05em; text-align:left; text-transform:uppercase; white-space:nowrap; }
     .gb-services-table td { padding:15px 16px; border-bottom:1px solid #f1f5f9; color:#334155; font-size:13px; vertical-align:middle; }
