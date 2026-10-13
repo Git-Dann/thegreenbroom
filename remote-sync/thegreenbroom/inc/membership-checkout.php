@@ -110,7 +110,25 @@ function gb_membership_checkout_available( $plan_key ) {
         return false;
     }
 
-    return gb_get_subscription_price_id( $plan_key ) !== '';
+    if ( gb_get_subscription_price_id( $plan_key ) === '' ) {
+        return false;
+    }
+
+    /*
+     * The price on the panel is what people are told they will pay, but
+     * checkout charges the price set up in Stripe. Edit the panel without
+     * pressing "Set up the plans" again and the two differ, so somebody would
+     * be charged something other than what they read. Until they match the
+     * button falls back to "create an account" (and Settings shows why).
+     */
+    $record = gb_get_subscription_record( $plan_key );
+    $panel  = gb_subscription_plan_amount( $plan_key );
+
+    if ( isset( $record['amount_minor'] ) && ! is_wp_error( $panel ) && (int) $record['amount_minor'] !== (int) $panel ) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -266,6 +284,14 @@ function gb_membership_handle_checkout_request() {
     // Not logged in: keep the choice, send them to register, come back for it.
     if ( ! is_user_logged_in() ) {
         wp_safe_redirect( add_query_arg( array( 'plan' => $plan_key ), home_url( '/register/' ) ) );
+        exit;
+    }
+
+    // In Test mode only staff may start a checkout (see
+    // gb_membership_checkout_visible()); a hidden button was the only guard,
+    // so anybody posting the form could pay with a test card and be a member.
+    if ( ! gb_membership_checkout_visible( $plan_key ) ) {
+        wp_safe_redirect( gb_membership_return_url( $plan_key, 'error' ) );
         exit;
     }
 
@@ -758,21 +784,40 @@ function gb_membership_handle_stripe_event( $event_type, $event_object ) {
             }
             break;
 
+        /*
+         * Read the subscription fresh from Stripe rather than trusting the
+         * copy inside the event. Stripe does not promise to deliver events in
+         * order, so a late "updated (active)" arriving after "deleted" used to
+         * switch a cancelled membership back on. Asking Stripe for it now
+         * always gives the current state, whichever event arrives last.
+         */
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
         case 'customer.subscription.deleted':
-            gb_membership_apply_subscription( $event_object );
+            if ( ! empty( $event_object['id'] ) ) {
+                gb_membership_sync_subscription( $event_object['id'] );
+            }
             break;
 
         case 'customer.subscription.trial_will_end':
-            gb_membership_apply_subscription( $event_object );
+            if ( ! empty( $event_object['id'] ) ) {
+                gb_membership_sync_subscription( $event_object['id'] );
+            }
             gb_membership_send_trial_ending_email( $event_object );
             break;
 
+        // Newer Stripe API versions moved the subscription off the invoice
+        // and into parent.subscription_details, so read both.
         case 'invoice.paid':
         case 'invoice.payment_failed':
-            if ( ! empty( $event_object['subscription'] ) ) {
-                gb_membership_sync_subscription( $event_object['subscription'] );
+            $gb_invoice_sub = ! empty( $event_object['subscription'] )
+                ? $event_object['subscription']
+                : ( $event_object['parent']['subscription_details']['subscription'] ?? '' );
+            if ( is_array( $gb_invoice_sub ) ) {
+                $gb_invoice_sub = $gb_invoice_sub['id'] ?? '';
+            }
+            if ( $gb_invoice_sub !== '' ) {
+                gb_membership_sync_subscription( $gb_invoice_sub );
             }
             break;
     }
@@ -1094,9 +1139,13 @@ function gb_membership_send_trial_ending_email( array $subscription ) {
         implode( "\n", $lines )
     );
 
-    if ( $sent ) {
+    // Queued for a retry counts as sent: the outbox will deliver it, and not
+    // marking it let a redelivered Stripe event queue a second copy.
+    $queued = ! $sent && function_exists( 'gb_outbox_last_status' ) && gb_outbox_last_status() === 'retrying';
+
+    if ( $sent || $queued ) {
         update_user_meta( $user_id, '_gb_trial_reminder_sent', $subscription_id );
     }
 
-    return $sent;
+    return $sent || $queued;
 }

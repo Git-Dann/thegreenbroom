@@ -690,17 +690,19 @@ function gb_get_stripe_config() {
         ? get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true)
         : get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true);
 
-    // Backward compatibility with legacy single-key fields.
-    if (empty($publishable_key)) {
+    // Backward compatibility with legacy single-key fields - in Test mode only.
+    // Those old fields held test keys, and in Live mode a blank live field
+    // used to fall back to them silently, running "live" on test keys.
+    if ($mode === 'test' && empty($publishable_key)) {
         $publishable_key = get_post_meta($settings_id, '_gb_stripe_publishable_key', true);
     }
-    if (empty($secret_key)) {
+    if ($mode === 'test' && empty($secret_key)) {
         $secret_key = get_post_meta($settings_id, '_gb_stripe_secret_key', true);
     }
-    if (empty($webhook_secret)) {
+    if ($mode === 'test' && empty($webhook_secret)) {
         $webhook_secret = get_post_meta($settings_id, '_gb_stripe_webhook_secret', true);
     }
-    if (empty($connect_webhook_secret)) {
+    if ($mode === 'test' && empty($connect_webhook_secret)) {
         $connect_webhook_secret = get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true);
     }
 
@@ -1632,10 +1634,10 @@ function gb_handle_stripe_webhook() {
     $event_object = isset($event['data']['object']) && is_array($event['data']['object']) ? $event['data']['object'] : null;
 
     // Connect v2 thin events: fetch and sync account status so dashboard stays current.
-    if (
-        $event_type === 'v2.core.account[requirements].updated' ||
-        strpos($event_type, 'v2.core.account[') === 0
-    ) {
+    // Every v2 thin event, not only the bracketed kinds: v2.core.account.updated
+    // has no data.object, so it fell through to "invalid payload" and Stripe
+    // retried it for days.
+    if (strpos($event_type, 'v2.') === 0) {
         $account_id = gb_extract_connected_account_id_from_event($event);
 
         if ($account_id === '' && !empty($event['id'])) {
@@ -1676,7 +1678,13 @@ function gb_handle_stripe_webhook() {
 
         if ($booking_id && $session_id) {
             $synced = gb_sync_booking_from_checkout_session($booking_id, $session_id);
-            if (is_wp_error($synced)) {
+            /*
+             * Only ask Stripe to try again when trying again could help (it
+             * could not reach Stripe). A booking that no longer exists, or a
+             * session from another site on the same test account, will never
+             * sync; refusing it just had Stripe retry it for three days.
+             */
+            if (is_wp_error($synced) && !in_array($synced->get_error_code(), ['gb_invalid_booking', 'gb_mismatch_booking', 'gb_missing_session'], true)) {
                 status_header(400);
                 echo 'Stripe sync error.';
                 exit;

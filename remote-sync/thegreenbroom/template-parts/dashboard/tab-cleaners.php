@@ -569,7 +569,11 @@
             </thead>
             <tbody>
                 <?php 
-                $cleaners = new WP_Query(['post_type' => 'gb_cleaner', 'post_status' => ['publish', 'pending', 'draft'], 'posts_per_page' => 20]);
+                // Paged: it used to show the 20 newest and nothing else, so any
+                // cleaner past that - older applicants included - could not be
+                // reached from the list at all.
+                $gb_fleet_page = isset($_GET['fleet_page']) ? max(1, absint($_GET['fleet_page'])) : 1;
+                $cleaners = new WP_Query(['post_type' => 'gb_cleaner', 'post_status' => ['publish', 'pending', 'draft'], 'posts_per_page' => 25, 'paged' => $gb_fleet_page]);
                 if($cleaners->have_posts()): while($cleaners->have_posts()): $cleaners->the_post(); 
                     $cid = get_the_ID(); $st = get_post_status(); $rate = get_post_meta($cid, 'hourly_rate', true) ?: '25';
                     $sub = get_post_meta($cid, '_gb_subscription_status', true) ?: 'trial';
@@ -662,6 +666,15 @@
                 <?php endwhile; wp_reset_postdata(); endif; ?>
             </tbody>
         </table>
+        <?php if ($cleaners->max_num_pages > 1): ?>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; padding:14px 18px; border-top:1px solid #f1f5f9;">
+                <?php for ($gb_p = 1; $gb_p <= (int) $cleaners->max_num_pages; $gb_p++): ?>
+                    <a href="<?php echo esc_url(add_query_arg(['tab' => 'cleaners', 'fleet_page' => $gb_p], home_url('/manager-dashboard/'))); ?>"
+                       style="padding:6px 11px; border-radius:6px; font-size:13px; font-weight:700; text-decoration:none; <?php echo $gb_p === $gb_fleet_page ? 'background:#2e7d32; color:#fff;' : 'background:#f1f5f9; color:#334155;'; ?>"
+                       <?php echo $gb_p === $gb_fleet_page ? 'aria-current="page"' : ''; ?>><?php echo (int) $gb_p; ?></a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
         </div>
     </div>
 <?php } ?>

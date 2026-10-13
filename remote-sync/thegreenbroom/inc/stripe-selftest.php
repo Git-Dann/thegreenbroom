@@ -212,6 +212,14 @@ function gb_stripe_selftest_check() {
         $report['modes'][ $mode ] = $section;
     }
 
+    // How the site sees the caller's address, to confirm rate limits key on
+    // the real visitor (gb_get_request_ip()) and not on the host's front server.
+    $report['request_ip'] = array(
+        'remote_addr'     => isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '',
+        'x_forwarded_for' => isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ? (string) $_SERVER['HTTP_X_FORWARDED_FOR'] : '',
+        'used'            => function_exists( 'gb_get_request_ip' ) ? gb_get_request_ip() : '',
+    );
+
     $report['cleaner_payouts'] = gb_stripe_selftest_connect();
     $report['memberships']     = gb_stripe_selftest_membership_counts();
     $report['problems']        = gb_stripe_selftest_problems( $report );

@@ -26,7 +26,7 @@ $gb_resolve_booking_flow = static function($booking_id, $post_status = '') {
 $args = array('post_type' => 'gb_cleaner', 'author' => $current_user->ID, 'posts_per_page' => 1, 'post_status' => ['publish', 'pending', 'draft']);
 $cleaner_query = new WP_Query($args);
 
-$cleaner_id = 0; $profile_link = '#'; $is_verified = false; $earnings = '0.00'; $jobs_done = 0; $rating = '5.0'; $view_count = 0;
+$cleaner_id = 0; $profile_link = '#'; $is_verified = false; $earnings = '0.00'; $jobs_done = 0; $rating = '–'; // No reviews yet: a dash, not an invented 5.0. $view_count = 0;
 $sub_status = 'trial'; 
 
 if ( $cleaner_query->have_posts() ) {
