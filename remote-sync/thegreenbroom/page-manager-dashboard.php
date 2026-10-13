@@ -31,6 +31,22 @@ if (!in_array('gb_manager', (array) $current_user->roles) && !current_user_can('
 }
 add_filter('show_admin_bar', '__return_false');
 
+/*
+ * A fresh reply token for the Inbox reply form, fetched by the pre-save check
+ * at the bottom of this page.
+ *
+ * That check refreshes gb_manager_nonce through gb_session_check, but the
+ * reply form carries gb_reply_nonce, which that endpoint does not hand out. A
+ * reply typed into a message left open overnight was refused by the reply
+ * handler with a bare "Security check failed." page, and the reply was lost.
+ * Only reached past the manager check above, so a signed-out visitor is sent
+ * to the login page instead and the check treats that as "signed out".
+ */
+if (isset($_GET['gb_reply_token'])) {
+    nocache_headers();
+    wp_send_json(['signed_in' => true, 'reply_nonce' => wp_create_nonce('gb_reply_message')]);
+}
+
 // Required for wp.media() (featured image picker, page-builder image fields,
 // TinyMCE "Add Media") to work on this front-end template — without this,
 // clicking those buttons does nothing because the media library JS/templates
@@ -381,21 +397,35 @@ if (isset($_POST['gb_save_action'])) {
                 update_post_meta($pid, $key, wp_slash((string) wp_unslash($value)));
                 continue;
             }
-            update_post_meta($pid, $key, gb_manager_sanitize_meta_value($value));
+            /*
+             * wp_slash() for the same reason as the secrets above:
+             * gb_manager_sanitize_meta_value() has already unslashed the
+             * value, and update_post_meta() unslashes it a second time, which
+             * deleted every backslash anyone typed. The same goes for
+             * wp_insert_post() and wp_update_post() below, which is why
+             * every array handed to them is wrapped in wp_slash() too.
+             */
+            update_post_meta($pid, $key, wp_slash(gb_manager_sanitize_meta_value($value)));
         }
     }
 
     // A. SAVE PAGES
     if ($save_action === 'save_page') {
         if (isset($_POST['gb_main_content'])) {
-            wp_update_post(['ID' => $pid, 'post_content' => wp_kses_post(wp_unslash($_POST['gb_main_content']))]);
+            wp_update_post(wp_slash(['ID' => $pid, 'post_content' => wp_kses_post(wp_unslash($_POST['gb_main_content']))]));
         }
         wp_redirect(home_url('/manager-dashboard?tab=pages&action=edit&id='.$pid.'&msg=saved')); exit;
     }
     
     // B. SAVE BLOG POSTS
     if ($save_action === 'save_post') {
-        $allowed_statuses = ['publish', 'draft', 'pending', 'private'];
+        /*
+         * 'future' is here so a scheduled post can be edited without losing its
+         * schedule: the editor offers "Keep Scheduled" for one. WordPress keeps
+         * the post's existing date on update and publishes it at that time, or
+         * straight away if the date has already passed.
+         */
+        $allowed_statuses = ['publish', 'draft', 'pending', 'private', 'future'];
         $post_status = isset($_POST['post_status']) ? sanitize_key(wp_unslash($_POST['post_status'])) : 'draft';
         if (!in_array($post_status, $allowed_statuses, true)) {
             $post_status = 'draft';
@@ -412,14 +442,24 @@ if (isset($_POST['gb_save_action'])) {
             unset($post_data['ID']); 
             $post_data['post_type'] = 'post';
             $post_data['post_author'] = get_current_user_id();
-            $pid = wp_insert_post($post_data); 
+            $pid = wp_insert_post(wp_slash($post_data)); 
         } else { 
-            wp_update_post($post_data); 
+            wp_update_post(wp_slash($post_data)); 
         }
 
-        // Native WP Featured Image Saving
+        /*
+         * Native WP featured image. "Remove" in the editor sends an empty
+         * _thumbnail_id, and set_post_thumbnail() with 0 does nothing at all,
+         * so the image used to come straight back after saving. Zero means
+         * take it off.
+         */
         if (isset($_POST['_thumbnail_id'])) {
-            set_post_thumbnail($pid, intval($_POST['_thumbnail_id']));
+            $gb_thumb_id = intval($_POST['_thumbnail_id']);
+            if ($gb_thumb_id > 0) {
+                set_post_thumbnail($pid, $gb_thumb_id);
+            } else {
+                delete_post_thumbnail($pid);
+            }
         }
         
         // Sync SEO Score
@@ -479,13 +519,19 @@ if (isset($_POST['gb_save_action'])) {
             'post_status' => $cleaner_status,
             'post_type' => 'gb_cleaner'
         ];
-        if ($pid === 0) { unset($post_data['ID']); $pid = wp_insert_post($post_data); } 
-        else { wp_update_post($post_data); }
+        if ($pid === 0) { unset($post_data['ID']); $pid = wp_insert_post(wp_slash($post_data)); } 
+        else { wp_update_post(wp_slash($post_data)); }
         
+        // Same as blog posts: an emptied photo field means remove it.
         if (isset($_POST['_thumbnail_id'])) {
-            set_post_thumbnail($pid, intval($_POST['_thumbnail_id']));
+            $gb_thumb_id = intval($_POST['_thumbnail_id']);
+            if ($gb_thumb_id > 0) {
+                set_post_thumbnail($pid, $gb_thumb_id);
+            } else {
+                delete_post_thumbnail($pid);
+            }
         }
-        update_post_meta($pid, 'hourly_rate', $hourly_rate);
+        update_post_meta($pid, 'hourly_rate', wp_slash($hourly_rate));
 
         if ($gb_audit_before && class_exists('GB_Verification_Log')) {
             $gb_labels = [
@@ -550,7 +596,7 @@ if (isset($_POST['gb_save_action'])) {
         $booking_time = isset($_POST['_gb_booking_time']) ? sanitize_text_field(wp_unslash($_POST['_gb_booking_time'])) : '';
         $new_title = sprintf('%s - %s (%s)', $customer_name, $booking_date, $booking_time);
 
-        wp_update_post(['ID' => $pid, 'post_title' => $new_title, 'post_status' => $booking_status]);
+        wp_update_post(wp_slash(['ID' => $pid, 'post_title' => $new_title, 'post_status' => $booking_status]));
 
         // Keep lifecycle meta aligned with manager-selected post status.
         if (!isset($_POST['_gb_booking_status'])) {
@@ -592,11 +638,50 @@ if (isset($_POST['gb_save_action'])) {
             'post_status' => $service_status,
             'post_type' => 'gb_service'
         ];
-        if ($pid === 0) { unset($post_data['ID']); $pid = wp_insert_post($post_data); } 
-        else { wp_update_post($post_data); }
+        $gb_old_service_title = $pid ? (string) get_post_field('post_title', $pid, 'raw') : '';
+        if ($pid === 0) { unset($post_data['ID']); $pid = wp_insert_post(wp_slash($post_data)); }
+        else { wp_update_post(wp_slash($post_data)); }
+
+        /*
+         * Carry a rename through to the cleaners who offer it.
+         *
+         * Each cleaner's gb_services meta is an array of service TITLES (see
+         * page-edit-profile.php), because that is what the Find a Cleaner
+         * filter and the public profile match against. Renaming "Deep Clean"
+         * to "Deep Cleaning" used to leave every cleaner holding the old
+         * title, so the service vanished from all their profiles and the
+         * filter found nobody. Rewrite the old title to the new one on every
+         * cleaner who had it ticked, whatever their status.
+         */
+        $gb_new_service_title = ($pid && !is_wp_error($pid)) ? (string) get_post_field('post_title', $pid, 'raw') : '';
+        if ($gb_old_service_title !== '' && $gb_new_service_title !== '' && $gb_old_service_title !== $gb_new_service_title) {
+            $gb_offering = get_posts([
+                'post_type'      => 'gb_cleaner',
+                'post_status'    => 'any',
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                // Quoted, as on the listings page, so it matches a whole array
+                // element; the exact check below is what decides.
+                'meta_query'     => [[
+                    'key'     => 'gb_services',
+                    'value'   => '"' . $gb_old_service_title . '"',
+                    'compare' => 'LIKE',
+                ]],
+            ]);
+            foreach ($gb_offering as $gb_cleaner_id) {
+                $gb_ticked = get_post_meta($gb_cleaner_id, 'gb_services', true);
+                if (!is_array($gb_ticked) || !in_array($gb_old_service_title, $gb_ticked, true)) {
+                    continue;
+                }
+                $gb_ticked = array_map(static function ($title) use ($gb_old_service_title, $gb_new_service_title) {
+                    return $title === $gb_old_service_title ? $gb_new_service_title : $title;
+                }, $gb_ticked);
+                update_post_meta($gb_cleaner_id, 'gb_services', wp_slash(array_values(array_unique($gb_ticked))));
+            }
+        }
 
         update_post_meta($pid, '_gb_service_duration', $duration);
-        update_post_meta($pid, '_gb_service_icon', $icon);
+        update_post_meta($pid, '_gb_service_icon', wp_slash($icon));
         update_post_meta($pid, 'service_price', number_format($service_price, 2, '.', ''));
         update_post_meta($pid, '_gb_service_destination_cleaner_id', $service_destination_cleaner_id);
 
@@ -653,9 +738,9 @@ if (isset($_POST['gb_save_action'])) {
         }
         if ($pid === 0) {
             unset($post_data['ID']);
-            $pid = wp_insert_post($post_data);
+            $pid = wp_insert_post(wp_slash($post_data));
         } else {
-            wp_update_post($post_data);
+            wp_update_post(wp_slash($post_data));
         }
 
         if (!$pid || is_wp_error($pid)) {
@@ -675,7 +760,7 @@ if (isset($_POST['gb_save_action'])) {
         // URLs, and esc_url_raw() would keep them, so only trim and strip tags.
         $eco_link = isset($_POST['_gb_eco_link']) ? trim(sanitize_text_field(wp_unslash($_POST['_gb_eco_link']))) : '';
         if ($eco_link !== '') {
-            update_post_meta($pid, '_gb_eco_link', $eco_link);
+            update_post_meta($pid, '_gb_eco_link', wp_slash($eco_link));
         } else {
             delete_post_meta($pid, '_gb_eco_link');
         }
@@ -685,7 +770,7 @@ if (isset($_POST['gb_save_action'])) {
         foreach (['_gb_eco_cta_label', '_gb_eco_soon_label'] as $eco_label_key) {
             $eco_label = isset($_POST[$eco_label_key]) ? trim(sanitize_text_field(wp_unslash($_POST[$eco_label_key]))) : '';
             if ($eco_label !== '') {
-                update_post_meta($pid, $eco_label_key, $eco_label);
+                update_post_meta($pid, $eco_label_key, wp_slash($eco_label));
             } else {
                 delete_post_meta($pid, $eco_label_key);
             }
@@ -898,12 +983,22 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             }
             .gb-menu-btn .dashicons { font-size: 22px; width: 22px; height: 22px; }
 
+            /* Closed, the drawer is only slid off screen, so its links were
+               still reachable with Tab: keyboard focus vanished into a menu
+               nobody could see. visibility:hidden takes them out of the tab
+               order and away from screen readers. It switches after the slide
+               when closing and at once when opening, so the animation runs
+               both ways. */
             .gb-sidebar {
                 display: flex; width: 280px; max-width: 86vw; z-index: 400;
-                transform: translateX(-100%); transition: transform .25s ease;
+                transform: translateX(-100%); visibility: hidden;
+                transition: transform .25s ease, visibility 0s linear .25s;
                 overflow-y: auto; padding-top: 20px;
             }
-            .gb-sidebar.is-open { transform: translateX(0); }
+            .gb-sidebar.is-open {
+                transform: translateX(0); visibility: visible;
+                transition: transform .25s ease, visibility 0s linear 0s;
+            }
             .gb-sidebar-backdrop {
                 display: block; position: fixed; inset: 0; z-index: 350;
                 background: rgba(15,23,42,.55); opacity: 0; pointer-events: none;
@@ -1453,23 +1548,43 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         try { form.requestSubmit(submitter); } finally { delete form.dataset.gbChecked; }
     }
 
+    /*
+     * The Inbox reply form carries gb_reply_nonce rather than
+     * gb_manager_nonce, so it used to skip this check altogether. Its fresh
+     * token comes from this page itself (see gb_reply_token at the top),
+     * which also answers "signed in?": signed out, the page redirects to the
+     * login screen and the reply is not JSON.
+     */
+    var replyEndpoint = <?php echo wp_json_encode(add_query_arg('gb_reply_token', '1', home_url('/manager-dashboard/'))); ?>;
+
     document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!form || !form.querySelector || form.dataset.gbChecked === '1') { return; }
         // Forms that ask "are you sure?" first would ask twice when re-sent.
         if (form.hasAttribute('onsubmit')) { return; }
         var nonce = form.querySelector('input[name="gb_manager_nonce"]');
-        if (!nonce || !window.fetch || !form.requestSubmit) { return; }
+        var replyNonce = form.querySelector('input[name="gb_reply_nonce"]');
+        if ((!nonce && !replyNonce) || !window.fetch || !form.requestSubmit) { return; }
 
         e.preventDefault();
         var submitter = e.submitter || null;
 
-        fetch(endpoint, { credentials: 'same-origin', cache: 'no-store' })
-            .then(function (r) { return r.json(); })
+        fetch(nonce ? endpoint : replyEndpoint, { credentials: 'same-origin', cache: 'no-store' })
+            .then(function (r) {
+                // For the reply token, a redirect to the login page is HTML,
+                // not JSON: signed out. The admin-ajax check answers JSON
+                // either way, so anything else from it still falls through to
+                // submitting as before.
+                if (nonce) { return r.json(); }
+                return r.json().catch(function () { return { signed_in: false }; });
+            })
             .then(function (data) {
                 if (!data || !data.signed_in) { banner(); return; }
                 if (data.nonce) {
                     document.querySelectorAll('input[name="gb_manager_nonce"]').forEach(function (i) { i.value = data.nonce; });
+                }
+                if (data.reply_nonce) {
+                    document.querySelectorAll('input[name="gb_reply_nonce"]').forEach(function (i) { i.value = data.reply_nonce; });
                 }
                 var old = document.getElementById('gb-session-banner');
                 if (old) { old.remove(); }

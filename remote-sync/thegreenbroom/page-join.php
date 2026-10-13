@@ -12,7 +12,9 @@ $hero_title = get_post_meta(get_the_ID(), '_gb_join_hero_title', true) ?: 'Turn 
 $hero_sub   = get_post_meta(get_the_ID(), '_gb_join_hero_sub', true)   ?: 'Set your own rates, choose your own hours, and keep more of what you earn. The Green Broom connects you directly with vetted local customers — no agency taking the biggest cut.';
 $hero_btn   = get_post_meta(get_the_ID(), '_gb_join_hero_btn', true)   ?: 'Create Your Free Profile';
 $hero_link  = get_post_meta(get_the_ID(), '_gb_join_hero_link', true)  ?: '/register';
-$hero_btn2  = get_post_meta(get_the_ID(), '_gb_join_hero_btn2', true)  ?: 'See How It Works';
+// Same wording as the editor's default, so the button does not change name the
+// first time somebody saves the page without touching it.
+$hero_btn2  = get_post_meta(get_the_ID(), '_gb_join_hero_btn2', true)  ?: 'See What Cleaners Do';
 $hero_link2 = get_post_meta(get_the_ID(), '_gb_join_hero_link2', true) ?: '/what-cleaners-do';
 
 // Trust Bar

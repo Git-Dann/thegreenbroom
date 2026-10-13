@@ -17,7 +17,12 @@ $hero_btn_2    = get_post_meta(get_the_ID(), '_gb_hero_btn_2', true)    ?: 'Beco
 $hero_link_2   = get_post_meta(get_the_ID(), '_gb_hero_link_2', true)   ?: '/join';
 
 // B. Trust Bar (UPDATED to match the new Dashboard Field)
-$trust_text    = get_post_meta(get_the_ID(), '_gb_trust_banner', true)  ?: 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners';
+// The default only stands in until the field is first saved. Emptying it in
+// the editor now removes the strip; before, it came straight back with the
+// "500+ homes" claim, so there was no way to take that claim down.
+$trust_text    = metadata_exists('post', get_the_ID(), '_gb_trust_banner')
+    ? trim((string) get_post_meta(get_the_ID(), '_gb_trust_banner', true))
+    : 'Trusted by 500+ Homes Across the UK • 100% Vetted Cleaners';
 
 // C. Split Section (Value Prop)
 $split_head    = get_post_meta(get_the_ID(), '_gb_split_head', true)    ?: "Clean homes shouldn't cost the Earth.";
@@ -219,7 +224,9 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
         </div>
     </section>
 
+    <?php if ($trust_text !== ''): ?>
     <div class="gb-trust-bar"><span class="gb-trust-text"><?php echo esc_html($trust_text); ?></span></div>
+    <?php endif; ?>
 
     <section class="gb-section gb-bg-white">
         <div class="gb-container">

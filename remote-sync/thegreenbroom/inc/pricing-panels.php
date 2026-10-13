@@ -72,6 +72,29 @@ function gb_pricing_field( $key ) {
         return $default;
     }
 
+    /*
+     * The optional parts of a panel: the flash, the small print and the
+     * benefits list. The panels already skip each one when it is empty, but
+     * an emptied box used to come back as the default, so none of them could
+     * be removed. Settings always shows these filled in, so an empty one that
+     * has been saved was cleared on purpose and stays empty. Everything else
+     * (prices, names, headings, buttons) keeps falling back to the default,
+     * so a cleared box can never leave a panel with no price on it.
+     */
+    $optional = array(
+        '_gb_price_cust_p2_flag',
+        '_gb_price_cust_benefits',
+        '_gb_price_cust_foot',
+        '_gb_price_cust_foot_live',
+        '_gb_price_clean_free',
+        '_gb_price_clean_benefits',
+        '_gb_price_clean_foot',
+        '_gb_price_clean_foot_live',
+    );
+    if ( in_array( $key, $optional, true ) && metadata_exists( 'post', $id, $key ) ) {
+        return (string) get_post_meta( $id, $key, true );
+    }
+
     $stored = get_post_meta( $id, $key, true );
 
     return ( $stored === '' || $stored === null ) ? $default : $stored;
@@ -305,9 +328,18 @@ function gb_render_difference_panel( $band = 'light' ) {
         $home_id = $home ? (int) $home->ID : 0;
     }
 
+    /*
+     * The default only stands in for a field that has never been saved. The
+     * editor promises "Clear the heading to hide the whole section", and the
+     * old "empty means default" check put the heading straight back, so the
+     * section could never be hidden. The editor always shows these filled
+     * in, so an empty one that has been saved was cleared on purpose.
+     */
     $field = static function ( $key, $default ) use ( $home_id ) {
-        $value = $home_id ? trim( (string) get_post_meta( $home_id, $key, true ) ) : '';
-        return $value === '' ? $default : $value;
+        if ( ! $home_id || ! metadata_exists( 'post', $home_id, $key ) ) {
+            return $default;
+        }
+        return trim( (string) get_post_meta( $home_id, $key, true ) );
     };
 
     $lines = static function ( $raw ) {
@@ -329,7 +361,7 @@ function gb_render_difference_panel( $band = 'light' ) {
             <h2 class="gb-diff-title"><?php echo esc_html( $head ); ?></h2>
             <div class="gb-diff-grid">
                 <div class="gb-diff-card gb-diff-them">
-                    <h3><?php echo esc_html( $them_h ); ?></h3>
+                    <?php if ( $them_h !== '' ) : ?><h3><?php echo esc_html( $them_h ); ?></h3><?php endif; ?>
                     <ul>
                         <?php foreach ( $them as $line ) : ?>
                             <li><span aria-hidden="true">&times;</span> <?php echo esc_html( $line ); ?></li>
@@ -337,7 +369,7 @@ function gb_render_difference_panel( $band = 'light' ) {
                     </ul>
                 </div>
                 <div class="gb-diff-card gb-diff-us">
-                    <h3><?php echo esc_html( $us_h ); ?></h3>
+                    <?php if ( $us_h !== '' ) : ?><h3><?php echo esc_html( $us_h ); ?></h3><?php endif; ?>
                     <ul>
                         <?php foreach ( $us as $line ) : ?>
                             <li><span aria-hidden="true">&#10003;</span> <?php echo esc_html( $line ); ?></li>

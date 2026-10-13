@@ -54,7 +54,7 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
         <input type="hidden" name="gb_save_action" value="save_post">
         <?php wp_nonce_field('gb_manager_action', 'gb_manager_nonce'); ?>
         
-        <input type="hidden" name="_thumbnail_id" id="_thumbnail_id" value="<?php echo esc_attr($image_id); ?>">
+        <input type="hidden" name="_thumbnail_id" id="_thumbnail_id" value="<?php echo $image_id ? (int) $image_id : ''; ?>">
         <input type="hidden" name="_gb_seo_score" id="gb-seo-score-input" value="<?php echo $current_score; ?>">
         
         <div class="gb-edit-header">
@@ -69,9 +69,34 @@ $action = isset($_GET['view']) ? sanitize_key($_GET['view']) : (isset($_GET['act
                 </div>
             </div>
             <div style="display:flex; gap:12px; align-items:center;">
+                <?php
+                /*
+                 * The list used to hold only Publish and Draft. A pending,
+                 * private or scheduled post matched neither, so the browser
+                 * showed the first option, "Publish Live", and saving any edit
+                 * published it. The post's own status is now offered first and
+                 * selected, so saving keeps it where it was unless somebody
+                 * picks another. Only statuses the save handler accepts are
+                 * offered (see save_post in page-manager-dashboard.php).
+                 */
+                $gb_status_labels = [
+                    'pending' => 'Keep Pending Review',
+                    'private' => 'Keep Private',
+                    'future'  => 'Keep Scheduled',
+                ];
+                $gb_current_status = isset($post->post_status) ? (string) $post->post_status : 'draft';
+                ?>
                 <select name="post_status" class="gb-header-select" style="height:44px; padding:0 15px; border-radius:8px; border:1px solid #e2e8f0; font-weight:600;">
-                    <option value="publish" <?php selected($post->post_status, 'publish'); ?>>Publish Live</option>
-                    <option value="draft" <?php selected($post->post_status, 'draft'); ?>>Save Draft</option>
+                    <?php if (isset($gb_status_labels[$gb_current_status])): ?>
+                        <option value="<?php echo esc_attr($gb_current_status); ?>" selected><?php
+                            echo esc_html($gb_status_labels[$gb_current_status]);
+                            if ($gb_current_status === 'future' && !empty($post->post_date)) {
+                                echo esc_html(' (' . mysql2date('j M Y, g:i a', $post->post_date) . ')');
+                            }
+                        ?></option>
+                    <?php endif; ?>
+                    <option value="publish" <?php selected($gb_current_status, 'publish'); ?>>Publish Live</option>
+                    <option value="draft" <?php selected($gb_current_status, 'draft'); ?>>Save Draft</option>
                 </select>
                 <button type="submit" class="gb-header-btn" style="height:44px; background:#2e7d32; color:white; border:none; padding:0 30px; border-radius:8px; font-weight:700; cursor:pointer;">Save Changes</button>
             </div>

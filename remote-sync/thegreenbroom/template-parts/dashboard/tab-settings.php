@@ -562,7 +562,17 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                         default:
                                             $gb_pill = ['idle', 'Sending'];
                                     }
-                                    $gb_can_resend = !empty($gb_row->resendable) && in_array($gb_state, ['retrying', 'dead', 'sending'], true);
+                                    /*
+                                     * "Sending" means another request is sending it right now, and
+                                     * resending it then is how a customer gets two copies. Only once
+                                     * it has been stuck there long enough that the send must have
+                                     * died (the same test the queue uses) is it offered again.
+                                     */
+                                    $gb_stuck = $gb_state === 'sending' && function_exists('gb_outbox_is_stuck') && gb_outbox_is_stuck($gb_row);
+                                    if ($gb_stuck) {
+                                        $gb_pill = ['warn', 'Stuck while sending'];
+                                    }
+                                    $gb_can_resend = !empty($gb_row->resendable) && (in_array($gb_state, ['retrying', 'dead'], true) || $gb_stuck);
                                     ?>
                                     <tr>
                                         <td style="white-space:nowrap; color:#64748b;"><?php echo esc_html(get_date_from_gmt($gb_row->created_at, 'j M, H:i')); ?></td>
