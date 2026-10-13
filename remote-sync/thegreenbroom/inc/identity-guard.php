@@ -1103,7 +1103,7 @@ function gb_identity_alert_support( $user_id, array $others, $subscription_id, $
     $lines = array(
         'A cleaner has started a listing subscription with a card that has already had a free trial on another account.',
         '',
-        'New account: ' . ( $user ? $user->display_name . ' <' . $user->user_email . '>' : '#' . $user_id ),
+        'New account: ' . ( $user ? $user->display_name . ' (' . $user->user_email . ')' : '#' . $user_id ),
         'Manager OS: ' . gb_identity_manager_link_for_user( $user_id ),
         'Stripe subscription: ' . $subscription_id . ' (' . gb_stripe_site_mode() . ' mode)',
         '',
@@ -1113,7 +1113,7 @@ function gb_identity_alert_support( $user_id, array $others, $subscription_id, $
     foreach ( $others as $other ) {
         $o       = get_userdata( $other );
         $lines[] = $o
-            ? '- ' . $o->display_name . ' <' . $o->user_email . '>, ' . gb_identity_manager_link_for_user( $other )
+            ? '- ' . $o->display_name . ' (' . $o->user_email . '): ' . gb_identity_manager_link_for_user( $other )
             : '- account #' . $other . ' (since deleted)';
     }
 
