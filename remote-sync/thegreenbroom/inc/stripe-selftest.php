@@ -220,7 +220,11 @@ function gb_stripe_selftest_check() {
         'used'            => function_exists( 'gb_get_request_ip' ) ? gb_get_request_ip() : '',
     );
 
-    $report['webhooks_received'] = array_slice( (array) get_option( 'gb_stripe_webhook_log', array() ), 0, 15 );
+    global $wpdb;
+    $report['webhooks_received'] = array();
+    foreach ( $wpdb->get_col( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'gb\\_whlog\\_%' ORDER BY option_name DESC LIMIT 20" ) as $gb_name ) {
+        $report['webhooks_received'][] = get_option( $gb_name );
+    }
 
     $report['cleaner_payouts'] = gb_stripe_selftest_connect();
     $report['memberships']     = gb_stripe_selftest_membership_counts();
@@ -657,6 +661,24 @@ function gb_stripe_selftest_run_phase( $phase, $given ) {
             $steps['cancelled_in_stripe'] = is_wp_error( $cancelled )
                 ? array( 'ok' => false, 'detail' => $cancelled->get_error_message() )
                 : array( 'ok' => true );
+
+            /*
+             * Diagnostic only, and done on a copy: run the site's own handling
+             * of "subscription deleted" here, timed, without saving anything,
+             * to tell slow or failing code apart from a webhook that never
+             * arrives. The real switch-off is still left to Stripe's webhook.
+             */
+            if ( ! is_wp_error( $cancelled ) ) {
+                $gb_t   = microtime( true );
+                $gb_got = gb_stripe_api_request( 'subscriptions/' . rawurlencode( $sub_id ), array(), 'GET' );
+                $steps['site_can_read_cancellation'] = array(
+                    'ok'      => ! is_wp_error( $gb_got ) && ( $gb_got['status'] ?? '' ) === 'canceled'
+                                 && gb_membership_status_from_stripe( $gb_got['status'] ) === 'cancelled'
+                                 && gb_membership_user_from_subscription( $gb_got ) === $user_id,
+                    'stripe_says' => is_wp_error( $gb_got ) ? $gb_got->get_error_message() : ( $gb_got['status'] ?? '' ),
+                    'ms'      => (int) round( ( microtime( true ) - $gb_t ) * 1000 ),
+                );
+            }
         }
 
         $run['steps'] = $steps;

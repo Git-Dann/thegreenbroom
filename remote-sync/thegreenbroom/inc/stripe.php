@@ -1645,10 +1645,15 @@ function gb_stripe_webhook_log_start() {
                 ? $fatal['message'] . ' (' . basename($fatal['file']) . ':' . $fatal['line'] . ')'
                 : '',
         ];
-        $log = get_option('gb_stripe_webhook_log', []);
-        $log = is_array($log) ? $log : [];
-        array_unshift($log, $row);
-        update_option('gb_stripe_webhook_log', array_slice($log, 0, 25), false);
+        // One option per request, not one shared list: Stripe sends several
+        // events at once, and a shared list read and rewritten by each lost
+        // all but one of them. Old rows are pruned to the newest 25.
+        global $wpdb;
+        add_option('gb_whlog_' . str_replace('.', '', sprintf('%.6f', microtime(true))) . '_' . wp_rand(100, 999), $row, '', 'no');
+        $names = $wpdb->get_col("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'gb\\_whlog\\_%' ORDER BY option_name DESC");
+        foreach (array_slice($names, 25) as $old) {
+            delete_option($old);
+        }
     });
 }
 
