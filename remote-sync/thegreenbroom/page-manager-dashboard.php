@@ -924,7 +924,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
             /* Two-column form rows are laid out with inline grid styles all over
                these tabs; collapse them rather than editing every template. */
-            .gb-main [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .gb-main [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
             .gb-main .gb-link-row { display: block !important; }
 
             /* The rule above only reaches INLINE grid styles. These layouts are

@@ -2471,55 +2471,128 @@ function gb_get_rate_limit_message( $state, $default = 'Too many attempts. Pleas
 }
 
 /*
- * The same limit on WordPress's own login screen.
+ * Password guessing: a limit per ACCOUNT, on every way in.
  *
- * /login/ allows 8 wrong passwords per account in 15 minutes, but
- * wp-login.php is still reachable (administrators use it) and had no limit at
- * all, so anybody guessing passwords could simply go there instead. It now
- * shares the /login/ counter, so switching between the two buys nothing.
- * /login/ records its own failures, so only wp-login.php is counted here.
+ * Counted per account rather than per IP. The IP the site sees can be set by
+ * the visitor (X-Forwarded-For and friends are trusted, because the host's
+ * front server sits in between), so an IP-based count can be reset on every
+ * request. A count per account cannot, whatever the visitor sends.
+ *
+ * It runs inside WordPress's own 'authenticate' filter, so /login/,
+ * wp-login.php and xmlrpc.php all share it, and an email address counts as the
+ * account it belongs to. Attempts are counted as they arrive, in one database
+ * statement, so a burst of simultaneous guesses cannot all slip under the
+ * limit before any of them is recorded; a successful sign-in clears it.
+ *
+ * Once over the limit, even the right password is refused until the window
+ * passes, so the answer gives nothing away. The cost is that somebody could
+ * lock a known account out for fifteen minutes; reset password still works.
  */
-function gb_is_wp_login_screen() {
-    return isset( $GLOBALS['pagenow'] ) && $GLOBALS['pagenow'] === 'wp-login.php';
+const GB_LOGIN_ATTEMPT_LIMIT  = 8;
+const GB_LOGIN_ATTEMPT_WINDOW = 900;
+
+function gb_login_attempt_option( $username ) {
+    $account = strtolower( trim( (string) $username ) );
+
+    if ( is_email( $account ) ) {
+        $user = get_user_by( 'email', $account );
+        if ( $user ) {
+            $account = strtolower( $user->user_login );
+        }
+    }
+
+    // A fixed fifteen-minute window, named in the option, so each one starts
+    // from nothing without a separate expiry to manage.
+    return 'gb_login_tries_' . md5( $account ) . '_' . (int) floor( time() / GB_LOGIN_ATTEMPT_WINDOW );
 }
 
 add_filter( 'authenticate', function ( $user, $username ) {
-    if ( ! gb_is_wp_login_screen() || (string) $username === '' ) {
+    global $wpdb;
+
+    if ( (string) $username === '' ) {
         return $user;
     }
 
-    $state = gb_rate_limit_check( 'login', 8, 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+    $option = gb_login_attempt_option( $username );
 
-    return $state['blocked'] ? new WP_Error( 'gb_login_limited', gb_get_rate_limit_message( $state ) ) : $user;
+    $wpdb->query( $wpdb->prepare(
+        "INSERT INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, '1', 'no')
+         ON DUPLICATE KEY UPDATE option_value = option_value + 1",
+        $option
+    ) );
+
+    $GLOBALS['gb_login_attempt'] = array(
+        'option' => $option,
+        'count'  => (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $option ) ),
+    );
+
+    return $user;
+}, 1, 2 );
+
+add_filter( 'authenticate', function ( $user, $username ) {
+    global $wpdb;
+
+    if ( (string) $username === '' || empty( $GLOBALS['gb_login_attempt'] ) ) {
+        return $user;
+    }
+
+    $attempt = $GLOBALS['gb_login_attempt'];
+    unset( $GLOBALS['gb_login_attempt'] );
+
+    if ( $attempt['count'] > GB_LOGIN_ATTEMPT_LIMIT ) {
+        return new WP_Error(
+            'gb_login_locked',
+            'Too many sign-in attempts for this account. Please wait 15 minutes and try again, or reset your password.'
+        );
+    }
+
+    if ( $user instanceof WP_User ) {
+        $wpdb->delete( $wpdb->options, array( 'option_name' => $attempt['option'] ) );
+    }
+
+    return $user;
 }, 100, 2 );
 
-add_action( 'wp_login_failed', function ( $username ) {
-    if ( gb_is_wp_login_screen() && (string) $username !== '' ) {
-        gb_record_rate_limit_hit( 'login', 15 * MINUTE_IN_SECONDS, strtolower( (string) $username ) );
+/*
+ * Last window's counters are only clutter once it has passed. Cleared daily
+ * rather than on every attempt, so a sign-in never waits on it.
+ */
+add_action( 'gb_clear_login_attempts', function () {
+    global $wpdb;
+
+    $current = (int) floor( time() / GB_LOGIN_ATTEMPT_WINDOW );
+    $rows    = $wpdb->get_col( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'gb\\_login\\_tries\\_%'" );
+
+    foreach ( $rows as $name ) {
+        if ( (int) substr( strrchr( $name, '_' ), 1 ) < $current ) {
+            $wpdb->delete( $wpdb->options, array( 'option_name' => $name ) );
+        }
     }
 } );
 
-add_action( 'wp_login', function ( $user_login ) {
-    if ( gb_is_wp_login_screen() ) {
-        gb_reset_rate_limit( 'login', strtolower( (string) $user_login ) );
+add_action( 'init', function () {
+    if ( ! wp_next_scheduled( 'gb_clear_login_attempts' ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'gb_clear_login_attempts' );
     }
 } );
 
 /*
  * wp-login.php said "The username X is not registered" for a wrong username
  * and something different for a wrong password, which tells a stranger which
- * accounts exist. Both now get the one message /login/ already uses.
+ * accounts exist. Both now get the one message /login/ already uses. Only on
+ * the sign-in form itself: the reset and registration forms have their own
+ * wording, and "invalid_email" there means something else.
  */
 add_filter( 'login_errors', function ( $message ) {
     global $errors;
 
-    if ( ! ( $errors instanceof WP_Error ) ) {
+    $action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : 'login';
+
+    if ( ! ( $errors instanceof WP_Error ) || ! in_array( $action, array( 'login', '' ), true ) ) {
         return $message;
     }
 
-    $codes = $errors->get_error_codes();
-
-    if ( array_intersect( $codes, array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
+    if ( array_intersect( $errors->get_error_codes(), array( 'invalid_username', 'invalid_email', 'incorrect_password' ) ) ) {
         return 'Invalid username or password.';
     }
 

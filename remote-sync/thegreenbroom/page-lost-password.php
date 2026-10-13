@@ -16,6 +16,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_login'])) {
         } else {
             gb_record_rate_limit_hit('lost_password', HOUR_IN_SECONDS, strtolower($user_login));
             $result = retrieve_password($user_login);
+
+            /*
+             * An address with no account gets the same answer as one with an
+             * account. Saying "there is no account with that email" told a
+             * stranger exactly which addresses are signed up here.
+             */
+            if (is_wp_error($result) && array_intersect($result->get_error_codes(), array('invalid_email', 'invalidcombo', 'invalid_username'))) {
+                $result = true;
+            }
+
             if (true === $result) {
                 wp_safe_redirect(add_query_arg('checkemail', 'confirm', home_url('/lost-password')));
                 exit;
@@ -82,7 +92,7 @@ get_header();
         <div class="gb-auth-card-body">
             <?php 
             if ( isset($_GET['checkemail']) && $_GET['checkemail'] == 'confirm' ) {
-                echo '<div style="background:#f0fdf4; color:#166534; padding:12px; border-radius:8px; font-size:13px; margin-bottom:20px; text-align:center;">📩 Check your email for the reset link.</div>';
+                echo '<div style="background:#f0fdf4; color:#166534; padding:12px; border-radius:8px; font-size:13px; margin-bottom:20px; text-align:center;">📩 If that matches an account, we have emailed a reset link. Check your inbox and spam folder.</div>';
             }
             if ( ! empty($lost_password_error) ) {
                 echo '<div style="background:#fef2f2; color:#991b1b; padding:12px; border-radius:8px; font-size:13px; margin-bottom:20px; text-align:center;">' . esc_html($lost_password_error) . '</div>';
