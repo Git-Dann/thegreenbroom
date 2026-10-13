@@ -119,6 +119,13 @@
                     <div style="flex-grow:1;">
                         <label class="gb-os-label">Display Name</label>
                         <input type="text" name="post_title" class="gb-os-input" style="font-size:18px; font-weight:700;" value="<?php echo esc_attr($post->post_title); ?>">
+                        <?php if (!$image_url && $pid): ?>
+                            <?php // Not a vetting gap, so it stays out of the Vetting column, but
+                                  // listings without a photo look poor and the cleaner may need a nudge. ?>
+                            <div style="margin-top:8px; font-size:12px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 10px; display:inline-block;">
+                                No profile photo yet. Their listing shows a grey placeholder until they add one from Edit Profile.
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -270,10 +277,22 @@
                     <div class="gb-os-body">
                         <?php if ($post->post_status === 'publish'): ?>
                             <div style="font-size:12px; color:#166534; background:#f0fdf4; border:1px solid #dcfce7; border-radius:8px; padding:12px;">
-                                This cleaner is verified. For data protection, the ID, proof-of-address and DBS documents they uploaded for review are automatically and permanently deleted once approval is granted, so sensitive files are never kept on the platform longer than needed. The audit trail above records what was checked and when, so the decision can still be evidenced.
+                                This cleaner is verified. For data protection, the ID and DBS documents they uploaded for review are automatically and permanently deleted once approval is granted, so sensitive files are never kept on the platform longer than needed. The audit trail above records what was checked and when, so the decision can still be evidenced.
                             </div>
                         <?php else: ?>
-                            <?php foreach (['doc_id' => 'Government ID', 'doc_address' => 'Proof of Address', 'doc_dbs' => 'DBS Certificate'] as $doc_key => $doc_label): ?>
+                            <?php
+                            /*
+                             * Proof of address is no longer asked for. It is only
+                             * listed when an earlier applicant already uploaded one,
+                             * so the manager can still see it; it is deleted on
+                             * approval with the rest and never blocks approval.
+                             */
+                            $gb_doc_rows = ['doc_id' => 'Government ID', 'doc_dbs' => 'DBS Certificate'];
+                            if (!empty($verification_docs['doc_address'])) {
+                                $gb_doc_rows['doc_address'] = 'Proof of Address (no longer required)';
+                            }
+                            ?>
+                            <?php foreach ($gb_doc_rows as $doc_key => $doc_label): ?>
                                 <?php
                                 $doc = isset($verification_docs[$doc_key]) && is_array($verification_docs[$doc_key]) ? $verification_docs[$doc_key] : [];
                                 $doc_url = function_exists('gb_get_cleaner_verification_document_url') ? gb_get_cleaner_verification_document_url($pid, $doc_key) : '';
@@ -297,7 +316,7 @@
                                 </div>
                             <?php endforeach; ?>
                             <div style="font-size:11px; color:#64748b; margin-top:12px;">
-                                Uploaded verification files (ID, proof of address, DBS) are kept in private storage — never the public media library — and are automatically and permanently deleted once the cleaner is marked verified.
+                                Uploaded verification files (ID and DBS) are kept in private storage — never the public media library — and are automatically and permanently deleted once the cleaner is marked verified.
                             </div>
                         <?php endif; ?>
                     </div>
@@ -311,6 +330,12 @@
                 $v_ref2_name  = get_post_meta($pid, '_gb_ref2_name', true);
                 $v_ref2_addr  = get_post_meta($pid, '_gb_ref2_address', true);
                 $v_ref2_email = get_post_meta($pid, '_gb_ref2_email', true);
+                $v_ref1_rel   = get_post_meta($pid, '_gb_ref1_relationship', true);
+                $v_ref2_rel   = get_post_meta($pid, '_gb_ref2_relationship', true);
+                // '1' confirmed, '0' not confirmed, '' never asked (submitted
+                // before the not-a-relative question was added).
+                $v_ref1_notrel = (string) get_post_meta($pid, '_gb_ref1_not_relative', true);
+                $v_ref2_notrel = (string) get_post_meta($pid, '_gb_ref2_not_relative', true);
                 ?>
                 <div class="gb-os-card">
                     <div class="gb-os-head"><div class="gb-os-head-content"><div class="gb-os-title">Phone &amp; Character References</div></div></div>
@@ -319,14 +344,32 @@
                             <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700;">Cleaner Phone</div>
                             <div style="font-weight:700; color:#0f172a;"><?php echo $v_phone ? esc_html($v_phone) : '<span style="color:#ef4444; font-weight:600;">Not provided</span>'; ?></div>
                         </div>
-                        <?php foreach ([['1', $v_ref1_name, $v_ref1_addr, $v_ref1_email], ['2', $v_ref2_name, $v_ref2_addr, $v_ref2_email]] as $ref):
-                            list($rn, $r_name, $r_addr, $r_email) = $ref; ?>
+                        <p style="margin:12px 0 0; font-size:11.5px; color:#94a3b8;">
+                            Referees must be verifiable and must not be relatives. Contact each one before ticking &ldquo;2 references verified&rdquo;.
+                        </p>
+                        <?php foreach ([
+                            ['1', $v_ref1_name, $v_ref1_addr, $v_ref1_email, $v_ref1_rel, $v_ref1_notrel],
+                            ['2', $v_ref2_name, $v_ref2_addr, $v_ref2_email, $v_ref2_rel, $v_ref2_notrel],
+                        ] as $ref):
+                            list($rn, $r_name, $r_addr, $r_email, $r_rel, $r_notrel) = $ref; ?>
                             <div style="padding:12px 0; border-bottom:1px solid #f1f5f9;">
                                 <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:6px;">Reference <?php echo esc_html($rn); ?></div>
                                 <?php if ($r_name || $r_addr || $r_email): ?>
                                     <div style="font-weight:700; color:#0f172a;"><?php echo esc_html($r_name ?: '—'); ?></div>
                                     <div style="font-size:13px; color:#475569;"><?php echo esc_html($r_addr ?: '—'); ?></div>
                                     <div style="font-size:13px; color:#475569;"><?php echo esc_html($r_email ?: '—'); ?></div>
+                                    <div style="font-size:13px; color:#475569; margin-top:4px;">
+                                        How they know them: <?php echo $r_rel !== '' ? '<strong style="color:#0f172a;">' . esc_html($r_rel) . '</strong>' : '<span style="color:#94a3b8;">Not given</span>'; ?>
+                                    </div>
+                                    <div style="font-size:12px; margin-top:4px;">
+                                        <?php if ($r_notrel === '1'): ?>
+                                            <span style="color:#166534; font-weight:700;">✓ Cleaner confirmed this person is not a relative</span>
+                                        <?php elseif ($r_notrel === '0'): ?>
+                                            <span style="color:#b91c1c; font-weight:700;">Not confirmed as a non-relative</span>
+                                        <?php else: ?>
+                                            <span style="color:#b45309;">Submitted before we asked about relatives. Check this when you contact them.</span>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <div style="color:#ef4444; font-size:13px; font-weight:600;">Not provided</div>
                                 <?php endif; ?>
@@ -533,6 +576,9 @@
                     <td>
                         <strong style="color: #1b5e20; font-size: 14px;"><?php the_title(); ?></strong>
                         <div style="font-size:11px; color:#94a3b8;"><?php echo esc_html($loc); ?></div>
+                        <?php if (!$thumb): ?>
+                            <div style="font-size:10.5px; color:#b45309; margin-top:2px;">No profile photo</div>
+                        <?php endif; ?>
                     </td>
                     <td><span class="<?php echo ($sub === 'active') ? 'pill-active' : 'pill-trial'; ?>"><?php echo esc_html($sub); ?></span></td>
                     <td style="font-weight:700; color:#0f172a;">£<?php echo esc_html($rate); ?>/hr</td>

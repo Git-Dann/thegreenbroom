@@ -65,7 +65,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
             gb_save_availability_slots($cleaner_id, isset($_POST['gb_availability_slots']) ? $_POST['gb_availability_slots'] : []);
         }
 
-        $msg = '<div style="background:#d1fae5; color:#065f46; padding:15px; border-radius:8px; margin-bottom:20px;">✅ Saved successfully!</div>';
+        /*
+         * Profile photo. Optional, and only touched when a file was chosen, so
+         * saving the rest of the form never removes a photo. A failed upload
+         * still saves everything else; the cleaner is told what went wrong.
+         */
+        $gb_photo_error = '';
+        if (!empty($_FILES['gb_profile_photo']['name']) && function_exists('gb_save_cleaner_profile_photo')) {
+            $gb_photo_result = gb_save_cleaner_profile_photo($cleaner_id, $_FILES['gb_profile_photo']);
+            if (is_wp_error($gb_photo_result)) {
+                $gb_photo_error = $gb_photo_result->get_error_message();
+            }
+        }
+
+        if ($gb_photo_error !== '') {
+            $msg = '<div style="background:#fee2e2; color:#991b1b; padding:15px; border-radius:8px; margin-bottom:20px;">Your other changes are saved, but your photo was not: ' . esc_html($gb_photo_error) . '</div>';
+        } else {
+            $msg = '<div style="background:#d1fae5; color:#065f46; padding:15px; border-radius:8px; margin-bottom:20px;">✅ Saved successfully!</div>';
+        }
     }
 }
 
@@ -73,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_save'])) {
 $bio = get_post_field('post_content', $cleaner_id);
 $rate = get_post_meta($cleaner_id, 'hourly_rate', true);
 $loc = gb_get_cleaner_location($cleaner_id);
+$gb_photo_url = get_the_post_thumbnail_url($cleaner_id, 'medium') ?: '';
 
 get_header(); 
 ?>
@@ -91,12 +109,16 @@ get_header();
     .gb-service-option { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 9px; background: #fff; cursor: pointer; font-size: 14px; }
     .gb-service-option:hover { border-color: #10b981; background: #f0fdf4; }
     .gb-service-option input { width: 17px; height: 17px; flex: 0 0 auto; margin: 0; }
+    .gb-photo-row { display: flex; gap: 20px; align-items: center; margin-bottom: 24px; padding: 18px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+    .gb-photo-row.missing { background: #f0fdf4; border-color: #bbf7d0; }
+    .gb-photo-preview { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
 
     @media (max-width: 640px) {
         .gb-edit-wrap { margin: 28px auto; padding: 14px; }
         .gb-card { padding: 22px 18px; }
         .gb-profile-grid { grid-template-columns: 1fr; gap: 0; }
         .gb-btn { width: 100%; }
+        .gb-photo-row { flex-direction: column; text-align: center; }
     }
 </style>
 
@@ -106,10 +128,31 @@ get_header();
     <?php echo $msg; ?>
     <div class="gb-card">
         <h1 style="margin-top:0;">Edit Profile</h1>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <input type="hidden" name="gb_save" value="1">
             <?php wp_nonce_field('gb_edit_profile', 'gb_edit_profile_nonce'); ?>
-            
+
+            <div id="photo" class="gb-photo-row <?php echo $gb_photo_url ? '' : 'missing'; ?>">
+                <?php if ($gb_photo_url): ?>
+                    <img src="<?php echo esc_url($gb_photo_url); ?>" class="gb-photo-preview" alt="Your profile photo">
+                <?php else: ?>
+                    <div class="gb-photo-preview"><span class="dashicons dashicons-camera" style="font-size:32px; width:32px; height:32px; color:#94a3b8;"></span></div>
+                <?php endif; ?>
+                <div style="flex:1 1 auto;">
+                    <label style="display:block; font-weight:700; margin-bottom:4px;">Profile photo</label>
+                    <?php if ($gb_photo_url): ?>
+                        <p style="margin:0 0 10px; color:#64748b; font-size:13px;">This is the photo customers see on your listing. Choose a new one to replace it.</p>
+                    <?php else: ?>
+                        <p style="margin:0 0 10px; color:#166534; font-size:13px; line-height:1.55;">
+                            You have not added a photo yet. It is optional, but listings with a photo look far better and get more bookings.
+                            A clear, friendly photo of your face works best.
+                        </p>
+                    <?php endif; ?>
+                    <input type="file" name="gb_profile_photo" accept="image/jpeg,image/png,image/webp">
+                    <p style="margin:6px 0 0; color:#94a3b8; font-size:12px;">JPG, PNG or WebP, up to 8MB.</p>
+                </div>
+            </div>
+
             <label>About Me</label>
             <textarea name="bio" class="gb-input" style="height:150px;"><?php echo esc_textarea($bio); ?></textarea>
             

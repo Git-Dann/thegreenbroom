@@ -806,8 +806,9 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
 
     $cleaner_id = intval($_GET['approve_cleaner']);
     if (get_post_type($cleaner_id) === 'gb_cleaner') {
-        // Hard block: cannot go live until DBS + ID + address docs, phone and
-        // two references are all present.
+        // Hard block: cannot go live until DBS + ID docs, phone, two references
+        // and the signed terms are all present. Proof of address is no longer
+        // required (see gb_cleaner_verification_missing()).
         $missing = function_exists('gb_cleaner_verification_missing') ? gb_cleaner_verification_missing($cleaner_id) : array();
         if (!empty($missing)) {
             wp_redirect(home_url('/manager-dashboard?tab=cleaners&action=edit&id=' . $cleaner_id . '&msg=incomplete')); exit;

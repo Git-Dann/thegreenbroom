@@ -180,8 +180,8 @@ function gb_render_stars( $value, $size = 14 ) {
 /**
  * The trust checks shown publicly on a cleaner profile.
  *
- * A cleaner cannot be approved until Government ID, proof of address and a DBS
- * certificate have all been supplied (gb_cleaner_verification_missing() hard
+ * A cleaner cannot be approved until Government ID and a DBS certificate have
+ * both been supplied (gb_cleaner_verification_missing() hard
  * blocks it), and those documents are then permanently deleted for data
  * protection. So 'is_verified' is the durable record that those checks passed —
  * the badges must never be driven off the documents themselves, which are gone.
@@ -247,7 +247,7 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
     $refs_ok = $checks['refs'];
 
     // 'public' marks the checks a customer actually weighs when deciding to let
-    // someone into their home. Address/phone/terms are internal vetting admin —
+    // someone into their home. Phone/terms are internal vetting admin —
     // they matter to the manager, not to a booker, so they stay off the profile.
     $svg = function ( $paths ) {
         return '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $paths . '</svg>';
@@ -273,7 +273,8 @@ function gb_get_cleaner_verification_badges( $cleaner_id ) {
             'svg'   => $svg( '<circle cx="9" cy="9" r="3"/><path d="M3.5 19c.6-3 2.9-4.6 5.5-4.6S13.9 16 14.5 19"/><path d="M16 6.6a3 3 0 0 1 0 5.5"/><path d="M17.6 14.7c1.9.6 3 2 3.4 4.3"/>' ),
         ),
         // Internal vetting — deliberately not shown on the public profile.
-        array( 'label' => 'Address Confirmed', 'done' => $verified, 'public' => false, 'note' => 'Proof of address confirmed', 'svg' => $svg( '<path d="M4 10.5L12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19v-8.5z"/>' ) ),
+        // There used to be an 'Address Confirmed' item here. Proof of address
+        // is no longer asked for, so it would have claimed a check nobody does.
         array( 'label' => 'Phone Verified', 'done' => (bool) get_post_meta( $cleaner_id, '_gb_cleaner_phone', true ), 'public' => false, 'note' => 'Contact number on file', 'svg' => $svg( '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/>' ) ),
         array( 'label' => 'Terms Signed', 'done' => get_post_meta( $cleaner_id, '_gb_toa_signed', true ) === '1', 'public' => false, 'note' => 'Signed the Terms of Association', 'svg' => $svg( '<path d="M4 18.5c3-1 4-6 6.5-6s1.5 4 4 4 3-3 5.5-3"/>' ) ),
     );
@@ -314,8 +315,8 @@ function gb_get_public_cleaner_badges( $cleaner_id ) {
 /**
  * Vetting fields still outstanding on a cleaner, for the manager list.
  *
- * Differs from gb_cleaner_verification_missing() in one important way: the ID,
- * address and DBS documents are permanently purged once a cleaner is approved,
+ * Differs from gb_cleaner_verification_missing() in one important way: the ID
+ * and DBS documents are permanently purged once a cleaner is approved,
  * so on an APPROVED profile their absence means "checked, then deleted" rather
  * than "never supplied". Reporting those as missing would flag every live
  * cleaner. Documents are therefore only counted before approval; the fields
@@ -327,7 +328,8 @@ function gb_get_cleaner_vetting_gaps( $cleaner_id ) {
     $gaps       = array();
 
     if ( ! $verified && class_exists( 'GB_Uploads' ) && method_exists( 'GB_Uploads', 'get_cleaner_verification_document' ) ) {
-        $doc_labels = array( 'doc_id' => 'ID', 'doc_address' => 'Address', 'doc_dbs' => 'DBS' );
+        // No proof of address: it is no longer asked for, so it is not a gap.
+        $doc_labels = array( 'doc_id' => 'ID', 'doc_dbs' => 'DBS' );
         foreach ( $doc_labels as $field => $label ) {
             if ( empty( GB_Uploads::get_cleaner_verification_document( $cleaner_id, $field ) ) ) {
                 $gaps[] = $label;
@@ -353,6 +355,82 @@ function gb_get_cleaner_vetting_gaps( $cleaner_id ) {
     }
 
     return $gaps;
+}
+
+/**
+ * Save a cleaner's own profile photo from the Edit Profile screen.
+ *
+ * The listings, the public profile and the manager dashboard all show the
+ * gb_cleaner post's featured image, so that is what this sets. Until now there
+ * was no way for a cleaner to set it themselves: the dashboard card promised
+ * "photos" but the screen behind it had no upload, so every photo had to go
+ * through a manager. The client wants cleaners encouraged to add one, which
+ * means they need somewhere to do it.
+ *
+ * The previous photo is deleted only when it was uploaded through this same
+ * route (attached to this profile, by the profile's owner). A picture a
+ * manager chose from the media library may be in use elsewhere, so it is
+ * left alone and simply no longer used as this cleaner's photo.
+ *
+ * @return int|WP_Error The new attachment ID.
+ */
+function gb_save_cleaner_profile_photo( $cleaner_id, $file ) {
+    $cleaner_id = (int) $cleaner_id;
+    if ( $cleaner_id < 1 || get_post_type( $cleaner_id ) !== 'gb_cleaner' ) {
+        return new WP_Error( 'gb_photo_profile', 'No cleaner profile found.' );
+    }
+
+    if ( ! is_array( $file ) || empty( $file['tmp_name'] ) || ! empty( $file['error'] ) ) {
+        return new WP_Error( 'gb_photo_upload', 'Your photo did not upload. Please try again.' );
+    }
+
+    if ( empty( $file['size'] ) || (int) $file['size'] > ( 8 * MB_IN_BYTES ) ) {
+        return new WP_Error( 'gb_photo_size', 'Please choose a photo smaller than 8MB.' );
+    }
+
+    // Checked against the file's real contents, not just its name.
+    $mimes = array(
+        'jpg|jpeg' => 'image/jpeg',
+        'png'      => 'image/png',
+        'webp'     => 'image/webp',
+    );
+    $checked = wp_check_filetype_and_ext( $file['tmp_name'], (string) $file['name'], $mimes );
+    if ( empty( $checked['ext'] ) || empty( $checked['type'] ) ) {
+        return new WP_Error( 'gb_photo_type', 'Please choose a JPG, PNG or WebP photo.' );
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+    require_once ABSPATH . 'wp-admin/includes/media.php';
+
+    $title      = get_the_title( $cleaner_id );
+    $previous   = (int) get_post_thumbnail_id( $cleaner_id );
+    $attachment = media_handle_sideload(
+        array(
+            'name'     => sanitize_file_name( (string) $file['name'] ),
+            'tmp_name' => $file['tmp_name'],
+        ),
+        $cleaner_id,
+        $title . ' profile photo'
+    );
+
+    if ( is_wp_error( $attachment ) ) {
+        return new WP_Error( 'gb_photo_save', 'We could not save your photo. Please try a different image.' );
+    }
+
+    update_post_meta( $attachment, '_wp_attachment_image_alt', $title . ' profile photo' );
+    set_post_thumbnail( $cleaner_id, $attachment );
+
+    if ( $previous && $previous !== (int) $attachment ) {
+        $old = get_post( $previous );
+        if ( $old
+            && (int) $old->post_parent === $cleaner_id
+            && (int) $old->post_author === (int) get_post_field( 'post_author', $cleaner_id ) ) {
+            wp_delete_attachment( $previous, true );
+        }
+    }
+
+    return (int) $attachment;
 }
 
 function gb_get_email_settings() {

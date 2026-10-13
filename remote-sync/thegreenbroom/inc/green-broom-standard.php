@@ -42,7 +42,7 @@ function gb_green_broom_standard_seed_content() {
 <li><strong>Insured</strong> &mdash; covered by The Green Broom&rsquo;s own insurance policy, which we provide.</li>
 </ul>
 
-<p>We also confirm an address and a contact number, and every cleaner signs our Terms of Association. If a check lapses, the badge comes off. A cleaner who has not completed all four is not listed.</p>
+<p>We also confirm a contact number, and every cleaner signs our Terms of Association. If a check lapses, the badge comes off. A cleaner who has not completed all four is not listed.</p>
 
 <h2>The products</h2>
 

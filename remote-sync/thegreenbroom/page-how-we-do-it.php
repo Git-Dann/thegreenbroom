@@ -33,7 +33,7 @@ $vet_head     = get_post_meta(get_the_ID(), '_gb_vet_head', true)     ?: 'Trust 
 $vet_sub      = get_post_meta(get_the_ID(), '_gb_vet_sub', true)      ?: 'We invite less than 10% of applicants to join our platform. Here is how we ensure only the best enter your home.';
 
 $vet_s1_title = get_post_meta(get_the_ID(), '_gb_vet_s1_title', true) ?: 'ID & Right to Work Checks';
-$vet_s1_desc  = get_post_meta(get_the_ID(), '_gb_vet_s1_desc', true)  ?: 'We verify government-issued ID and proof of address for every single applicant.';
+$vet_s1_desc  = get_post_meta(get_the_ID(), '_gb_vet_s1_desc', true)  ?: 'We verify government-issued photo ID for every single applicant.';
 
 $vet_s2_title = get_post_meta(get_the_ID(), '_gb_vet_s2_title', true) ?: 'Reference Verification';
 $vet_s2_desc  = get_post_meta(get_the_ID(), '_gb_vet_s2_desc', true)  ?: 'We speak to previous employers or clients. If they haven\'t delivered 5-star service before, they won\'t be on The Green Broom.';
