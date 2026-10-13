@@ -314,6 +314,18 @@ if (isset($_POST['gb_save_action'])) {
                     $gb_notice = ['error', 'Brevo would not unblock it: ' . $gb_unblocked->get_error_message()];
                 } else {
                     gb_outbox_update($gb_log_id, ['delivery' => '']);
+                    /*
+                     * An email Brevo "sent" to a blocked address never arrived,
+                     * so put it back in the queue before resending: the queue
+                     * will not resend a row that says sent.
+                     */
+                    if ($gb_row->status === 'sent' && $gb_row->route === 'brevo' && !empty($gb_row->payload)) {
+                        global $wpdb;
+                        $wpdb->query($wpdb->prepare(
+                            "UPDATE {$wpdb->prefix}gb_email_log SET status = 'retrying' WHERE id = %d AND status = 'sent' AND route = 'brevo'",
+                            $gb_log_id
+                        ));
+                    }
                     $gb_resent = ($gb_row->status !== 'sent' || $gb_row->route === 'brevo') && !empty($gb_row->payload) ? gb_outbox_retry_one($gb_log_id) : false;
                     $gb_notice = ['ok', $gb_row->to_email . ' is off Brevo\'s block list' . ($gb_resent ? ' and the email has been sent again.' : '. Future emails to it will go through Brevo as normal.')];
                 }
@@ -323,9 +335,14 @@ if (isset($_POST['gb_save_action'])) {
             } else {
                 $gb_resent = gb_outbox_retry_one($gb_log_id);
                 $gb_row    = gb_outbox_get($gb_log_id);
-                $gb_notice = $gb_resent
-                    ? ['ok', 'Sent again' . ($gb_row && $gb_row->route ? ' by ' . gb_outbox_route_label($gb_row->route) : '') . '.']
-                    : ['error', 'Still could not send it. It stays in the queue; the reason is in the log below.'];
+                if ($gb_resent) {
+                    $gb_notice = ['ok', 'Sent again' . ($gb_row && $gb_row->route ? ' by ' . gb_outbox_route_label($gb_row->route) : '') . '.'];
+                } elseif ($gb_row && in_array($gb_row->status, ['sending', 'sent'], true)) {
+                    // The queue got to it first (it claims each email before sending).
+                    $gb_notice = ['ok', 'That email is already being sent, or has just gone. Nothing more to do.'];
+                } else {
+                    $gb_notice = ['error', 'Still could not send it. It stays in the queue; the reason is in the log below.'];
+                }
             }
             wp_safe_redirect(gb_get_manager_settings_url([
                 'section'      => 'email',
