@@ -495,9 +495,32 @@ function gb_handle_connect_onboarding() {
         gb_connect_redirect_with_notice($redirect_to, 'error', $msg);
     }
 
-    wp_safe_redirect(esc_url_raw($link['url']));
+    gb_safe_redirect_to_stripe($link['url']);
     exit;
 }
+
+/**
+ * Send the browser on to a page Stripe gave us (onboarding, Express
+ * dashboard, a checkout).
+ *
+ * wp_safe_redirect() only allows this site's own host, so on its own it
+ * refused every Stripe address and sent the visitor to wp-admin instead -
+ * which bounces cleaners straight back to their dashboard. "Continue Setup"
+ * looked like it did nothing and no cleaner could ever reach Stripe's form.
+ *
+ * Still a safe redirect: only Stripe's own hosts are allowed, and only for
+ * this one call.
+ */
+function gb_safe_redirect_to_stripe($url) {
+    $allow = static function ($hosts) {
+        return array_merge($hosts, ['connect.stripe.com', 'checkout.stripe.com', 'dashboard.stripe.com']);
+    };
+
+    add_filter('allowed_redirect_hosts', $allow);
+    wp_safe_redirect(esc_url_raw($url));
+    remove_filter('allowed_redirect_hosts', $allow);
+}
+
 /**
  * Build a Connect action link that does not go through wp-admin.
  *
@@ -586,7 +609,7 @@ function gb_handle_connect_login_link() {
         gb_connect_redirect_with_notice($redirect_to, 'error', $msg);
     }
 
-    wp_safe_redirect(esc_url_raw($login_link['url']));
+    gb_safe_redirect_to_stripe($login_link['url']);
     exit;
 }
 add_action('admin_post_gb_connect_login_link', 'gb_handle_connect_login_link');
@@ -1469,7 +1492,7 @@ function gb_handle_stripe_storefront_checkout() {
         exit;
     }
 
-    wp_safe_redirect(esc_url_raw($session['url']));
+    gb_safe_redirect_to_stripe($session['url']);
     exit;
 }
 add_action('admin_post_gb_stripe_storefront_checkout', 'gb_handle_stripe_storefront_checkout');
