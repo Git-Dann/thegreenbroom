@@ -971,6 +971,17 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         .gb-nav-item:hover { color: white; background: rgba(255,255,255,0.03); }
         .gb-nav-item.active { color: #10b981; background: rgba(16, 185, 129, 0.1); border-left-color: #10b981; }
         .gb-nav-item .dashicons { font-size: 18px; width: 18px; height: 18px; }
+        /* The menu grew taller than a laptop screen (Reviews was the one too
+           many) and the sidebar is a fixed full-height column, so Log Out
+           was pushed off the bottom with no way to reach it. The links now
+           scroll in their own area and Log Out stays pinned at the foot. */
+        .gb-nav-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+        .gb-nav-logout { flex: 0 0 auto; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 8px; }
+        @media (max-height: 820px) {
+            .gb-brand { padding-bottom: 20px; }
+            .gb-sidebar { padding-top: 20px; padding-bottom: 10px; }
+            .gb-nav-item { padding-top: 10px; padding-bottom: 10px; }
+        }
         .gb-title { font-size: 28px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
         .gb-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 24px; }
         /* MOBILE
@@ -1122,6 +1133,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
             </div>
         </div>
         
+        <div class="gb-nav-scroll">
         <a href="?tab=overview" class="gb-nav-item <?php echo $tab=='overview'||$tab=='dashboard'?'active':''; ?>"><span class="dashicons dashicons-dashboard"></span> Dashboard</a>
         <a href="?tab=bookings" class="gb-nav-item <?php echo $tab=='bookings'?'active':''; ?>"><span class="dashicons dashicons-calendar-alt"></span> Bookings</a>
         <a href="?tab=cleaners" class="gb-nav-item <?php echo $tab=='cleaners'?'active':''; ?>"><span class="dashicons dashicons-id"></span> Manage Cleaners</a>
@@ -1149,8 +1161,8 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         <a href="?tab=settings" class="gb-nav-item <?php echo $tab=='settings'?'active':''; ?>">
             <span class="dashicons dashicons-admin-generic"></span> Settings
         </a>
-        <div style="flex-grow:1;"></div>
-        <a href="<?php echo wp_logout_url(home_url()); ?>" class="gb-nav-item"><span class="dashicons dashicons-migrate"></span> Log Out</a>
+        </div>
+        <a href="<?php echo esc_url(wp_logout_url(home_url())); ?>" class="gb-nav-item gb-nav-logout"><span class="dashicons dashicons-migrate"></span> Log Out</a>
     </nav>
 
     <main class="gb-main gb-tab-<?php echo esc_attr($tab); ?>">
