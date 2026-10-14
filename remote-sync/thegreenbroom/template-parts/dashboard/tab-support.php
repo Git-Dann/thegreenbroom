@@ -165,13 +165,13 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
     </div>
 
     <div class="gb-filter-bar">
-        <form method="get" style="display:flex; gap:12px; width:100%; align-items:center;">
+        <form method="get" style="display:flex; flex-wrap:wrap; gap:12px; width:100%; align-items:center;">
             <input type="hidden" name="tab" value="support">
-            <div class="gb-search-container">
+            <div class="gb-search-container" style="flex:1 1 220px; min-width:0;">
                 <span class="dashicons dashicons-search"></span>
                 <input type="text" name="s" class="gb-search-input" value="<?php echo esc_attr($search_query); ?>" placeholder="Search subject or content...">
             </div>
-            <select name="cleaner_id" class="gb-input" style="width:200px; padding:10px;">
+            <select name="cleaner_id" class="gb-input" style="flex:1 1 160px; max-width:200px; min-width:0; padding:10px;">
                 <option value="0">All Cleaners</option>
                 <?php 
                 $cleaners = get_posts(['post_type'=>'gb_cleaner', 'numberposts'=>-1, 'post_status'=>'publish']);
@@ -179,7 +179,7 @@ $view = (isset($_GET['view']) && $_GET['view'] === 'archived') ? 'archived' : 'i
                     <option value="<?php echo $c->ID; ?>" <?php selected($cleaner_id_filter, $c->ID); ?>><?php echo esc_html($c->post_title); ?></option>
                 <?php endforeach; ?>
             </select>
-            <select name="sort" class="gb-input" style="width:160px; padding:10px;">
+            <select name="sort" class="gb-input" style="flex:1 1 140px; max-width:160px; min-width:0; padding:10px;">
                 <option value="date_desc" <?php selected($orderby, 'date_desc'); ?>>Newest First</option>
                 <option value="date_asc" <?php selected($orderby, 'date_asc'); ?>>Oldest First</option>
             </select>
