@@ -208,6 +208,7 @@ function gb_stripe_selftest_check() {
         $section['plans']          = gb_stripe_selftest_plans( $secret, $mode );
         $section['billing_portal'] = gb_stripe_selftest_portal( $secret );
         $section['recent_events']  = gb_stripe_selftest_events( $secret );
+        $section['connect']        = gb_stripe_selftest_connect_platform( $secret );
 
         $report['modes'][ $mode ] = $section;
     }
@@ -429,6 +430,11 @@ function gb_stripe_selftest_connect() {
             'cleaner'         => get_the_title( $id ),
             'status'          => get_post_status( $id ),
             'payout_account'  => $account !== '',
+            'account_id'      => $account,
+            'connect_status'  => (string) get_post_meta( $id, '_gb_stripe_connect_status', true ),
+            'last_error'      => (string) get_post_meta( $id, '_gb_stripe_last_error', true ),
+            'last_sync'       => (string) get_post_meta( $id, '_gb_stripe_last_sync', true ),
+            'stripe_says'     => $account !== '' ? gb_stripe_selftest_connected_account( $account ) : null,
             'charges_enabled' => (bool) get_post_meta( $id, '_gb_stripe_charges_enabled', true ),
             'payouts_enabled' => (bool) get_post_meta( $id, '_gb_stripe_payouts_enabled', true ),
             'can_take_bookings' => function_exists( 'gb_cleaner_can_take_bookings' ) ? (bool) gb_cleaner_can_take_bookings( $id ) : null,
@@ -439,6 +445,62 @@ function gb_stripe_selftest_connect() {
     return array(
         'mode'     => function_exists( 'gb_connect_current_mode' ) ? gb_connect_current_mode() : '',
         'cleaners' => $rows,
+    );
+}
+
+/**
+ * Is Connect switched on for this Stripe account, through the v1 API and the
+ * v2 Accounts API the "Set up payouts" button tries first? Both are list
+ * calls, so nothing is created.
+ */
+function gb_stripe_selftest_connect_platform( $secret ) {
+    $v1 = gb_stripe_selftest_api( $secret, 'accounts', array( 'limit' => 3 ) );
+
+    $report = array(
+        'v1_accounts' => isset( $v1['error'] ) ? array( 'error' => $v1['error'] ) : array( 'ok' => true, 'count_shown' => count( isset( $v1['data'] ) ? $v1['data'] : array() ) ),
+    );
+
+    $response = wp_remote_get( 'https://api.stripe.com/v2/core/accounts?limit=3', array(
+        'timeout' => 20,
+        'headers' => array( 'Authorization' => 'Bearer ' . $secret ),
+    ) );
+
+    if ( is_wp_error( $response ) ) {
+        $report['v2_accounts'] = array( 'error' => 'Could not reach Stripe: ' . $response->get_error_message() );
+    } else {
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+        $code = (int) wp_remote_retrieve_response_code( $response );
+        $report['v2_accounts'] = $code >= 400
+            ? array( 'error' => is_array( $data ) && isset( $data['error']['message'] ) ? (string) $data['error']['message'] : 'HTTP ' . $code )
+            : array( 'ok' => true, 'count_shown' => count( isset( $data['data'] ) ? $data['data'] : array() ) );
+    }
+
+    return $report;
+}
+
+/**
+ * What Stripe itself says about one cleaner's payout account, in the site's
+ * current mode: has the form been finished, and what is still owed.
+ */
+function gb_stripe_selftest_connected_account( $account_id ) {
+    $config = gb_get_stripe_config();
+    if ( empty( $config['secret_key'] ) ) {
+        return array( 'error' => 'No secret key in the current mode.' );
+    }
+
+    $account = gb_stripe_selftest_api( $config['secret_key'], 'accounts/' . rawurlencode( $account_id ) );
+    if ( isset( $account['error'] ) ) {
+        return $account;
+    }
+
+    return array(
+        'type'              => isset( $account['type'] ) ? $account['type'] : '',
+        'details_submitted' => ! empty( $account['details_submitted'] ),
+        'charges_enabled'   => ! empty( $account['charges_enabled'] ),
+        'payouts_enabled'   => ! empty( $account['payouts_enabled'] ),
+        'capabilities'      => isset( $account['capabilities'] ) ? $account['capabilities'] : array(),
+        'currently_due'     => isset( $account['requirements']['currently_due'] ) ? $account['requirements']['currently_due'] : array(),
+        'disabled_reason'   => isset( $account['requirements']['disabled_reason'] ) ? $account['requirements']['disabled_reason'] : null,
     );
 }
 
@@ -512,6 +574,10 @@ function gb_stripe_selftest_problems( array $report ) {
 
         if ( isset( $section['billing_portal'] ) && empty( $section['billing_portal']['configured'] ) && ! isset( $section['billing_portal']['error'] ) ) {
             $problems[] = "{$label}: the billing portal is not configured, so members cannot manage or cancel.";
+        }
+
+        if ( isset( $section['connect']['v1_accounts']['error'] ) ) {
+            $problems[] = "{$label}: Stripe Connect is not usable, so cleaners cannot set up payouts: {$section['connect']['v1_accounts']['error']}";
         }
 
         if ( ! empty( $section['recent_events']['not_yet_delivered'] ) ) {
