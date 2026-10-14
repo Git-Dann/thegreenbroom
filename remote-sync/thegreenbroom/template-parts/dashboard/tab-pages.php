@@ -22,16 +22,21 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
     .gb-input, .gb-textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
     .gb-textarea { min-height: 70px; resize: vertical; }
     .gb-upload-wrapper { margin-top: 5px; }
-    .gb-media-field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1fr); gap: 16px; align-items: stretch; }
+    /* Preview beside the controls only when both get at least 280px; otherwise
+       it drops underneath. A fixed 260px preview column left the controls
+       ~90px on a laptop, cutting "Choose image" in half. */
+    .gb-media-field { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: stretch; }
     .gb-media-controls { min-width: 0; }
-    .gb-media-toolbar { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
-    .gb-media-input-row { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
+    /* The address gets its own full-width line and the buttons sit under it.
+       Side by side, the buttons kept their width and squeezed the address
+       box down to a sliver, with its icon spilling over the border. */
+    .gb-media-toolbar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; min-width: 0; }
+    .gb-media-input-row { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 100%; min-height: 46px; padding: 0 12px; border: 1px solid #dbe4ef; border-radius: 9px; background: #fff; }
     .gb-media-input-row:focus-within { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
     .gb-media-input-row .dashicons { flex: 0 0 auto; color: #2e7d32; }
     .gb-media-input { min-width: 0; width: 100%; padding: 0; overflow: hidden; border: 0; outline: 0; background: transparent; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
     .gb-media-input::placeholder { color: #94a3b8; }
-    .gb-media-actions { display: flex; flex: 0 0 auto; align-items: stretch; gap: 8px; margin-top: 0; }
-    .gb-media-actions
+    .gb-media-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-top: 0; }
     .gb-media-actions .gb-upload-btn { border-color: #2e7d32; color: #2e7d32; }
     .gb-media-actions .gb-upload-btn:hover { border-color: #256b2a; background: #f0fdf4; }
     .gb-media-clear { display: none; }
@@ -42,7 +47,7 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
     .gb-media-preview.is-empty::before { content: '\f128'; font-family: dashicons; color: #cbd5e1; font-size: 24px; }
     .gb-media-preview.is-error::before { content: '\f534'; font-family: dashicons; color: #f59e0b; font-size: 24px; }
     @media (max-width: 900px) { .gb-media-field { grid-template-columns: 1fr; } .gb-media-preview { min-height: 180px; } .gb-media-preview img { min-height: 180px; max-height: 240px; } }
-    @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions}
+    @media (max-width: 620px) { .gb-media-toolbar { flex-direction: column; } .gb-media-actions { width: 100%; } .gb-media-actions .gb-btn-small-os { flex: 1 1 0; justify-content: center; } }
     
     .gb-table { width: 100%; border-collapse: collapse; }
     .gb-table th { text-align: left; padding: 15px; background: #f8fafc; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
