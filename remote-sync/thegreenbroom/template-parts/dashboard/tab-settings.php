@@ -1152,9 +1152,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                 $gb_subs_cat    = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : array();
                 ?>
                 <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
-                    The prices below come straight from the panels on the public site, so the page and the card charge cannot say different things. Change a price under <strong>Membership pricing</strong>, run this again, and Stripe follows.
-                    <br><br>
-                    Safe to run as often as you like. Anyone already paying stays on the price they signed up at &mdash; changing a price here never re-rates somebody mid-term.
+                    The prices below come straight from the panels on the public site. Change one under <strong>Membership pricing</strong> and a button appears here to update Stripe to match. Anyone already paying stays on the price they signed up at.
                 </div>
 
                 <?php
@@ -1165,6 +1163,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     return '<span' . ($title !== '' ? ' title="' . esc_attr($title) . '"' : '') . ' style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:' . $bg . '; color:' . $fg . '; font-size:11.5px; font-weight:700; white-space:nowrap; cursor:default;"><span aria-hidden="true" style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>' . esc_html($label) . '</span>';
                 };
                 ?>
+                <?php $gb_needs_update = false; $gb_any_live = false; ?>
                 <table class="gb-booking-table" style="margin-bottom:18px;">
                     <thead><tr><th>Plan</th><th>Charges</th><th>Every</th><th>Free trial</th><th>Status</th></tr></thead>
                     <tbody>
@@ -1174,6 +1173,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         $gb_live = !empty($gb_rec['price_id']);
                         $gb_amt  = function_exists('gb_subscription_plan_amount') ? gb_subscription_plan_amount($gb_pk) : null;
                         $gb_amt_err = is_wp_error($gb_amt) ? $gb_amt->get_error_message() : '';
+                        // Checkout refuses a plan whose panel price no longer
+                        // matches what Stripe will charge (inc/membership-checkout.php),
+                        // so a changed price has to be pushed to Stripe before it sells.
+                        $gb_stale = $gb_live && $gb_amt_err === '' && isset($gb_rec['amount_minor'])
+                            && (int) $gb_rec['amount_minor'] !== (int) $gb_amt;
+                        $gb_any_live = $gb_any_live || $gb_live;
+                        if (!$gb_live || $gb_stale || (!empty($gb_row) && empty($gb_row['ok']))) {
+                            $gb_needs_update = true;
+                        }
                         ?>
                         <tr>
                             <td><strong style="font-size:13px; color:#0f172a;"><?php echo esc_html($gb_plan['label']); ?></strong></td>
@@ -1190,6 +1198,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                                 <?php if (!empty($gb_row) && empty($gb_row['ok'])): ?>
                                     <?php echo $gb_pill('Failed', '#fee2e2', '#b91c1c'); ?>
                                     <div style="color:#94a3b8; font-size:11px; margin-top:5px;"><?php echo esc_html($gb_row['error']); ?></div>
+                                <?php elseif ($gb_stale): ?>
+                                    <?php echo $gb_pill('Price changed: update Stripe', '#fef3c7', '#92400e', 'Stripe price ' . $gb_rec['price_id']); ?>
                                 <?php elseif ($gb_live): ?>
                                     <?php echo $gb_pill('Ready in ' . ($gb_subs_mode === 'live' ? 'Live' : 'Test'), '#dcfce7', '#166534', 'Stripe price ' . $gb_rec['price_id']); ?>
                                 <?php elseif ($gb_amt_err !== ''): ?>
@@ -1213,14 +1223,22 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     </p>
                 <?php endif; ?>
 
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="gb_stripe_provision_subscriptions">
-                    <?php wp_nonce_field('gb_stripe_provision_subscriptions'); ?>
-                    <button type="submit" class="gb-btn gb-btn-primary">Set up the plans in Stripe</button>
-                    <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
-                        Creates the products and recurring prices in whichever Stripe account the keys above belong to. Test and live are kept apart, so setting up in test does not touch live.
+                <?php if ($gb_needs_update): ?>
+                    <?php /* Only offered when there is something to do: with every plan
+                             ready it read as a step still waiting to be taken. */ ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="gb_stripe_provision_subscriptions">
+                        <?php wp_nonce_field('gb_stripe_provision_subscriptions'); ?>
+                        <button type="submit" class="gb-btn gb-btn-primary"><?php echo $gb_any_live ? 'Update the plans in Stripe' : 'Set up the plans in Stripe'; ?></button>
+                        <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
+                            Until this is done, a plan marked above cannot be bought. It only touches the Stripe account for the current mode (<?php echo esc_html($gb_subs_mode); ?>).
+                        </p>
+                    </form>
+                <?php else: ?>
+                    <p style="margin:0; padding:10px 12px; border-radius:8px; background:#f0fdf4; border:1px solid #dcfce7; color:#166534; font-size:13px;">
+                        All plans match Stripe. Nothing to do here.
                     </p>
-                </form>
+                <?php endif; ?>
             </div>
         </div>
 
