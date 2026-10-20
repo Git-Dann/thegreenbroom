@@ -1038,9 +1038,89 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <p style="margin:0 0 18px; color:#64748b; font-size:13px;">
                         Active mode above determines which key set is used in booking/payment flows.
                     </p>
+                    <?php
+                    /*
+                     * Keys and secrets folded away. Once set, nobody needs to see two
+                     * columns of ten password boxes every time they open Settings; each
+                     * group says in its heading whether it is complete, and opens itself
+                     * when the active mode is missing something. Opening one closes the
+                     * others (the details name attribute, with a small script fallback).
+                     * Closed groups still submit with the form: blank secrets mean keep.
+                     */
+                    $gb_key_state = static function ($mode) use ($settings_id) {
+                        $fields = array('publishable_key', 'secret_key', 'webhook_secret', 'connect_webhook_secret');
+                        $missing = 0;
+                        foreach ($fields as $f) {
+                            if (trim((string) get_post_meta($settings_id, '_gb_stripe_' . $mode . '_' . $f, true)) === '') {
+                                $missing++;
+                            }
+                        }
+                        return $missing;
+                    };
+                    $gb_acc_badge = static function ($missing) {
+                        return $missing === 0
+                            ? '<span class="gb-acc-badge is-ok">Complete</span>'
+                            : '<span class="gb-acc-badge is-warn">' . (int) $missing . ' missing</span>';
+                    };
+                    $gb_live_missing = $gb_key_state('live');
+                    $gb_test_missing = $gb_key_state('test');
+                    ?>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys"<?php echo ($stripe_mode === 'live' && $gb_live_missing) ? ' open' : ''; ?>>
+                        <summary><span class="gb-acc-title">Live keys &amp; webhook secrets<?php echo $stripe_mode === 'live' ? ' <em>in use</em>' : ''; ?></span><?php echo $gb_acc_badge($gb_live_missing); ?></summary>
+                        <div class="gb-acc-body">
+                        <div class="gb-form-row">
+                            <label class="gb-label">Live Publishable Key</label>
+                            <input type="text" name="_gb_stripe_live_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_publishable_key', true)); ?>" placeholder="pk_live_...">
+                        </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Live Secret Key</label>
+                            <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_live_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-bottom:0;">
+                            <label class="gb-label">Live Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Live Connect Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Live Accounts v2 Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        </div>
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys"<?php echo ($stripe_mode === 'test' && $gb_test_missing) ? ' open' : ''; ?>>
+                        <summary><span class="gb-acc-title">Test (sandbox) keys &amp; webhook secrets<?php echo $stripe_mode === 'test' ? ' <em>in use</em>' : ''; ?></span><?php echo $gb_acc_badge($gb_test_missing); ?></summary>
+                        <div class="gb-acc-body">
                     <div style="margin:0 0 18px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
                         Sandbox checklist: keep the platform in <strong>Test Mode</strong>, paste the test publishable and secret keys plus both webhook secrets, use the cleaner onboarding buttons in <strong>Manage Cleaners</strong>, then run a sample checkout below or from a live booking flow. When you are satisfied, switch to <strong>Live Mode</strong> and add the live keys.
                     </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Test Publishable Key</label>
+                            <input type="text" name="_gb_stripe_test_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_publishable_key', true)); ?>" placeholder="pk_test_...">
+                        </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Test Secret Key</label>
+                            <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_test_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-bottom:0;">
+                            <label class="gb-label">Test Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Test Connect Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Test Accounts v2 Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        </div>
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys">
+                        <summary><span class="gb-acc-title">Webhook address for Stripe</span></summary>
+                        <div class="gb-acc-body">
                     <div class="gb-form-row" style="margin-bottom:20px;">
                         <label class="gb-label">Stripe Webhook Endpoint URL</label>
                         <input type="text" class="gb-input" value="<?php echo esc_attr(function_exists('gb_get_stripe_webhook_url') ? gb_get_stripe_webhook_url() : admin_url('admin-post.php?action=gb_stripe_webhook')); ?>" readonly>
@@ -1048,57 +1128,11 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             Add this URL in your Stripe Dashboard webhook settings for the active environment.
                         </p>
                     </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">Test Keys</h4>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Test Publishable Key</label>
-                                <input type="text" name="_gb_stripe_test_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_publishable_key', true)); ?>" placeholder="pk_test_...">
-                            </div>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Test Secret Key</label>
-                                <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_test_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-bottom:0;">
-                                <label class="gb-label">Test Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Test Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Test Accounts v2 Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
                         </div>
-
-                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">Live Keys</h4>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Live Publishable Key</label>
-                                <input type="text" name="_gb_stripe_live_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_publishable_key', true)); ?>" placeholder="pk_live_...">
-                            </div>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Live Secret Key</label>
-                                <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_live_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-bottom:0;">
-                                <label class="gb-label">Live Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Live Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Live Accounts v2 Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                        </div>
-                    </div>
-
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys">
+                        <summary><span class="gb-acc-title">Legacy fallback keys <em>not normally used</em></span></summary>
+                        <div class="gb-acc-body">
                     <div class="gb-form-row" style="margin-top:20px;">
                         <label class="gb-label">Legacy Fallback Publishable Key (Optional)</label>
                         <input type="text" name="_gb_stripe_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_publishable_key', true)); ?>" placeholder="Optional - legacy compatibility">
@@ -1115,6 +1149,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <label class="gb-label">Legacy Fallback Connect Webhook Secret (Optional)</label>
                         <input type="password" name="_gb_stripe_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'Optional - legacy compatibility'); ?>" autocomplete="new-password">
                     </div>
+                        </div>
+                    </details>
                 </div>
             </div>
         </form>
@@ -1329,6 +1365,18 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     var hashSection = window.location.hash ? window.location.hash.slice(1) : '';
     activate(hashSection || defaultSection, false);
 })();
+</script>
+
+<script>
+/* One open at a time in a settings group. The details "name" attribute does
+   this natively in current browsers; this covers older ones. */
+document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d || d.tagName !== 'DETAILS' || !d.open || !d.dataset.accGroup) { return; }
+    document.querySelectorAll('details[data-acc-group="' + d.dataset.accGroup + '"]').forEach(function (o) {
+        if (o !== d) { o.open = false; }
+    });
+}, true);
 </script>
 
 <script>

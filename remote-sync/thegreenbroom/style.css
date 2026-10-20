@@ -1134,6 +1134,22 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
 .gb-link-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
 /* Filter and search bars. */
+/* Manager OS: collapsible settings groups (<details class="gb-acc">).
+   Opening one closes the rest of its group; see tab-settings.php. */
+.gb-acc { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; margin: 0 0 10px; overflow: hidden; }
+.gb-acc > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 13.5px; color: #0f172a; user-select: none; }
+.gb-acc > summary::-webkit-details-marker { display: none; }
+.gb-acc > summary::before { content: ""; flex: 0 0 auto; width: 7px; height: 7px; border-right: 2px solid #64748b; border-bottom: 2px solid #64748b; transform: rotate(-45deg); transition: transform .15s ease; margin-right: 2px; }
+.gb-acc[open] > summary::before { transform: rotate(45deg); }
+.gb-acc > summary:hover { background: #f8fafc; }
+.gb-acc > summary:focus-visible { outline: 2px solid #2e7d32; outline-offset: -2px; }
+.gb-acc-title { flex: 1 1 auto; min-width: 0; }
+.gb-acc-title em { font-style: normal; font-weight: 600; font-size: 11.5px; color: #64748b; margin-left: 6px; }
+.gb-acc-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.gb-acc-badge.is-ok { background: #dcfce7; color: #166534; }
+.gb-acc-badge.is-warn { background: #fef3c7; color: #92400e; }
+.gb-acc-body { padding: 4px 16px 16px; border-top: 1px solid #f1f5f9; }
+.gb-acc-body > :first-child { margin-top: 12px; }
 .gb-filter-bar { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; display: flex; gap: 15px; align-items: center; }
 .gb-search-container { flex-grow: 1; position: relative; }
 .gb-search-container .dashicons { position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 18px; }
