@@ -1157,6 +1157,14 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     Safe to run as often as you like. Anyone already paying stays on the price they signed up at &mdash; changing a price here never re-rates somebody mid-term.
                 </div>
 
+                <?php
+                /* A status badge, not coloured text: bold green "Set up" read
+                   like a link to press. The Stripe price id is still here for
+                   support, but quiet, on hover. */
+                $gb_pill = static function ($label, $bg, $fg, $title = '') {
+                    return '<span' . ($title !== '' ? ' title="' . esc_attr($title) . '"' : '') . ' style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:' . $bg . '; color:' . $fg . '; font-size:11.5px; font-weight:700; white-space:nowrap; cursor:default;"><span aria-hidden="true" style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>' . esc_html($label) . '</span>';
+                };
+                ?>
                 <table class="gb-booking-table" style="margin-bottom:18px;">
                     <thead><tr><th>Plan</th><th>Charges</th><th>Every</th><th>Free trial</th><th>Status</th></tr></thead>
                     <tbody>
@@ -1180,16 +1188,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <td style="font-size:12.5px; color:#475569;"><?php echo $gb_plan['trial_days'] ? esc_html($gb_plan['trial_days'] . ' days') : '&mdash;'; ?></td>
                             <td style="font-size:12px;">
                                 <?php if (!empty($gb_row) && empty($gb_row['ok'])): ?>
-                                    <span style="color:#b91c1c; font-weight:700;">Failed</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_row['error']); ?></div>
+                                    <?php echo $gb_pill('Failed', '#fee2e2', '#b91c1c'); ?>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:5px;"><?php echo esc_html($gb_row['error']); ?></div>
                                 <?php elseif ($gb_live): ?>
-                                    <span style="color:#16a34a; font-weight:700;">Set up</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px; font-family:monospace;"><?php echo esc_html($gb_rec['price_id']); ?></div>
+                                    <?php echo $gb_pill('Ready in ' . ($gb_subs_mode === 'live' ? 'Live' : 'Test'), '#dcfce7', '#166534', 'Stripe price ' . $gb_rec['price_id']); ?>
                                 <?php elseif ($gb_amt_err !== ''): ?>
-                                    <span style="color:#b91c1c; font-weight:700;">Blocked</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_amt_err); ?></div>
+                                    <?php echo $gb_pill('Blocked', '#fef3c7', '#92400e'); ?>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:5px;"><?php echo esc_html($gb_amt_err); ?></div>
                                 <?php else: ?>
-                                    <span style="color:#94a3b8; font-weight:700;">Not set up yet</span>
+                                    <?php echo $gb_pill('Not set up yet', '#f1f5f9', '#64748b'); ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
