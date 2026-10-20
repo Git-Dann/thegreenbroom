@@ -111,7 +111,7 @@ https://thegreenbroom.uk/wp-admin/admin-post.php?action=gb_stripe_webhook
 They have to be three separate endpoints because Stripe will not mix v1
 snapshot events and v2 thin events on one destination.
 
-**a. Memberships and bookings** — 11 events:
+**a. Memberships and bookings** — 13 events:
 
 ```
 checkout.session.completed
@@ -125,7 +125,14 @@ customer.subscription.trial_will_end
 invoice.paid
 invoice.payment_failed
 charge.refunded
+refund.updated
+refund.failed
 ```
+
+The last three are for booking refunds. `charge.refunded` records a refund
+made in the Stripe dashboard against its booking; `refund.updated` and
+`refund.failed` catch a refund that Stripe later fails to pay out, so the
+booking says the customer has not had their money back.
 
 **b. Connect** — `account.updated`, with **"Listen to events on connected
 accounts"** ticked.
