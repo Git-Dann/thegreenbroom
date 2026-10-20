@@ -496,6 +496,10 @@ if ($verified_body === '') {
     .gb-card-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     
     .gb-card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto; }
+    .gb-card-actions.is-single { grid-template-columns: 1fr; }
+    .gb-card-status { display: flex; align-items: center; gap: 8px; margin: auto 0 12px; font-size: 13px; color: #64748b; }
+    .gb-card-status > span { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; flex: 0 0 auto; }
+    .gb-card-status + .gb-card-actions { margin-top: 0; }
     
     /* Buttons */
     .gb-btn-outline { display: block; text-align: center; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; color: #475569; text-decoration: none; font-size: 14px; font-weight: 600; transition: 0.2s; }
@@ -706,13 +710,27 @@ if ($verified_body === '') {
                         <?php echo wp_trim_words(get_the_content(), 15, '...'); ?>
                     </div>
                     
-                    <div class="gb-card-actions">
-                        <a href="<?php the_permalink(); ?>" class="gb-btn-outline"><?php echo esc_html($listings_btn_profile); ?></a>
+                    <?php
+                    /*
+                     * A cleaner who cannot be booked used to get a faded green
+                     * "Not taking bookings" button beside View Profile: it looked
+                     * like a broken button and wrapped onto two lines. Now the
+                     * profile is the one full-width action, with a quiet status
+                     * line above it saying why there is no Book button.
+                     */
+                    $gb_card_off = ( ! function_exists('gb_can_contact_cleaners') || gb_can_contact_cleaners() )
+                        && function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings(get_the_ID());
+                    ?>
+                    <?php if ( $gb_card_off ) : ?>
+                        <p class="gb-card-status"><span aria-hidden="true"></span><?php echo function_exists('gb_bookings_paused') && gb_bookings_paused() ? 'Online booking is paused for now' : 'Not taking online bookings yet'; ?></p>
+                    <?php endif; ?>
+                    <div class="gb-card-actions<?php echo $gb_card_off ? ' is-single' : ''; ?>">
+                        <a href="<?php the_permalink(); ?>" class="<?php echo $gb_card_off ? 'gb-btn-solid' : 'gb-btn-outline'; ?>"><?php echo esc_html($listings_btn_profile); ?></a>
                         <?php if ( function_exists('gb_can_contact_cleaners') && ! gb_can_contact_cleaners() ) : ?>
                             <?php /* Browsing stays open; booking is for members, and the panel is on this page. */ ?>
                             <a href="<?php echo esc_url(gb_membership_join_url()); ?>" class="gb-btn-solid">Join to book</a>
-                        <?php elseif ( function_exists('gb_cleaner_can_take_bookings') && ! gb_cleaner_can_take_bookings(get_the_ID()) ) : ?>
-                            <span class="gb-btn-solid gb-btn-solid-off" aria-disabled="true">Not taking bookings</span>
+                        <?php elseif ( $gb_card_off ) : ?>
+                            <?php /* Said by the status line above; View Profile is the only button. */ ?>
                         <?php else : ?>
                             <a href="<?php echo esc_url(home_url('/book-now/?cleaner=' . get_the_ID())); ?>" class="gb-btn-solid"><?php echo esc_html($listings_btn_book); ?></a>
                         <?php endif; ?>

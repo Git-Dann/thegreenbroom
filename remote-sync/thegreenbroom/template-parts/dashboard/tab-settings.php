@@ -1017,6 +1017,33 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <option value="live" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'live'); ?>>💰 Live Mode (Real Payments)</option>
                         </select>
                     </div>
+                    <?php
+                    /*
+                     * Payment switches (inc/payment-switches.php). A hidden "0"
+                     * before each checkbox so that unticking actually saves as
+                     * off; the generic _gb_ saver stores whichever arrives last.
+                     */
+                    $gb_switches = array(
+                        array('_gb_pause_bookings', 'Pause online bookings', 'Nobody can book or pay for a clean. Listings and profiles stay up and say booking is paused. Use it for holidays, or if something looks wrong.', function_exists('gb_bookings_paused') && gb_bookings_paused(), 'warn'),
+                        array('_gb_pause_memberships', 'Pause new memberships', 'Hides the buy buttons for customer memberships and cleaner listings ("Sign-ups paused"). Existing members carry on and can still manage or cancel.', function_exists('gb_memberships_paused') && gb_memberships_paused(), 'warn'),
+                        array('_gb_auto_refunds', 'Automatic refunds on cancellation', 'On: a cancelled booking is refunded straight away, by the cancellation policy. Off: the refund due is recorded on the booking and emailed to the team to send by hand.', !function_exists('gb_auto_refunds_enabled') || gb_auto_refunds_enabled(), 'ok'),
+                    );
+                    ?>
+                    <div class="gb-switches" style="margin:22px 0 0;">
+                        <label class="gb-label" style="margin-bottom:10px;">Payment switches</label>
+                        <?php foreach ($gb_switches as $gb_sw): list($gb_sw_key, $gb_sw_label, $gb_sw_help, $gb_sw_on, $gb_sw_tone) = $gb_sw; ?>
+                            <label class="gb-switch-row">
+                                <span class="gb-switch-text">
+                                    <strong><?php echo esc_html($gb_sw_label); ?></strong>
+                                    <span><?php echo esc_html($gb_sw_help); ?></span>
+                                </span>
+                                <input type="hidden" name="<?php echo esc_attr($gb_sw_key); ?>" value="0">
+                                <input type="checkbox" class="gb-switch-input" name="<?php echo esc_attr($gb_sw_key); ?>" value="1" <?php checked($gb_sw_on); ?>>
+                                <span class="gb-switch<?php echo $gb_sw_tone === 'warn' ? ' gb-switch-warn' : ''; ?>" aria-hidden="true"></span>
+                            </label>
+                        <?php endforeach; ?>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Changes take effect when you press <strong>Update Settings</strong>.</p>
+                    </div>
                     <hr style="border:none; border-top:1px solid #e2e8f0; margin:22px 0;">
 
                     <?php if (!empty($stripe_missing)): ?>

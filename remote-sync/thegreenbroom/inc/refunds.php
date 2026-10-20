@@ -621,6 +621,17 @@ function gb_refund_on_team_cancellation( $booking_id ) {
         return;
     }
 
+    // Settings, Payment switches: automatic refunds off. The team cancelled
+    // it, so the team sends the refund; the booking says what is owed.
+    if ( function_exists( 'gb_auto_refunds_enabled' ) && ! gb_auto_refunds_enabled() ) {
+        update_post_meta(
+            $booking_id,
+            '_gb_refund_note',
+            'Refund of ' . gb_refund_money( $quote['remaining_pence'] ) . ' due. Automatic refunds are switched off, so it has not been sent: use "Refund the rest in full" to send it.'
+        );
+        return;
+    }
+
     $result = gb_refund_booking( $booking_id, $quote['remaining_pence'], 'Cancelled by the team (full refund)' );
 
     if ( is_wp_error( $result ) ) {
