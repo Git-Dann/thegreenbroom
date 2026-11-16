@@ -2736,7 +2736,7 @@ require_once get_template_directory() . '/inc/identity-guard.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 19;
+const GB_MIGRATION_VERSION = 20;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2783,7 +2783,8 @@ function gb_run_one_time_migrations() {
         'gb_promote_ongoing_monitoring',
         'gb_migrate_connect_accounts_to_test_mode',
         'gb_retire_how_we_do_it',
-        'gb_rename_listings_page'
+        'gb_rename_listings_page',
+        'gb_seed_recruitment_blog_draft'
     );
 
     foreach ( $migrations as $migration ) {
