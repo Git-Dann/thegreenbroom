@@ -675,11 +675,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <input type="url" name="_gb_social_share_image" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_share_image', true)); ?>" placeholder="https://thegreenbroom.uk/wp-content/uploads/...">
                     </div>
                     <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Google Reviews</div>
-                    <p style="margin:0 0 12px; color:#64748b; font-size:12px;">Install a reviews plugin (e.g. "Widgets for Google Reviews" by Trustindex), connect your Google Business profile, then paste its shortcode here to show reviews on the homepage. Leave blank to hide.</p>
-                    <div class="gb-form-row" style="margin-bottom:0;">
-                        <label class="gb-label">Google Reviews Shortcode / Embed</label>
-                        <input type="text" name="_gb_reviews_embed" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_reviews_embed', true)); ?>" placeholder="[trustindex no-registration=google]">
-                    </div>
+                    <p style="margin:0; color:#64748b; font-size:12px;">The Google reviews widget is now set in <strong>Pages, Home, Customer Reviews</strong>, where it takes the place of the cleaner showcase on the homepage.</p>
                 </div>
             </div>
 

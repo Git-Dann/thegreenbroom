@@ -371,18 +371,6 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
     </section>
     <?php endif; ?>
 
-    <?php
-    $gb_reviews_embed = get_post_meta((int) get_option('page_on_front'), '_gb_reviews_embed', true);
-    if (trim((string) $gb_reviews_embed) !== ''):
-    ?>
-    <section class="gb-section gb-bg-white">
-        <div class="gb-container">
-            <h2 class="gb-heading-md gb-text-center">Our Google Reviews</h2>
-            <div style="margin-top:30px;"><?php echo do_shortcode($gb_reviews_embed); ?></div>
-        </div>
-    </section>
-    <?php endif; ?>
-
     <section class="gb-cta-banner">
         <div class="gb-container">
             <h2 style="font-size:3rem; margin-bottom:20px; font-weight:800; color:white"><?php echo esc_html($cta_heading); ?></h2>
