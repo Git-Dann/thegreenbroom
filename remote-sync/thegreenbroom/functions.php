@@ -1252,6 +1252,7 @@ require_once get_template_directory() . '/inc/cookie-consent.php';
 require_once get_template_directory() . '/inc/legal-content.php';
 require_once get_template_directory() . '/inc/membership.php';
 require_once get_template_directory() . '/inc/page-text.php';
+require_once get_template_directory() . '/inc/blog-seed.php';
 
 /**
  * One-time migration: publish the two client-written Eco Product guides.
