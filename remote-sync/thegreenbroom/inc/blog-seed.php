@@ -593,6 +593,8 @@ function gb_publish_blog_batch_2026_11() {
         wp_update_post( array(
             'ID'            => (int) $found[0],
             'post_status'   => 'publish',
+            // Without edit_date WordPress gives a draft today's date and ignores these.
+            'edit_date'     => true,
             'post_date'     => get_date_from_gmt( $gmt ),
             'post_date_gmt' => $gmt,
         ) );
