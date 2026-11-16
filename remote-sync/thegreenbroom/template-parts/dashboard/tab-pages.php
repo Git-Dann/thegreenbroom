@@ -595,6 +595,29 @@ $gb_structured_core_slugs = ['home', 'how-we-do-it', 'what-cleaners-do', 'cleane
                                     <textarea name="_gb_diff_2_list" class="gb-textarea" rows="4" style="margin-top:8px;"><?php echo $gb_textarea($gb_field_value('_gb_diff_2_list')); ?></textarea>
                                 </div>
 
+                                <div class="gb-sub-head">Customer Reviews</div>
+                                <p class="gb-media-help" style="margin:0 0 14px;">Paste your Google reviews widget here (for example the shortcode from the <strong>Widgets for Google Reviews</strong> plugin, which looks like <code>[trustindex no-registration=google]</code>). Once there is something in this box, it replaces the cleaner showcase below on the homepage. Clear the box to bring the cleaners back.</p>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Reviews widget shortcode</label>
+                                    <input type="text" name="_gb_reviews_embed" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_reviews_embed')); ?>" placeholder="[trustindex no-registration=google]">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Section heading</label>
+                                    <input type="text" name="_gb_reviews_head" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_reviews_head')); ?>" placeholder="What our customers say">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Section sub-heading (optional)</label>
+                                    <textarea name="_gb_reviews_sub" class="gb-textarea"><?php echo $gb_textarea($gb_field_value('_gb_reviews_sub')); ?></textarea>
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">"Leave a review" link (your Google review link, optional)</label>
+                                    <input type="url" name="_gb_reviews_link" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_reviews_link')); ?>" placeholder="https://g.page/r/...">
+                                </div>
+                                <div class="gb-form-row">
+                                    <label class="gb-label">Button text</label>
+                                    <input type="text" name="_gb_reviews_btn" class="gb-input" value="<?php echo esc_attr($gb_field_value('_gb_reviews_btn')); ?>" placeholder="Leave us a Google review">
+                                </div>
+
                                 <div class="gb-sub-head">Cleaner Showcase</div>
                                 <p class="gb-media-help" style="margin:0 0 14px;">The homepage shows your four newest published cleaners here automatically, with their photo, location and rate. There is nothing to type in per cleaner — add or edit them under Cleaners. The whole section hides itself while there are no cleaners.</p>
                                 <div class="gb-form-row">

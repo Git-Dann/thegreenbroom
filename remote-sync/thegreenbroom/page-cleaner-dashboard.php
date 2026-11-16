@@ -149,10 +149,13 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
         <div class="gb-container" style="margin-top:-50px; position:relative; z-index:10;">
             <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:20px 22px; margin-bottom:20px;">
                 <div style="font-weight:800; color:#92400e; font-size:16px; margin-bottom:6px;">
-                    Customers cannot book you yet
+                    <?php echo $gb_block === 'paused' ? 'Online booking is paused for now' : 'Customers cannot book you yet'; ?>
                 </div>
                 <p style="margin:0 0 14px; color:#92400e; font-size:14px; line-height:1.65;">
-                    <?php if ($gb_block === 'listing_inactive'): ?>
+                    <?php if ($gb_block === 'paused'): ?>
+                        The team has paused online booking across The Green Broom for a short while. There is nothing
+                        you need to do: your profile stays up, and customers can book you again as soon as it is back on.
+                    <?php elseif ($gb_block === 'listing_inactive'): ?>
                         Your listing subscription is not active, so customers cannot find or book you. Restart it
                         from Become a Cleaner and your profile goes straight back on.
                     <?php elseif ($gb_block === 'not_live'): ?>
@@ -180,7 +183,9 @@ $sub_class = ($sub_status === 'active') ? 'gb-badge-success' : 'gb-badge-warning
                 ];
                 list($gb_cta_url, $gb_cta_label) = isset($gb_block_cta[$gb_block]) ? $gb_block_cta[$gb_block] : ['/settings/', 'Finish setting up payouts'];
                 ?>
-                <a href="<?php echo esc_url(home_url($gb_cta_url)); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none;"><?php echo esc_html($gb_cta_label); ?></a>
+                <?php if ($gb_block !== 'paused'): ?>
+                    <a href="<?php echo esc_url(home_url($gb_cta_url)); ?>" class="gb-btn gb-btn-primary" style="text-decoration:none;"><?php echo esc_html($gb_cta_label); ?></a>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>

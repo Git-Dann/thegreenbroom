@@ -85,10 +85,15 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
             update_post_meta($bid, '_gb_cancelled_at', current_time('mysql'));
             update_post_meta($bid, '_gb_booking_status', 'cancelled');
 
-            $gb_c_refund_due   = $gb_c_quote ? (int) $gb_c_quote['amount_pence'] : 0;
-            $gb_c_refund_error = '';
-            $gb_c_refunded     = 0;
-            if ($gb_c_refund_due > 0) {
+            $gb_c_refund_due    = $gb_c_quote ? (int) $gb_c_quote['amount_pence'] : 0;
+            $gb_c_refund_error  = '';
+            $gb_c_refunded      = 0;
+            // Settings, Payment switches: with automatic refunds off, what is
+            // due is worked out and recorded, and the team sends it by hand.
+            $gb_c_refund_manual = $gb_c_refund_due > 0 && function_exists('gb_auto_refunds_enabled') && !gb_auto_refunds_enabled();
+            if ($gb_c_refund_manual) {
+                update_post_meta($bid, '_gb_refund_note', 'Refund of ' . gb_refund_money($gb_c_refund_due) . ' due (' . gb_refund_quote_reason_text($gb_c_quote) . '). Automatic refunds are switched off, so it has not been sent yet.');
+            } elseif ($gb_c_refund_due > 0) {
                 $gb_c_result = gb_refund_booking($bid, $gb_c_refund_due, 'Cancelled by the customer: ' . gb_refund_quote_reason_text($gb_c_quote));
                 if (is_wp_error($gb_c_result)) {
                     $gb_c_refund_error = $gb_c_result->get_error_message();
@@ -110,7 +115,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
             $gb_c_when    = trim($gb_c_service . ' on ' . $gb_c_date . ' at ' . $gb_c_time);
             $gb_c_subject = 'Booking #' . $bid . ' cancelled by the customer';
 
-            if ($gb_c_refunded > 0) {
+            if ($gb_c_refund_manual) {
+                $gb_c_money = 'REFUND DUE: ' . gb_refund_money($gb_c_refund_due) . ' (' . gb_refund_quote_reason_text($gb_c_quote) . "). Automatic refunds are switched off in Settings, so nothing has been sent yet.\n\nTo send it: refund " . gb_refund_money($gb_c_refund_due) . " on this payment in Stripe (Payments, open the payment, Refund), choosing to reverse the transfer to the cleaner if Stripe offers it. If the whole remaining amount is owed, \"Refund the rest in full\" on the booking in Manager OS does it in one step. The customer has been told the team will send it.";
+            } elseif ($gb_c_refunded > 0) {
                 $gb_c_money = 'It was paid through Stripe and ' . gb_refund_money($gb_c_refunded) . ' has been refunded automatically (' . gb_refund_quote_reason_text($gb_c_quote) . '). The cleaner\'s share of that has been taken back from their Stripe account.';
             } elseif ($gb_c_refund_error !== '') {
                 $gb_c_money = 'REFUND FAILED. ' . gb_refund_money($gb_c_refund_due) . ' was due (' . gb_refund_quote_reason_text($gb_c_quote) . "), but Stripe did not accept it:\n\n" . $gb_c_refund_error . "\n\nPlease refund it by hand in Stripe, or use \"Refund the rest in full\" on the booking once the problem is fixed. The customer has been told the team will sort it.";
@@ -132,7 +139,7 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
             if (function_exists('gb_get_support_email') && is_email(gb_get_support_email())) {
                 wp_mail(
                     gb_get_support_email(),
-                    $gb_c_subject . ($gb_c_refund_error !== '' ? ' - REFUND FAILED, action needed' : ($gb_c_refunded > 0 ? ' - refunded ' . gb_refund_money($gb_c_refunded) : '')),
+                    $gb_c_subject . ($gb_c_refund_manual ? ' - REFUND DUE ' . gb_refund_money($gb_c_refund_due) . ', please send it' : ($gb_c_refund_error !== '' ? ' - REFUND FAILED, action needed' : ($gb_c_refunded > 0 ? ' - refunded ' . gb_refund_money($gb_c_refunded) : ''))),
                     "Booking #{$bid} ({$gb_c_when}) was cancelled by the customer from their account.\n\n"
                     . $gb_c_money . "\n\n"
                     . 'Open it in Manager OS: ' . home_url('/manager-dashboard/?tab=bookings&action=edit&id=' . $bid)
@@ -141,7 +148,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_cancel_id']) ) {
 
             // The customer's own word on the money, by email as well as on
             // the page, so they have it in writing.
-            if ($gb_c_refunded > 0) {
+            if ($gb_c_refund_manual) {
+                $gb_c_notice = 'Booking cancelled. A refund of ' . gb_refund_money($gb_c_refund_due) . ' is due (' . gb_refund_quote_reason_text($gb_c_quote) . '). Our team will send it to your card shortly; it usually takes 5 to 10 working days to show after that. You do not need to do anything.';
+            } elseif ($gb_c_refunded > 0) {
                 gb_refund_email_customer($bid, $gb_c_refunded, gb_refund_customer_why($gb_c_quote));
                 $gb_c_notice = 'Booking cancelled. We have refunded ' . gb_refund_money($gb_c_refunded) . ' to your card (' . gb_refund_quote_reason_text($gb_c_quote) . '). It usually takes 5 to 10 working days to show. We have emailed you a copy.';
             } elseif ($gb_c_refund_error !== '') {

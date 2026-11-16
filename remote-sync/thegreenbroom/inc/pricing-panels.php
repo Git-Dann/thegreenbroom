@@ -128,6 +128,17 @@ function gb_pricing_panel_enabled( $which ) {
  * @return bool whether anything was printed
  */
 function gb_pricing_checkout_button( $plan_key, $label ) {
+    /*
+     * Paused in Settings: where the buy button would be, say so, rather than
+     * falling back to the "create an account" link, which would only lead to
+     * a plan nobody can buy right now.
+     */
+    if ( function_exists( 'gb_memberships_paused' ) && gb_memberships_paused()
+        && function_exists( 'gb_membership_checkout_visible' ) && gb_membership_checkout_visible( $plan_key, true ) ) {
+        echo '<span class="gb-btn gb-btn-primary gb-pricing-btn gb-btn-solid-off" aria-disabled="true">Sign-ups paused</span>';
+        return true;
+    }
+
     if ( ! function_exists( 'gb_membership_checkout_visible' ) || ! gb_membership_checkout_visible( $plan_key ) ) {
         return false;
     }

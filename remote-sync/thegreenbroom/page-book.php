@@ -236,6 +236,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
             }
             $platform_fee_pence = (int) round($total_amount_pence * ($platform_fee_percent / 100));
 
+            if (function_exists('gb_bookings_paused') && gb_bookings_paused()) {
+                $error_messages[] = gb_bookings_paused_message();
+            }
+
             if ($cleaner_id > 0) {
                 $destination_account_id = sanitize_text_field((string) get_post_meta($cleaner_id, '_gb_stripe_account_id', true));
 
@@ -402,11 +406,12 @@ get_header();
      * rather than only at the end - filling in a whole form and being turned
      * away at the payment step is the worst possible place to find out.
      */
-    $gb_book_blocked = $cleaner_id > 0 && ! gb_cleaner_can_take_bookings($cleaner_id);
+    $gb_book_paused  = function_exists('gb_bookings_paused') && gb_bookings_paused();
+    $gb_book_blocked = $gb_book_paused || ($cleaner_id > 0 && ! gb_cleaner_can_take_bookings($cleaner_id));
     ?>
     <?php if ($gb_book_blocked) : ?>
         <div class="gb-book-blocked">
-            <strong><?php echo esc_html($cleaner_name); ?> is not taking online bookings yet</strong>
+            <strong><?php echo $gb_book_paused ? 'Online booking is paused' : esc_html($cleaner_name) . ' is not taking online bookings yet'; ?></strong>
             <p><?php echo esc_html(gb_cleaner_booking_block_message($cleaner_id)); ?></p>
             <a class="gb-btn gb-btn-primary" href="<?php echo esc_url(home_url('/cleaner-listings')); ?>">Find another cleaner</a>
         </div>

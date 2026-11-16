@@ -317,7 +317,9 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
     $cleaner_id = absint($cleaner_id);
 
     if (!$cleaner_id || get_post_type($cleaner_id) !== 'gb_cleaner') {
-        return true; // "Any professional" - nothing to check yet.
+        // "Any professional" - nothing about a cleaner to check yet, but a
+        // site-wide pause still applies.
+        return function_exists('gb_bookings_paused') && gb_bookings_paused() ? 'paused' : true;
     }
 
     // Only a live, approved cleaner can be paid. A draft, pending or withdrawn
@@ -356,6 +358,15 @@ function gb_cleaner_booking_block_reason($cleaner_id) {
         return 'listing_inactive';
     }
 
+    /*
+     * Settings, Payment switches: "Pause online bookings". Asked after the
+     * cleaner's own reasons, so a cleaner who still has something to fix is
+     * told about that, not about a pause that is nothing to do with them.
+     */
+    if (function_exists('gb_bookings_paused') && gb_bookings_paused()) {
+        return 'paused';
+    }
+
     return true;
 }
 
@@ -377,6 +388,10 @@ function gb_cleaner_booking_block_message($cleaner_id) {
 
     if ($reason === 'fully_booked') {
         return 'This cleaner is fully booked at the moment. Browse other cleaners in your area, or message them to ask when they have space.';
+    }
+
+    if ($reason === 'paused') {
+        return function_exists('gb_bookings_paused_message') ? gb_bookings_paused_message() : 'Online booking is paused for a short while.';
     }
 
     if ($reason === 'listing_inactive') {

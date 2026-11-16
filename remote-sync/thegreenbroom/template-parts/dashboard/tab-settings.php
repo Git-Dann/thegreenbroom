@@ -675,11 +675,7 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <input type="url" name="_gb_social_share_image" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_social_share_image', true)); ?>" placeholder="https://thegreenbroom.uk/wp-content/uploads/...">
                     </div>
                     <div style="margin:0 0 8px; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Google Reviews</div>
-                    <p style="margin:0 0 12px; color:#64748b; font-size:12px;">Install a reviews plugin (e.g. "Widgets for Google Reviews" by Trustindex), connect your Google Business profile, then paste its shortcode here to show reviews on the homepage. Leave blank to hide.</p>
-                    <div class="gb-form-row" style="margin-bottom:0;">
-                        <label class="gb-label">Google Reviews Shortcode / Embed</label>
-                        <input type="text" name="_gb_reviews_embed" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_reviews_embed', true)); ?>" placeholder="[trustindex no-registration=google]">
-                    </div>
+                    <p style="margin:0; color:#64748b; font-size:12px;">The Google reviews widget is now set in <strong>Pages, Home, Customer Reviews</strong>, where it takes the place of the cleaner showcase on the homepage.</p>
                 </div>
             </div>
 
@@ -1017,6 +1013,33 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <option value="live" <?php selected(get_post_meta($settings_id, '_gb_stripe_mode', true), 'live'); ?>>💰 Live Mode (Real Payments)</option>
                         </select>
                     </div>
+                    <?php
+                    /*
+                     * Payment switches (inc/payment-switches.php). A hidden "0"
+                     * before each checkbox so that unticking actually saves as
+                     * off; the generic _gb_ saver stores whichever arrives last.
+                     */
+                    $gb_switches = array(
+                        array('_gb_pause_bookings', 'Pause online bookings', 'Nobody can book or pay for a clean. Listings and profiles stay up and say booking is paused. Use it for holidays, or if something looks wrong.', function_exists('gb_bookings_paused') && gb_bookings_paused(), 'warn'),
+                        array('_gb_pause_memberships', 'Pause new memberships', 'Hides the buy buttons for customer memberships and cleaner listings ("Sign-ups paused"). Existing members carry on and can still manage or cancel.', function_exists('gb_memberships_paused') && gb_memberships_paused(), 'warn'),
+                        array('_gb_auto_refunds', 'Automatic refunds on cancellation', 'On: a cancelled booking is refunded straight away, by the cancellation policy. Off: the refund due is recorded on the booking and emailed to the team to send by hand.', !function_exists('gb_auto_refunds_enabled') || gb_auto_refunds_enabled(), 'ok'),
+                    );
+                    ?>
+                    <div class="gb-switches" style="margin:22px 0 0;">
+                        <label class="gb-label" style="margin-bottom:10px;">Payment switches</label>
+                        <?php foreach ($gb_switches as $gb_sw): list($gb_sw_key, $gb_sw_label, $gb_sw_help, $gb_sw_on, $gb_sw_tone) = $gb_sw; ?>
+                            <label class="gb-switch-row">
+                                <span class="gb-switch-text">
+                                    <strong><?php echo esc_html($gb_sw_label); ?></strong>
+                                    <span><?php echo esc_html($gb_sw_help); ?></span>
+                                </span>
+                                <input type="hidden" name="<?php echo esc_attr($gb_sw_key); ?>" value="0">
+                                <input type="checkbox" class="gb-switch-input" name="<?php echo esc_attr($gb_sw_key); ?>" value="1" <?php checked($gb_sw_on); ?>>
+                                <span class="gb-switch<?php echo $gb_sw_tone === 'warn' ? ' gb-switch-warn' : ''; ?>" aria-hidden="true"></span>
+                            </label>
+                        <?php endforeach; ?>
+                        <p style="margin:8px 0 0; color:#64748b; font-size:12px;">Changes take effect when you press <strong>Update Settings</strong>.</p>
+                    </div>
                     <hr style="border:none; border-top:1px solid #e2e8f0; margin:22px 0;">
 
                     <?php if (!empty($stripe_missing)): ?>
@@ -1038,9 +1061,89 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     <p style="margin:0 0 18px; color:#64748b; font-size:13px;">
                         Active mode above determines which key set is used in booking/payment flows.
                     </p>
+                    <?php
+                    /*
+                     * Keys and secrets folded away. Once set, nobody needs to see two
+                     * columns of ten password boxes every time they open Settings; each
+                     * group says in its heading whether it is complete, and opens itself
+                     * when the active mode is missing something. Opening one closes the
+                     * others (the details name attribute, with a small script fallback).
+                     * Closed groups still submit with the form: blank secrets mean keep.
+                     */
+                    $gb_key_state = static function ($mode) use ($settings_id) {
+                        $fields = array('publishable_key', 'secret_key', 'webhook_secret', 'connect_webhook_secret');
+                        $missing = 0;
+                        foreach ($fields as $f) {
+                            if (trim((string) get_post_meta($settings_id, '_gb_stripe_' . $mode . '_' . $f, true)) === '') {
+                                $missing++;
+                            }
+                        }
+                        return $missing;
+                    };
+                    $gb_acc_badge = static function ($missing) {
+                        return $missing === 0
+                            ? '<span class="gb-acc-badge is-ok">Complete</span>'
+                            : '<span class="gb-acc-badge is-warn">' . (int) $missing . ' missing</span>';
+                    };
+                    $gb_live_missing = $gb_key_state('live');
+                    $gb_test_missing = $gb_key_state('test');
+                    ?>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys"<?php echo ($stripe_mode === 'live' && $gb_live_missing) ? ' open' : ''; ?>>
+                        <summary><span class="gb-acc-title">Live keys &amp; webhook secrets<?php echo $stripe_mode === 'live' ? ' <em>in use</em>' : ''; ?></span><?php echo $gb_acc_badge($gb_live_missing); ?></summary>
+                        <div class="gb-acc-body">
+                        <div class="gb-form-row">
+                            <label class="gb-label">Live Publishable Key</label>
+                            <input type="text" name="_gb_stripe_live_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_publishable_key', true)); ?>" placeholder="pk_live_...">
+                        </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Live Secret Key</label>
+                            <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_live_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-bottom:0;">
+                            <label class="gb-label">Live Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Live Connect Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Live Accounts v2 Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_live_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        </div>
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys"<?php echo ($stripe_mode === 'test' && $gb_test_missing) ? ' open' : ''; ?>>
+                        <summary><span class="gb-acc-title">Test (sandbox) keys &amp; webhook secrets<?php echo $stripe_mode === 'test' ? ' <em>in use</em>' : ''; ?></span><?php echo $gb_acc_badge($gb_test_missing); ?></summary>
+                        <div class="gb-acc-body">
                     <div style="margin:0 0 18px; padding:12px 14px; border:1px dashed #cbd5e1; border-radius:8px; color:#475569; font-size:13px;">
                         Sandbox checklist: keep the platform in <strong>Test Mode</strong>, paste the test publishable and secret keys plus both webhook secrets, use the cleaner onboarding buttons in <strong>Manage Cleaners</strong>, then run a sample checkout below or from a live booking flow. When you are satisfied, switch to <strong>Live Mode</strong> and add the live keys.
                     </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Test Publishable Key</label>
+                            <input type="text" name="_gb_stripe_test_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_publishable_key', true)); ?>" placeholder="pk_test_...">
+                        </div>
+                        <div class="gb-form-row">
+                            <label class="gb-label">Test Secret Key</label>
+                            <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_test_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-bottom:0;">
+                            <label class="gb-label">Test Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Test Connect Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
+                            <label class="gb-label">Test Accounts v2 Webhook Secret</label>
+                            <input type="password" name="_gb_stripe_test_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
+                        </div>
+                        </div>
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys">
+                        <summary><span class="gb-acc-title">Webhook address for Stripe</span></summary>
+                        <div class="gb-acc-body">
                     <div class="gb-form-row" style="margin-bottom:20px;">
                         <label class="gb-label">Stripe Webhook Endpoint URL</label>
                         <input type="text" class="gb-input" value="<?php echo esc_attr(function_exists('gb_get_stripe_webhook_url') ? gb_get_stripe_webhook_url() : admin_url('admin-post.php?action=gb_stripe_webhook')); ?>" readonly>
@@ -1048,57 +1151,11 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             Add this URL in your Stripe Dashboard webhook settings for the active environment.
                         </p>
                     </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">Test Keys</h4>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Test Publishable Key</label>
-                                <input type="text" name="_gb_stripe_test_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_publishable_key', true)); ?>" placeholder="pk_test_...">
-                            </div>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Test Secret Key</label>
-                                <input type="password" name="_gb_stripe_test_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_test_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-bottom:0;">
-                                <label class="gb-label">Test Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Test Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Test Accounts v2 Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_test_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_test_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
                         </div>
-
-                        <div style="border:1px solid #e2e8f0; border-radius:10px; padding:16px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">Live Keys</h4>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Live Publishable Key</label>
-                                <input type="text" name="_gb_stripe_live_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_publishable_key', true)); ?>" placeholder="pk_live_...">
-                            </div>
-                            <div class="gb-form-row">
-                                <label class="gb-label">Live Secret Key</label>
-                                <input type="password" name="_gb_stripe_live_secret_key" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_secret_key', true) ? 'Saved — leave blank to keep' : 'sk_live_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-bottom:0;">
-                                <label class="gb-label">Live Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Live Connect Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                            <div class="gb-form-row" style="margin-top:12px; margin-bottom:0;">
-                                <label class="gb-label">Live Accounts v2 Webhook Secret</label>
-                                <input type="password" name="_gb_stripe_live_v2_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_live_v2_webhook_secret', true) ? 'Saved — leave blank to keep' : 'whsec_...'); ?>" autocomplete="new-password">
-                            </div>
-                        </div>
-                    </div>
-
+                    </details>
+                    <details class="gb-acc" name="gb-stripe-keys" data-acc-group="gb-stripe-keys">
+                        <summary><span class="gb-acc-title">Legacy fallback keys <em>not normally used</em></span></summary>
+                        <div class="gb-acc-body">
                     <div class="gb-form-row" style="margin-top:20px;">
                         <label class="gb-label">Legacy Fallback Publishable Key (Optional)</label>
                         <input type="text" name="_gb_stripe_publishable_key" class="gb-input" value="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_publishable_key', true)); ?>" placeholder="Optional - legacy compatibility">
@@ -1115,6 +1172,8 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         <label class="gb-label">Legacy Fallback Connect Webhook Secret (Optional)</label>
                         <input type="password" name="_gb_stripe_connect_webhook_secret" class="gb-input" value="" placeholder="<?php echo esc_attr(get_post_meta($settings_id, '_gb_stripe_connect_webhook_secret', true) ? 'Saved — leave blank to keep' : 'Optional - legacy compatibility'); ?>" autocomplete="new-password">
                     </div>
+                        </div>
+                    </details>
                 </div>
             </div>
         </form>
@@ -1152,11 +1211,18 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                 $gb_subs_cat    = function_exists('gb_subscription_catalogue') ? gb_subscription_catalogue() : array();
                 ?>
                 <div style="margin:0 0 20px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; color:#1d4ed8; font-size:13px; line-height:1.6;">
-                    The prices below come straight from the panels on the public site, so the page and the card charge cannot say different things. Change a price under <strong>Membership pricing</strong>, run this again, and Stripe follows.
-                    <br><br>
-                    Safe to run as often as you like. Anyone already paying stays on the price they signed up at &mdash; changing a price here never re-rates somebody mid-term.
+                    The prices below come straight from the panels on the public site. Change one under <strong>Membership pricing</strong> and a button appears here to update Stripe to match. Anyone already paying stays on the price they signed up at.
                 </div>
 
+                <?php
+                /* A status badge, not coloured text: bold green "Set up" read
+                   like a link to press. The Stripe price id is still here for
+                   support, but quiet, on hover. */
+                $gb_pill = static function ($label, $bg, $fg, $title = '') {
+                    return '<span' . ($title !== '' ? ' title="' . esc_attr($title) . '"' : '') . ' style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:' . $bg . '; color:' . $fg . '; font-size:11.5px; font-weight:700; white-space:nowrap; cursor:default;"><span aria-hidden="true" style="width:6px; height:6px; border-radius:50%; background:currentColor;"></span>' . esc_html($label) . '</span>';
+                };
+                ?>
+                <?php $gb_needs_update = false; $gb_any_live = false; ?>
                 <table class="gb-booking-table" style="margin-bottom:18px;">
                     <thead><tr><th>Plan</th><th>Charges</th><th>Every</th><th>Free trial</th><th>Status</th></tr></thead>
                     <tbody>
@@ -1166,6 +1232,15 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                         $gb_live = !empty($gb_rec['price_id']);
                         $gb_amt  = function_exists('gb_subscription_plan_amount') ? gb_subscription_plan_amount($gb_pk) : null;
                         $gb_amt_err = is_wp_error($gb_amt) ? $gb_amt->get_error_message() : '';
+                        // Checkout refuses a plan whose panel price no longer
+                        // matches what Stripe will charge (inc/membership-checkout.php),
+                        // so a changed price has to be pushed to Stripe before it sells.
+                        $gb_stale = $gb_live && $gb_amt_err === '' && isset($gb_rec['amount_minor'])
+                            && (int) $gb_rec['amount_minor'] !== (int) $gb_amt;
+                        $gb_any_live = $gb_any_live || $gb_live;
+                        if (!$gb_live || $gb_stale || (!empty($gb_row) && empty($gb_row['ok']))) {
+                            $gb_needs_update = true;
+                        }
                         ?>
                         <tr>
                             <td><strong style="font-size:13px; color:#0f172a;"><?php echo esc_html($gb_plan['label']); ?></strong></td>
@@ -1180,16 +1255,17 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                             <td style="font-size:12.5px; color:#475569;"><?php echo $gb_plan['trial_days'] ? esc_html($gb_plan['trial_days'] . ' days') : '&mdash;'; ?></td>
                             <td style="font-size:12px;">
                                 <?php if (!empty($gb_row) && empty($gb_row['ok'])): ?>
-                                    <span style="color:#b91c1c; font-weight:700;">Failed</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_row['error']); ?></div>
+                                    <?php echo $gb_pill('Failed', '#fee2e2', '#b91c1c'); ?>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:5px;"><?php echo esc_html($gb_row['error']); ?></div>
+                                <?php elseif ($gb_stale): ?>
+                                    <?php echo $gb_pill('Price changed: update Stripe', '#fef3c7', '#92400e', 'Stripe price ' . $gb_rec['price_id']); ?>
                                 <?php elseif ($gb_live): ?>
-                                    <span style="color:#16a34a; font-weight:700;">Set up</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px; font-family:monospace;"><?php echo esc_html($gb_rec['price_id']); ?></div>
+                                    <?php echo $gb_pill('Ready in ' . ($gb_subs_mode === 'live' ? 'Live' : 'Test'), '#dcfce7', '#166534', 'Stripe price ' . $gb_rec['price_id']); ?>
                                 <?php elseif ($gb_amt_err !== ''): ?>
-                                    <span style="color:#b91c1c; font-weight:700;">Blocked</span>
-                                    <div style="color:#94a3b8; font-size:11px; margin-top:3px;"><?php echo esc_html($gb_amt_err); ?></div>
+                                    <?php echo $gb_pill('Blocked', '#fef3c7', '#92400e'); ?>
+                                    <div style="color:#94a3b8; font-size:11px; margin-top:5px;"><?php echo esc_html($gb_amt_err); ?></div>
                                 <?php else: ?>
-                                    <span style="color:#94a3b8; font-weight:700;">Not set up yet</span>
+                                    <?php echo $gb_pill('Not set up yet', '#f1f5f9', '#64748b'); ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -1206,14 +1282,22 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
                     </p>
                 <?php endif; ?>
 
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                    <input type="hidden" name="action" value="gb_stripe_provision_subscriptions">
-                    <?php wp_nonce_field('gb_stripe_provision_subscriptions'); ?>
-                    <button type="submit" class="gb-btn gb-btn-primary">Set up the plans in Stripe</button>
-                    <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
-                        Creates the products and recurring prices in whichever Stripe account the keys above belong to. Test and live are kept apart, so setting up in test does not touch live.
+                <?php if ($gb_needs_update): ?>
+                    <?php /* Only offered when there is something to do: with every plan
+                             ready it read as a step still waiting to be taken. */ ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="gb_stripe_provision_subscriptions">
+                        <?php wp_nonce_field('gb_stripe_provision_subscriptions'); ?>
+                        <button type="submit" class="gb-btn gb-btn-primary"><?php echo $gb_any_live ? 'Update the plans in Stripe' : 'Set up the plans in Stripe'; ?></button>
+                        <p style="margin:10px 0 0; color:#64748b; font-size:12px;">
+                            Until this is done, a plan marked above cannot be bought. It only touches the Stripe account for the current mode (<?php echo esc_html($gb_subs_mode); ?>).
+                        </p>
+                    </form>
+                <?php else: ?>
+                    <p style="margin:0; padding:10px 12px; border-radius:8px; background:#f0fdf4; border:1px solid #dcfce7; color:#166534; font-size:13px;">
+                        All plans match Stripe. Nothing to do here.
                     </p>
-                </form>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -1304,6 +1388,18 @@ if (!in_array($active_settings_section, $settings_sections, true)) {
     var hashSection = window.location.hash ? window.location.hash.slice(1) : '';
     activate(hashSection || defaultSection, false);
 })();
+</script>
+
+<script>
+/* One open at a time in a settings group. The details "name" attribute does
+   this natively in current browsers; this covers older ones. */
+document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d || d.tagName !== 'DETAILS' || !d.open || !d.dataset.accGroup) { return; }
+    document.querySelectorAll('details[data-acc-group="' + d.dataset.accGroup + '"]').forEach(function (o) {
+        if (o !== d) { o.open = false; }
+    });
+}, true);
 </script>
 
 <script>

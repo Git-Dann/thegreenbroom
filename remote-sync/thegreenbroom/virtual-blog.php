@@ -1,14 +1,26 @@
 <?php
 $hidden_ids = function_exists( 'gb_get_hidden_blog_post_ids' ) ? gb_get_hidden_blog_post_ids() : [];
+/*
+ * Paged with ?pg=, not WordPress's own /page/2/: the blog is a virtual route,
+ * so the core paging rewrite never reaches it. Showing only the newest six
+ * with no way back meant every new post pushed an older one off the site.
+ */
+$blog_page  = isset( $_GET['pg'] ) ? max( 1, absint( $_GET['pg'] ) ) : 1;
 $blog_posts = new WP_Query(
     [
         'post_type'           => 'post',
         'post_status'         => 'publish',
-        'posts_per_page'      => 6,
+        'posts_per_page'      => 9,
+        'paged'               => $blog_page,
         'post__not_in'        => $hidden_ids,
         'ignore_sticky_posts' => true,
     ]
 );
+$blog_pages = (int) $blog_posts->max_num_pages;
+$blog_base  = function_exists( 'gb_get_blog_url' ) ? gb_get_blog_url() : home_url( '/blog/' );
+$blog_link  = static function ( $n ) use ( $blog_base ) {
+    return $n > 1 ? add_query_arg( 'pg', (int) $n, $blog_base ) : $blog_base;
+};
 
 get_header();
 ?>
@@ -28,6 +40,11 @@ get_header();
     .gb-blog-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: #166534; font-weight: 700; text-decoration: none; }
     .gb-blog-empty { display: grid; gap: 18px; }
     .gb-blog-note { background: #fff; border: 1px dashed #cbd5e1; border-radius: 18px; padding: 22px; color: #475569; }
+    .gb-blog-pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
+    .gb-blog-pager a, .gb-blog-pager span { min-width: 44px; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; color: #0f172a; font-weight: 700; font-size: 14px; text-align: center; text-decoration: none; box-sizing: border-box; }
+    .gb-blog-pager a:hover { border-color: #2e7d32; color: #2e7d32; }
+    .gb-blog-pager .is-current { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+    .gb-blog-pager .is-gap { border: 0; background: none; min-width: 0; padding: 10px 4px; color: #94a3b8; }
 
     @media (max-width: 720px) {
         .gb-blog-title { font-size: 36px; }
@@ -57,6 +74,39 @@ get_header();
             <?php endwhile; ?>
         </div>
         <?php wp_reset_postdata(); ?>
+        <?php if ( $blog_pages > 1 ) : ?>
+            <nav class="gb-blog-pager" aria-label="More blog posts">
+                <?php if ( $blog_page > 1 ) : ?>
+                    <a href="<?php echo esc_url( $blog_link( $blog_page - 1 ) ); ?>" rel="prev">&larr; Newer</a>
+                <?php endif; ?>
+                <?php
+                $gb_last_shown = 0;
+                for ( $n = 1; $n <= $blog_pages; $n++ ) :
+                    // First, last, and the two either side of this page; the rest fold into "...".
+                    if ( $n !== 1 && $n !== $blog_pages && abs( $n - $blog_page ) > 2 ) {
+                        continue;
+                    }
+                    if ( $gb_last_shown && $n - $gb_last_shown > 1 ) {
+                        echo '<span class="is-gap" aria-hidden="true">&hellip;</span>';
+                    }
+                    $gb_last_shown = $n;
+                    ?>
+                    <?php if ( $n === $blog_page ) : ?>
+                        <span class="is-current" aria-current="page"><?php echo (int) $n; ?></span>
+                    <?php else : ?>
+                        <a href="<?php echo esc_url( $blog_link( $n ) ); ?>"><?php echo (int) $n; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                <?php if ( $blog_page < $blog_pages ) : ?>
+                    <a href="<?php echo esc_url( $blog_link( $blog_page + 1 ) ); ?>" rel="next">Older &rarr;</a>
+                <?php endif; ?>
+            </nav>
+        <?php endif; ?>
+    <?php elseif ( $blog_page > 1 ) : ?>
+        <div class="gb-blog-note">
+            <strong>There are no more posts.</strong>
+            <a class="gb-blog-link" href="<?php echo esc_url( $blog_base ); ?>">Back to the latest posts <span aria-hidden="true">-></span></a>
+        </div>
     <?php else : ?>
         <div class="gb-blog-empty">
             <div class="gb-blog-note">

@@ -97,10 +97,16 @@ function gb_membership_get_stripe_customer( $user_id ) {
  * both, the panels keep their old "create an account" button rather than
  * offering a purchase that would fail.
  */
-function gb_membership_checkout_available( $plan_key ) {
+function gb_membership_checkout_available( $plan_key, $ignore_pause = false ) {
     $catalogue = gb_subscription_catalogue();
 
     if ( ! isset( $catalogue[ $plan_key ] ) ) {
+        return false;
+    }
+
+    // Settings, Payment switches: "Pause new memberships". Existing members
+    // are untouched; this only stops new checkouts starting.
+    if ( ! $ignore_pause && function_exists( 'gb_memberships_paused' ) && gb_memberships_paused() ) {
         return false;
     }
 
@@ -155,8 +161,8 @@ function gb_membership_user_is_staff() {
  * So in Test Mode only staff see it, which is enough to test the whole flow
  * end to end without the public ever meeting the sandbox.
  */
-function gb_membership_checkout_visible( $plan_key ) {
-    if ( ! gb_membership_checkout_available( $plan_key ) ) {
+function gb_membership_checkout_visible( $plan_key, $ignore_pause = false ) {
+    if ( ! gb_membership_checkout_available( $plan_key, $ignore_pause ) ) {
         return false;
     }
 
@@ -334,7 +340,8 @@ function gb_membership_handle_checkout_request() {
     // gb_membership_checkout_visible()); a hidden button was the only guard,
     // so anybody posting the form could pay with a test card and be a member.
     if ( ! gb_membership_checkout_visible( $plan_key ) ) {
-        wp_safe_redirect( gb_membership_return_url( $plan_key, 'error' ) );
+        $paused = function_exists( 'gb_memberships_paused' ) && gb_memberships_paused() && gb_membership_checkout_visible( $plan_key, true );
+        wp_safe_redirect( gb_membership_return_url( $plan_key, $paused ? 'paused' : 'error' ) );
         exit;
     }
 
@@ -907,6 +914,7 @@ function gb_membership_return_notice() {
         'success'   => array( 'ok', 'Thank you - your membership is being set up. It can take a few seconds to show here.' ),
         'cancelled' => array( 'info', 'No payment was taken. You can pick a plan whenever you are ready.' ),
         'expired'   => array( 'error', 'That page had been open a while, so we stopped. Please try again.' ),
+        'paused'    => array( 'info', 'New sign-ups are paused for a short while. Please check back soon.' ),
         'error'     => array( 'error', $detail !== '' ? $detail : 'We could not start the checkout. Please try again.' ),
     );
 

@@ -70,6 +70,13 @@ $testi_head    = get_post_meta(get_the_ID(), '_gb_testi_head', true)    ?: 'Meet
 $testi_sub     = get_post_meta(get_the_ID(), '_gb_testi_sub', true)     ?: 'Every one of them ID-checked, DBS-checked and reference-checked before they appear here.';
 $testi_btn     = get_post_meta(get_the_ID(), '_gb_testi_btn', true)     ?: 'Browse all cleaners';
 $testi_link    = get_post_meta(get_the_ID(), '_gb_testi_link', true)    ?: '/cleaner-listings';
+// Customer reviews: a review widget (e.g. a Google reviews plugin's shortcode)
+// takes this slot in place of the cleaner showcase once one is pasted in.
+$reviews_embed = trim((string) get_post_meta(get_the_ID(), '_gb_reviews_embed', true));
+$reviews_head  = get_post_meta(get_the_ID(), '_gb_reviews_head', true)  ?: 'What our customers say';
+$reviews_sub   = get_post_meta(get_the_ID(), '_gb_reviews_sub', true);
+$reviews_btn   = get_post_meta(get_the_ID(), '_gb_reviews_btn', true)   ?: 'Leave us a Google review';
+$reviews_link  = trim((string) get_post_meta(get_the_ID(), '_gb_reviews_link', true));
 
 // H. Bottom CTA
 $cta_heading   = get_post_meta(get_the_ID(), '_gb_cta_heading', true)   ?: 'Ready to make money cleaning?';
@@ -308,7 +315,28 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
         'order'          => 'DESC',
     ]);
     ?>
-    <?php if ($gb_home_cleaners): ?>
+    <?php if ($reviews_embed !== ''): ?>
+    <section class="gb-section gb-bg-light gb-home-reviews">
+        <div class="gb-container">
+            <h2 class="gb-heading-md gb-text-center"><?php echo esc_html($reviews_head); ?></h2>
+            <?php if ($reviews_sub !== ''): ?>
+                <p class="gb-home-cleaner-sub"><?php echo esc_html($reviews_sub); ?></p>
+            <?php endif; ?>
+            <div class="gb-home-reviews-widget">
+                <?php
+                // Set by a manager in Manager OS; shortcodes run so a reviews
+                // plugin can draw its widget here.
+                echo do_shortcode(wp_kses_post($reviews_embed));
+                ?>
+            </div>
+            <?php if ($reviews_link !== ''): ?>
+                <p class="gb-text-center" style="margin-top:34px;">
+                    <a href="<?php echo esc_url($reviews_link); ?>" class="gb-btn gb-btn-primary" target="_blank" rel="noopener"><?php echo esc_html($reviews_btn); ?></a>
+                </p>
+            <?php endif; ?>
+        </div>
+    </section>
+    <?php elseif ($gb_home_cleaners): ?>
     <section class="gb-section gb-bg-light">
         <div class="gb-container">
             <h2 class="gb-heading-md gb-text-center"><?php echo esc_html($testi_head); ?></h2>
@@ -339,18 +367,6 @@ $split_image = $gb_image_source( $split_img, 'large', 600, 900 );
             <p class="gb-text-center" style="margin-top:34px;">
                 <a href="<?php echo esc_url($testi_link); ?>" class="gb-btn gb-btn-primary"><?php echo esc_html($testi_btn); ?></a>
             </p>
-        </div>
-    </section>
-    <?php endif; ?>
-
-    <?php
-    $gb_reviews_embed = get_post_meta((int) get_option('page_on_front'), '_gb_reviews_embed', true);
-    if (trim((string) $gb_reviews_embed) !== ''):
-    ?>
-    <section class="gb-section gb-bg-white">
-        <div class="gb-container">
-            <h2 class="gb-heading-md gb-text-center">Our Google Reviews</h2>
-            <div style="margin-top:30px;"><?php echo do_shortcode($gb_reviews_embed); ?></div>
         </div>
     </section>
     <?php endif; ?>
