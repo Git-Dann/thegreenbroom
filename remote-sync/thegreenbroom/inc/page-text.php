@@ -652,6 +652,8 @@ function gb_redirect_retired_paths() {
         'what-we-do'                       => '/what-cleaners-do/',
         'how-it-works'                     => '/what-cleaners-do/',
         'eco-guide/the-green-broom-standard' => '/the-green-broom-standard/',
+        // The older recruitment post, replaced by a newer one in November 2026.
+        'become-an-independent-cleaner-in-merseyside-with-the-green-broom' => '/run-your-own-eco-cleaning-business-merseyside/',
     );
 
     if ( isset( $moved[ $path ] ) ) {
