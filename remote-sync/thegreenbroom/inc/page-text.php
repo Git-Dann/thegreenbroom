@@ -1001,3 +1001,84 @@ add_action( 'load-post.php', function () {
     wp_safe_redirect( home_url( '/manager-dashboard/?tab=pages&action=edit&id=' . (int) $post->ID ) );
     exit;
 } );
+
+/**
+ * The cleaner recruitment post Nick asked for (November 2026), added as a
+ * DRAFT so the team can read it in Manager OS, Blog, and press Publish.
+ *
+ * Runs once (flag option), and never makes a second copy: if a post with this
+ * title already exists in any state, it is left alone.
+ */
+function gb_seed_recruitment_blog_draft() {
+    if ( get_option( 'gb_recruitment_blog_seeded' ) ) {
+        return;
+    }
+
+    $title = 'Run your own eco-cleaning business in Merseyside, with The Green Broom behind you';
+
+    $existing = get_posts( array(
+        'post_type'      => 'post',
+        'post_status'    => 'any',
+        'title'          => $title,
+        'posts_per_page' => 1,
+        'fields'         => 'ids',
+    ) );
+
+    if ( $existing ) {
+        update_option( 'gb_recruitment_blog_seeded', 1, false );
+        return;
+    }
+
+    $admins = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ID' ) );
+    $join   = esc_url( home_url( '/join/' ) );
+    $eco    = esc_url( home_url( '/eco-products/' ) );
+
+    $content = <<<HTML
+<p>If you love cleaning but not the agency that takes a cut of every hour, The Green Broom was built for you.</p>
+<p>We're a Liverpool-based platform connecting local homeowners with trusted, independent cleaners who use eco-friendly products. We don't employ you, and we don't take commission from your work. We give you a professional profile, bring customers to you, handle the payments, and get out of your way.</p>
+<h2>Why cleaners are joining</h2>
+<ul>
+<li><strong>Keep what you earn.</strong> You set your own rates, and we take no commission. What the customer pays for the clean is yours.</li>
+<li><strong>Choose your own hours.</strong> Full-time, part-time, or a few extra cleans around school runs. You decide which bookings to accept.</li>
+<li><strong>No chasing payments.</strong> Customers pay securely online when they book, and your earnings go straight to your bank account.</li>
+<li><strong>Insurance included.</strong> Every verified cleaner is covered by The Green Broom's own insurance policy, which we provide.</li>
+<li><strong>Customers who value you.</strong> People come to us because they want a checked, reliable cleaner who uses safer products. That means fewer bargain-hunters and more repeat bookings.</li>
+<li><strong>A reputation that grows.</strong> Reviews from happy customers build up on your profile and help new customers choose you.</li>
+</ul>
+<h2>Cleaning the greener way</h2>
+<p>Everyone on The Green Broom uses plant-based, non-toxic, biodegradable products instead of bleach and harsh chemicals. They're safer for the homes you clean, for children and pets, and for you, after a day of breathing them in. New to eco products? Our <a href="{$eco}">Eco Products guides</a> show you what works, including how to make effective cleaners at home from four everyday ingredients.</p>
+<h2>What it costs</h2>
+<ul>
+<li><strong>Your first three months are completely free.</strong> List your profile, take bookings and keep what you earn.</li>
+<li>After that, it's <strong>&pound;14.95 a month</strong> to stay listed.</li>
+<li>We'll remind you before your free period ends, and you can cancel at any time.</li>
+</ul>
+<h2>How to get started</h2>
+<ol>
+<li><strong>Create your profile.</strong> It takes a few minutes. Add your experience, the areas you cover, your services and your rates.</li>
+<li><strong>Get verified.</strong> We check your photo ID and your Basic DBS certificate, and contact two references. Once that's done, your profile goes live with a <strong>Verified</strong> badge, the mark customers look for.</li>
+<li><strong>Set up your payouts.</strong> A quick, secure form with Stripe so your earnings can be paid straight into your bank.</li>
+<li><strong>Start taking bookings.</strong> Local customers find you, message you, and book.</li>
+</ol>
+<h2>Who we're looking for</h2>
+<p>Independent cleaners across Liverpool and Merseyside who take pride in their work, turn up when they say they will, and like the idea of a greener way of cleaning. Whether you already have a few regular customers or you're just starting out on your own, we'd love to hear from you.</p>
+<h2>Ready to be your own boss?</h2>
+<p><a href="{$join}"><strong>Become a Cleaner</strong></a> and your first three months are on us.</p>
+HTML;
+
+    $post_id = wp_insert_post( array(
+        'post_type'    => 'post',
+        'post_status'  => 'draft',
+        'post_title'   => $title,
+        'post_name'    => 'run-your-own-eco-cleaning-business-merseyside',
+        'post_excerpt' => 'Independent cleaner in Liverpool or Merseyside? Set your own rates, choose your hours and keep everything you earn. Your first three months on The Green Broom are free.',
+        'post_content' => $content,
+        'post_author'  => $admins ? (int) $admins[0] : 0,
+    ), true );
+
+    if ( ! is_wp_error( $post_id ) && $post_id ) {
+        update_post_meta( $post_id, '_gb_seo_keyword', 'self-employed cleaner Liverpool' );
+        update_post_meta( $post_id, '_gb_seo_meta_desc', 'Independent cleaner in Liverpool or Merseyside? Set your own rates, choose your hours and keep everything you earn. Your first three months on The Green Broom are free.' );
+        update_option( 'gb_recruitment_blog_seeded', 1, false );
+    }
+}
