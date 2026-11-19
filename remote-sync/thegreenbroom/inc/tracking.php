@@ -731,3 +731,16 @@ function gb_refresh_cookie_bar_wording() {
     }
     update_option( 'gb_cookie_bar_wording_v2', 1, false );
 }
+
+/** Remove the two rows left by the checks run when this was deployed. */
+function gb_analytics_remove_deploy_checks() {
+    global $wpdb;
+    if ( get_option( 'gb_analytics_deploy_checks_removed' ) || ! gb_analytics_ready() ) {
+        return;
+    }
+    $wpdb->query( $wpdb->prepare(
+        'DELETE FROM ' . gb_analytics_table() . ' WHERE (metric = %s AND label = %s) OR (metric = %s AND label = %s)',
+        'landing', 'test / deploy-check', 'page_view', '/deploy-check/'
+    ) );
+    update_option( 'gb_analytics_deploy_checks_removed', 1, false );
+}
