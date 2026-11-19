@@ -551,3 +551,60 @@ function gb_seed_blog_batch_2026_11() {
     delete_transient( 'gb_blog_seed_lock' );
 }
 add_action( 'init', 'gb_seed_blog_batch_2026_11', 30 );
+
+/**
+ * Publish the batch, as the client asked: all five new posts today, plus the
+ * new recruitment post, which replaces the older one on the same subject.
+ * The old post goes back to draft (nothing is deleted) and its address
+ * redirects to the new one; see gb_redirect_retired_paths().
+ *
+ * Only posts that are still drafts are touched, so anything already
+ * published, scheduled or binned by hand is left exactly as it is. The posts
+ * are a minute apart so they sit on the blog in a sensible order.
+ */
+function gb_publish_blog_batch_2026_11() {
+    if ( get_option( 'gb_blog_publish_2026_11_done' ) || ! get_option( GB_BLOG_SEED_OPTION ) ) {
+        return;
+    }
+
+    $newest_first = array(
+        'christmas-cleaning-plan-guest-ready-home',
+        'how-to-get-rid-of-mould-naturally',
+        'end-of-tenancy-cleaning-liverpool-checklist',
+        'pet-safe-cleaning-dogs-and-cats',
+        'what-to-expect-from-a-cleaner-first-clean',
+        'run-your-own-eco-cleaning-business-merseyside',
+    );
+
+    $now = time();
+    foreach ( $newest_first as $i => $slug ) {
+        $found = get_posts( array(
+            'post_type'      => 'post',
+            'post_status'    => 'draft',
+            'name'           => $slug,
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ) );
+        if ( ! $found ) {
+            continue;
+        }
+
+        $gmt = gmdate( 'Y-m-d H:i:s', $now - ( $i * MINUTE_IN_SECONDS ) );
+        wp_update_post( array(
+            'ID'            => (int) $found[0],
+            'post_status'   => 'publish',
+            // Without edit_date WordPress gives a draft today's date and ignores these.
+            'edit_date'     => true,
+            'post_date'     => get_date_from_gmt( $gmt ),
+            'post_date_gmt' => $gmt,
+        ) );
+    }
+
+    $old = get_page_by_path( 'become-an-independent-cleaner-in-merseyside-with-the-green-broom', OBJECT, 'post' );
+    if ( $old && $old->post_status === 'publish' ) {
+        wp_update_post( array( 'ID' => $old->ID, 'post_status' => 'draft' ) );
+    }
+
+    update_option( 'gb_blog_publish_2026_11_done', 1, false );
+}
+add_action( 'init', 'gb_publish_blog_batch_2026_11', 31 );

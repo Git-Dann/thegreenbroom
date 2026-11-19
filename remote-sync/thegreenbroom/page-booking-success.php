@@ -62,6 +62,10 @@ if ($booking_id) {
             // A cancelled booking opened again from an email or the history:
             // say so, and say what came back, rather than "Booking Confirmed!".
             $is_cancelled   = get_post_status($booking_id) === 'trash' || get_post_meta($booking_id, '_gb_booking_status', true) === 'cancelled';
+            // Tell the Meta Pixel about the purchase, once, if the visitor allowed it.
+            if ($uses_stripe && $is_paid && !$is_cancelled && function_exists('gb_tracking_booking_confirmed')) {
+                gb_tracking_booking_confirmed($booking_id);
+            }
             $refunded_gbp   = (float) get_post_meta($booking_id, '_gb_refund_amount_gbp', true);
             $refund_state   = (string) get_post_meta($booking_id, '_gb_refund_status', true);
             $refund_message = '';

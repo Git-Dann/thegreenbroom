@@ -290,6 +290,23 @@ if (isset($_POST['gb_save_action'])) {
                 'capped'  => $gb_sync_all['capped'] ? 1 : 0,
             ], home_url('/manager-dashboard/')));
             exit;
+        case 'meta_capi_test':
+            // Analytics > Meta: send one test event and say what Meta answered.
+            $gb_capi = function_exists('gb_meta_capi_test') ? gb_meta_capi_test() : ['ok' => false, 'message' => 'Tracking is not loaded.'];
+            wp_safe_redirect(add_query_arg([
+                'tab'         => 'analytics',
+                'capi_notice' => $gb_capi['ok'] ? 'ok' : 'error',
+                'capi_msg'    => rawurlencode($gb_capi['message']),
+            ], home_url('/manager-dashboard/')));
+            exit;
+        case 'meta_capi_disconnect':
+            $gb_settings_id = (int) get_option('page_on_front');
+            if ($gb_settings_id) {
+                delete_post_meta($gb_settings_id, '_gb_meta_capi_token');
+            }
+            delete_option('gb_meta_capi_last_test');
+            wp_safe_redirect(add_query_arg(['tab' => 'analytics', 'msg' => 'saved'], home_url('/manager-dashboard/')));
+            exit;
         case 'resend_email':
         case 'dismiss_email':
         case 'unblock_email':
@@ -394,6 +411,7 @@ if (isset($_POST['gb_save_action'])) {
                 '_gb_stripe_secret_key',
                 '_gb_stripe_webhook_secret',
                 '_gb_stripe_connect_webhook_secret',
+                '_gb_meta_capi_token',
             ];
             if (in_array($key, $gb_write_only_secrets, true) && trim((string) wp_unslash($value)) === '') {
                 continue;
@@ -804,6 +822,10 @@ if (isset($_POST['gb_save_action'])) {
     }
 
     if ($save_action === 'save_settings') {
+        // The Meta settings live on the Analytics screen, so go back there.
+        if (isset($_POST['gb_return_tab']) && sanitize_key(wp_unslash($_POST['gb_return_tab'])) === 'analytics') {
+            wp_safe_redirect(add_query_arg(['tab' => 'analytics', 'msg' => 'saved'], home_url('/manager-dashboard/'))); exit;
+        }
         $settings_section = isset($_POST['_gb_settings_section']) ? sanitize_key(wp_unslash($_POST['_gb_settings_section'])) : 'env';
         $allowed_settings_sections = ['env', 'safeguarding', 'email', 'social', 'agreement', 'monetisation', 'stripe', 'stripe-tools', 'account'];
         if (!in_array($settings_section, $allowed_settings_sections, true)) {
@@ -1135,6 +1157,7 @@ if (isset($_GET['approve_cleaner']) && (in_array('gb_manager', (array) $current_
         
         <div class="gb-nav-scroll">
         <a href="?tab=overview" class="gb-nav-item <?php echo $tab=='overview'||$tab=='dashboard'?'active':''; ?>"><span class="dashicons dashicons-dashboard"></span> Dashboard</a>
+        <a href="?tab=analytics" class="gb-nav-item <?php echo $tab=='analytics'?'active':''; ?>"><span class="dashicons dashicons-chart-bar"></span> Analytics</a>
         <a href="?tab=bookings" class="gb-nav-item <?php echo $tab=='bookings'?'active':''; ?>"><span class="dashicons dashicons-calendar-alt"></span> Bookings</a>
         <a href="?tab=cleaners" class="gb-nav-item <?php echo $tab=='cleaners'?'active':''; ?>"><span class="dashicons dashicons-id"></span> Manage Cleaners</a>
         <?php

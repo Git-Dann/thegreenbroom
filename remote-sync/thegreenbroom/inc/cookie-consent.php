@@ -9,11 +9,11 @@
  *    visitor's decision to everyone. It is always in the HTML and hidden
  *    immediately by inline JS when a stored choice exists, before paint.
  *
- * 2. HONEST. The site currently sets only strictly necessary cookies (login,
- *    security, caching), which need no consent under PECR. The bar therefore
- *    asks about analytics and marketing that are NOT yet installed, so that the
- *    choice is already recorded and honoured the moment one is added. It does
- *    not claim to be blocking something it is not.
+ * 2. HONEST. Without consent the site sets only strictly necessary cookies
+ *    (login, security, caching), which need no consent under PECR. Marketing
+ *    consent switches on the Meta Pixel (inc/tracking.php) and nothing else.
+ *    There are no analytics cookies; the Analytics choice is kept so that one
+ *    could only ever be added behind it.
  *
  * 3. NO PRE-TICKED BOXES and reject is as easy as accept - both are one click
  *    at the same level. That is the part regulators actually enforce.
@@ -29,7 +29,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 const GB_CONSENT_COOKIE  = 'gb_cookie_consent';
-const GB_CONSENT_VERSION = 1;
+// 2: November 2026, when the Meta Pixel was added. Everybody is asked again,
+// because a yes given while the banner said nothing about adverts does not
+// cover them.
+const GB_CONSENT_VERSION = 2;
 
 /**
  * Whether the visitor has allowed a given category.
@@ -42,7 +45,7 @@ function gb_cookie_consent_allows( $category ) {
 
     $raw = sanitize_text_field( wp_unslash( $_COOKIE[ GB_CONSENT_COOKIE ] ) );
     $decoded = json_decode( $raw, true );
-    if ( ! is_array( $decoded ) ) {
+    if ( ! is_array( $decoded ) || (int) ( $decoded['v'] ?? 0 ) !== GB_CONSENT_VERSION ) {
         return false;
     }
 
@@ -64,7 +67,7 @@ function gb_cookie_consent_settings() {
     return array(
         'enabled' => $settings_id ? get_post_meta( $settings_id, '_gb_cookie_bar_enabled', true ) !== '0' : true,
         'title'   => $get( '_gb_cookie_bar_title', 'We use cookies' ),
-        'body'    => $get( '_gb_cookie_bar_body', 'We use essential cookies to keep the site working and you signed in. With your permission we would also like to measure how the site is used so we can improve it.' ),
+        'body'    => $get( '_gb_cookie_bar_body', 'We use essential cookies to keep the site working and you signed in. With your permission we would also like to use marketing cookies, including Meta\'s (Facebook and Instagram), to measure our adverts and show them to people likely to find us useful.' ),
         'accept'  => $get( '_gb_cookie_bar_accept', 'Accept all' ),
         'reject'  => $get( '_gb_cookie_bar_reject', 'Essential only' ),
         'choose'  => $get( '_gb_cookie_bar_choose', 'Choose' ),
@@ -124,14 +127,14 @@ function gb_render_cookie_consent_bar() {
                 <input type="checkbox" id="gb-consent-analytics">
                 <span>
                     <strong>Analytics</strong>
-                    <small>Helps us see which pages are useful so we can improve them.</small>
+                    <small>Not used at the moment. If we ever add an analytics tool, it will only run if this is ticked.</small>
                 </span>
             </label>
             <label class="gb-cookie-row">
                 <input type="checkbox" id="gb-consent-marketing">
                 <span>
                     <strong>Marketing</strong>
-                    <small>Lets us measure our adverts and show more relevant ones.</small>
+                    <small>Lets Meta (Facebook and Instagram) measure our adverts and show them to the right people, using the Meta Pixel.</small>
                 </span>
             </label>
             <div class="gb-cookie-panel-actions">

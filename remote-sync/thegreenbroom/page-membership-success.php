@@ -41,6 +41,11 @@ if ( $gb_user_id ) {
     }
 }
 
+// Tell the Meta Pixel, once per membership, if the visitor allowed it.
+if ( $gb_confirmed && function_exists( 'gb_tracking_membership_confirmed' ) ) {
+    gb_tracking_membership_confirmed( $gb_user_id, $gb_plan_key, $gb_audience );
+}
+
 $gb_renews_display = '';
 
 if ( $gb_renews !== '' && strtotime( $gb_renews ) ) {

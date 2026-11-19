@@ -81,6 +81,13 @@ function gb_send_cleaner_message() {
         update_post_meta($msg_id, '_gb_sender_email', $email);
         update_post_meta($msg_id, '_gb_responded_date', '');
         gb_notify_support_message($msg_id, 'Cleaner enquiry');
+        if (function_exists('gb_track')) {
+            gb_track('cleaner_enquiry', 'Lead', [
+                'content_name'     => get_the_title($cleaner_id),
+                'content_category' => 'Cleaner enquiry',
+                'content_ids'      => [(string) $cleaner_id],
+            ], ['label' => get_the_title($cleaner_id), 'email' => $email]);
+        }
         wp_send_json_success(['message'=>'Message sent!']);
     } else {
         wp_send_json_error(['message'=>'System error.']);

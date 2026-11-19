@@ -746,6 +746,11 @@ function gb_get_cookie_policy_seed_content() {
     $html .= '<h2>Questions</h2>';
     $html .= '<p>Our <a href="' . esc_url( $privacy ) . '">Privacy Notice</a> explains how we handle personal data more broadly, including your rights under UK GDPR. If anything here is unclear, please <a href="' . esc_url( $contact ) . '">get in touch</a>.</p>';
 
+    // The Meta Pixel and the site's own visit counts (inc/tracking.php).
+    if ( function_exists( 'gb_cookie_policy_meta_replacements' ) ) {
+        $html = strtr( $html, gb_cookie_policy_meta_replacements() );
+    }
+
     return $html;
 }
 
@@ -2713,6 +2718,7 @@ require_once get_template_directory() . '/inc/bookings.php';
 require_once get_template_directory() . '/inc/messaging.php';
 require_once get_template_directory() . '/inc/helpdesk.php';
 require_once get_template_directory() . '/inc/payment-switches.php';
+require_once get_template_directory() . '/inc/tracking.php';
 require_once get_template_directory() . '/inc/connect-modes.php';
 require_once get_template_directory() . '/inc/stripe.php';
 require_once get_template_directory() . '/inc/refunds.php';
@@ -2737,7 +2743,7 @@ require_once get_template_directory() . '/inc/identity-guard.php';
    also makes the run order explicit rather than an accident of hook priority.
    ========================================================================== */
 
-const GB_MIGRATION_VERSION = 20;
+const GB_MIGRATION_VERSION = 23;
 
 function gb_run_one_time_migrations() {
     if ( (int) get_option( 'gb_migration_version', 0 ) >= GB_MIGRATION_VERSION ) {
@@ -2785,7 +2791,12 @@ function gb_run_one_time_migrations() {
         'gb_migrate_connect_accounts_to_test_mode',
         'gb_retire_how_we_do_it',
         'gb_rename_listings_page',
-        'gb_seed_recruitment_blog_draft'
+        'gb_seed_recruitment_blog_draft',
+        'gb_analytics_install',
+        'gb_seed_meta_pixel_id',
+        'gb_update_cookie_policy_for_meta',
+        'gb_refresh_cookie_bar_wording',
+        'gb_analytics_remove_deploy_checks'
     );
 
     foreach ( $migrations as $migration ) {

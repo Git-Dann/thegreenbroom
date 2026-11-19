@@ -122,6 +122,9 @@ add_action('init', function() {
                 update_post_meta($ticket_id, '_gb_spam', '1');
             } else {
                 gb_notify_support_message($ticket_id, 'Support');
+                if (function_exists('gb_track')) {
+                    gb_track('contact_form', 'Contact', ['content_name' => 'Contact form'], ['email' => $email]);
+                }
             }
 
             // Redirect with success flag for page-contactus.php
