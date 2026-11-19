@@ -349,6 +349,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['gb_action']) && $_POS
                 $error_messages[] = 'Payment setup failed: ' . $checkout_session->get_error_message();
             } else {
                 update_post_meta($booking_id, '_gb_stripe_checkout_session_id', sanitize_text_field($checkout_session['id']));
+                if (!empty($checkout_session['url']) && function_exists('gb_track')) {
+                    gb_track('booking_started', 'InitiateCheckout', [
+                        'value'        => round((float) $total_amount_gbp, 2),
+                        'currency'     => 'GBP',
+                        'content_name' => $service_label,
+                        'content_type' => 'product',
+                        'content_ids'  => [(string) $cleaner_id],
+                        'num_items'    => 1,
+                    ], ['label' => $service_label, 'amount' => (float) $total_amount_gbp, 'email' => $form_data['email'], 'event_id' => 'checkout-' . $booking_id]);
+                }
                 if (!empty($checkout_session['url'])) {
                     wp_redirect(esc_url_raw($checkout_session['url']));
                     exit;

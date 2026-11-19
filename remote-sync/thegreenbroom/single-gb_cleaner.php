@@ -494,6 +494,7 @@ if ( ! empty( $gb_selected_services ) ) {
                 data: $(this).serialize(),
                 success: function(res) {
                     if(res.success) {
+                        if (window.gbFlushTracking) { window.gbFlushTracking(); }
                         $('#gb-msg-form').hide();
                         resp.html('<span style="color:#2e7d32;">✅ ' + res.data.message + '</span>');
                         setTimeout(closeMsgModal, 3000);

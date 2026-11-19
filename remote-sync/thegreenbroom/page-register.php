@@ -71,11 +71,17 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['gb_register']) ) {
                         gb_identity_on_cleaner_registered($uid);
                     }
                     wp_set_current_user($uid); wp_set_auth_cookie($uid);
+                    if (function_exists('gb_track')) {
+                        gb_track('cleaner_signup', 'CompleteRegistration', ['content_name' => 'Cleaner', 'status' => true], ['user_id' => $uid, 'email' => $email]);
+                    }
                     $verification_state = gb_prepare_new_user_email_verification($uid, home_url('/verify-profile'));
                     wp_safe_redirect($verification_state['redirect']); exit;
                 } else {
                     $u->set_role('gb_customer');
                     wp_set_current_user($uid); wp_set_auth_cookie($uid);
+                    if (function_exists('gb_track')) {
+                        gb_track('customer_signup', 'CompleteRegistration', ['content_name' => 'Customer', 'status' => true], ['user_id' => $uid, 'email' => $email]);
+                    }
                     $verification_state = gb_prepare_new_user_email_verification($uid, home_url('/my-account/'));
                     wp_safe_redirect($verification_state['redirect']); exit;
                 }

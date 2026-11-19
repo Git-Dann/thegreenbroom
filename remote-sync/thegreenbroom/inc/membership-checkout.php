@@ -362,6 +362,19 @@ function gb_membership_handle_checkout_request() {
         exit;
     }
 
+    if ( function_exists( 'gb_track' ) ) {
+        $gb_track_catalogue = function_exists( 'gb_subscription_catalogue' ) ? gb_subscription_catalogue() : array();
+        $gb_track_price     = gb_tracking_plan_price( $plan_key );
+        gb_track( 'membership_started', 'InitiateCheckout', array(
+            'value'        => round( $gb_track_price, 2 ),
+            'currency'     => 'GBP',
+            'content_name' => isset( $gb_track_catalogue[ $plan_key ]['label'] ) ? $gb_track_catalogue[ $plan_key ]['label'] : $plan_key,
+            'content_type' => 'product',
+            'content_ids'  => array( $plan_key ),
+            'num_items'    => 1,
+        ), array( 'label' => $plan_key, 'amount' => $gb_track_price ) );
+    }
+
     // Stripe's own domain, so wp_safe_redirect() would refuse it.
     wp_redirect( $url );
     exit;
