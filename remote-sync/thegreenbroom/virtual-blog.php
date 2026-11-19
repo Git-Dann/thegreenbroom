@@ -33,11 +33,18 @@ get_header();
     .gb-blog-subtitle { max-width: 720px; margin: 16px 0 0; font-size: 18px; line-height: 1.7; color: rgba(255,255,255,0.86); }
     .gb-blog-body { max-width: 1120px; margin: -56px auto 90px; padding: 0 20px; position: relative; z-index: 10; }
     .gb-blog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
-    .gb-blog-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08); }
+    .gb-blog-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08); overflow: hidden; display: flex; flex-direction: column; }
+    .gb-blog-card-media { display: block; aspect-ratio: 3 / 2; overflow: hidden; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
+    .gb-blog-card-media img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+    .gb-blog-card:hover .gb-blog-card-media img { transform: scale(1.04); }
+    .gb-blog-card-body { padding: 22px 24px 24px; display: flex; flex-direction: column; flex: 1 1 auto; }
+    .gb-blog-card h2 a { color: inherit; text-decoration: none; }
+    .gb-blog-card h2 a:hover { color: #166534; }
     .gb-blog-card h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.2; }
     .gb-blog-card p { color: #475569; line-height: 1.7; }
     .gb-blog-meta { display: inline-block; margin-bottom: 14px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #2e7d32; }
     .gb-blog-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: #166534; font-weight: 700; text-decoration: none; }
+    .gb-blog-card-body .gb-blog-link { margin-top: auto; padding-top: 6px; }
     .gb-blog-empty { display: grid; gap: 18px; }
     .gb-blog-note { background: #fff; border: 1px dashed #cbd5e1; border-radius: 18px; padding: 22px; color: #475569; }
     .gb-blog-pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; }
@@ -64,12 +71,29 @@ get_header();
     <section class="gb-blog-body" aria-label="Latest updates">
     <?php if ( $blog_posts->have_posts() ) : ?>
         <div class="gb-blog-grid">
-            <?php while ( $blog_posts->have_posts() ) : $blog_posts->the_post(); ?>
+            <?php $gb_card_n = 0; ?>
+            <?php while ( $blog_posts->have_posts() ) : $blog_posts->the_post(); $gb_card_n++; ?>
                 <article class="gb-blog-card">
-                    <span class="gb-blog-meta"><?php echo esc_html( get_the_date( 'j F Y' ) ); ?></span>
-                    <h2><?php the_title(); ?></h2>
-                    <p><?php echo esc_html( wp_trim_words( wp_strip_all_tags( get_the_excerpt() ?: get_the_content() ), 28, '...' ) ); ?></p>
-                    <a class="gb-blog-link" href="<?php the_permalink(); ?>">Read update <span aria-hidden="true">-></span></a>
+                    <?php
+                    // The picture repeats the title's link, so it is skipped by
+                    // keyboard and screen readers rather than announced twice.
+                    // The first row loads straight away; the rest as they scroll in.
+                    ?>
+                    <a class="gb-blog-card-media" href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
+                        <?php if ( has_post_thumbnail() ) : ?>
+                            <?php the_post_thumbnail( 'medium_large', array(
+                                'alt'     => '',
+                                'loading' => $gb_card_n <= 3 ? 'eager' : 'lazy',
+                                'sizes'   => '(max-width: 720px) 100vw, 360px',
+                            ) ); ?>
+                        <?php endif; ?>
+                    </a>
+                    <div class="gb-blog-card-body">
+                        <span class="gb-blog-meta"><?php echo esc_html( get_the_date( 'j F Y' ) ); ?></span>
+                        <h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
+                        <p><?php echo esc_html( wp_trim_words( wp_strip_all_tags( get_the_excerpt() ?: get_the_content() ), 28, '...' ) ); ?></p>
+                        <a class="gb-blog-link" href="<?php the_permalink(); ?>">Read article <span aria-hidden="true">&rarr;</span></a>
+                    </div>
                 </article>
             <?php endwhile; ?>
         </div>

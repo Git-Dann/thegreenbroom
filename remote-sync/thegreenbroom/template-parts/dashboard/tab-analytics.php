@@ -319,8 +319,16 @@ $an_fmt_money = static function ($n) { return '£' . number_format((float) $n, $
         <?php endif; ?>
     </section>
 
-    <section class="gb-card gb-an-block" id="meta">
-        <h3>Meta Pixel (Facebook and Instagram)</h3>
+    <?php /* Set-and-forget settings: folded away, but opened after a test or save so the result is visible. */ ?>
+    <details class="gb-card gb-an-fold" id="meta"<?php echo ($an_capi_notice !== '' || (isset($_GET['msg']) && $_GET['msg'] === 'saved')) ? ' open' : ''; ?>>
+        <summary>
+            <span class="gb-an-fold-title">Meta Pixel settings</span>
+            <span class="gb-an-fold-status">
+                <span class="gb-an-dot <?php echo $an_pixel_on ? 'is-ok' : ''; ?>"></span><?php echo $an_pixel_on ? 'Pixel on' : 'Pixel off'; ?>
+                <span class="gb-an-dot <?php echo $an_capi_set ? 'is-ok' : ''; ?>"></span><?php echo $an_capi_set ? 'Conversions API connected' : 'Conversions API not connected (optional)'; ?>
+            </span>
+        </summary>
+        <div class="gb-an-fold-body">
 
         <?php if ($an_capi_notice !== '' && $an_capi_msg !== ''): ?>
             <div class="gb-an-alert is-<?php echo $an_capi_notice === 'ok' ? 'ok' : 'error'; ?>"><?php echo esc_html($an_capi_msg); ?></div>
@@ -412,10 +420,15 @@ $an_fmt_money = static function ($n) { return '£' . number_format((float) $n, $
                 <p><strong>To get a Conversions API token:</strong> Events Manager &rarr; the pixel &rarr; <strong>Settings</strong> &rarr; <strong>Conversions API</strong> &rarr; <strong>Generate access token</strong>. Paste it above and save.</p>
             </div>
         </details>
-    </section>
+        </div>
+    </details>
 
-    <section class="gb-card gb-an-block">
-        <h3>What is tracked</h3>
+    <details class="gb-card gb-an-fold">
+        <summary>
+            <span class="gb-an-fold-title">What is tracked</span>
+            <span class="gb-an-fold-status"><?php echo count($an_catalogue); ?> actions, all counted here; Meta hears about them only with marketing consent</span>
+        </summary>
+        <div class="gb-an-fold-body">
         <p class="gb-an-small">Every action below is counted on this page. The Meta event is what Meta receives, only from visitors who allow marketing cookies, and is what adverts can be optimised for.</p>
         <div class="gb-an-table-wrap">
             <table class="gb-an-table gb-an-catalogue">
@@ -433,5 +446,6 @@ $an_fmt_money = static function ($n) { return '£' . number_format((float) $n, $
             </table>
         </div>
         <p class="gb-an-small">Bookings and memberships also send their value in pounds, so Meta can report the return on ad spend. Signed-in visitors' email addresses are scrambled (hashed) before being sent by the Conversions API, so Meta can match them to accounts but never sees them.</p>
-    </section>
+        </div>
+    </details>
 </div>
