@@ -1333,3 +1333,22 @@ select.gb-input.gb-input-sm { padding-right: 36px; }
     .gb-an-two { grid-template-columns: minmax(0, 1fr); }
     .gb-an-chart { height: 120px; }
 }
+/* Analytics: settings and reference folded away until wanted. */
+.gb-an details.gb-card.gb-an-fold { padding: 0 !important; overflow: hidden; }
+.gb-an-fold > summary { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 18px 24px 18px 48px; cursor: pointer; position: relative; user-select: none; }
+.gb-an-fold > summary::-webkit-details-marker { display: none; }
+.gb-an-fold > summary::before { content: ""; position: absolute; left: 24px; top: 50%; width: 8px; height: 8px; margin-top: -6px; border-right: 2px solid #64748b; border-bottom: 2px solid #64748b; transform: rotate(-45deg); transition: transform .15s ease; }
+.gb-an-fold[open] > summary::before { transform: rotate(45deg); margin-top: -7px; }
+.gb-an-fold > summary:hover { background: #f8fafc; }
+.gb-an-fold > summary:focus-visible { outline: 2px solid #2e7d32; outline-offset: -2px; }
+.gb-an-fold-title { font-size: 16px; font-weight: 800; color: #0f172a; }
+.gb-an-fold-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12.5px; color: #64748b; }
+.gb-an-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block; margin-left: 6px; }
+.gb-an-dot:first-child { margin-left: 0; }
+.gb-an-dot.is-ok { background: #16a34a; }
+.gb-an-fold-body { padding: 4px 24px 24px; border-top: 1px solid #f1f5f9; }
+@media (max-width: 600px) {
+    .gb-an-fold > summary { padding: 16px 16px 16px 40px; }
+    .gb-an-fold > summary::before { left: 18px; }
+    .gb-an-fold-body { padding: 4px 16px 16px; }
+}
