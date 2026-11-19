@@ -648,34 +648,49 @@ function gb_seed_meta_pixel_id() {
  * section is added instead so nothing anyone wrote is lost.
  */
 function gb_update_cookie_policy_for_meta() {
-    if ( get_option( 'gb_cookie_policy_meta_v1' ) ) {
+    // v2: the first pass only matched paragraphs stored with their <p> tags.
+    // A page saved through the Manager OS editor keeps paragraphs as plain
+    // text separated by blank lines, so most of the old wording stayed.
+    if ( get_option( 'gb_cookie_policy_meta_v2' ) ) {
         return;
     }
     $page = get_page_by_path( 'cookies', OBJECT, 'page' );
     if ( ! $page ) {
-        update_option( 'gb_cookie_policy_meta_v1', 1, false );
+        update_option( 'gb_cookie_policy_meta_v2', 1, false );
         return;
     }
 
-    $content = (string) $page->post_content;
-    $map     = gb_cookie_policy_meta_replacements();
-    $changed = false;
-    foreach ( $map as $old => $new ) {
-        if ( strpos( $content, $old ) !== false ) {
-            $content = str_replace( $old, $new, $content );
-            $changed = true;
-        }
+    $original = (string) $page->post_content;
+    $content  = gb_cookie_policy_apply_meta_wording( $original );
+
+    // Still promising there is no pixel (the wording was rewritten by hand):
+    // add a clearly headed section rather than leave the policy wrong.
+    if ( stripos( $content, 'no Meta pixel' ) !== false || strpos( $content, 'Meta Pixel' ) === false ) {
+        $content .= "\n\n<h2>Advertising: the Meta Pixel</h2>\n" . gb_cookie_policy_meta_section();
     }
 
-    if ( ! $changed && strpos( $content, 'Meta Pixel' ) === false ) {
-        $content .= '<h2>Advertising: the Meta Pixel</h2>' . gb_cookie_policy_meta_section();
-        $changed  = true;
-    }
-
-    if ( $changed ) {
+    if ( $content !== $original ) {
         wp_update_post( wp_slash( array( 'ID' => $page->ID, 'post_content' => $content ) ) );
     }
-    update_option( 'gb_cookie_policy_meta_v1', 1, false );
+    update_option( 'gb_cookie_policy_meta_v2', 1, false );
+}
+
+/**
+ * Swap each old passage for the new one, whether or not it sits in <p> tags
+ * and however its lines were wrapped.
+ */
+function gb_cookie_policy_apply_meta_wording( $content ) {
+    foreach ( gb_cookie_policy_meta_replacements() as $old => $new ) {
+        $is_para = strpos( $old, '<p>' ) === 0;
+        $inner   = $is_para ? substr( $old, 3, -4 ) : $old;
+        $pattern = preg_quote( $inner, '#' );
+        $pattern = preg_replace( '/\\ |\s+/', '\\s+', $pattern );
+        $pattern = $is_para ? '#(?:<p>)?\s*' . $pattern . '\s*(?:</p>)?#u' : '#' . $pattern . '#u';
+        $content = preg_replace_callback( $pattern, static function () use ( $new ) {
+            return $new;
+        }, $content );
+    }
+    return $content;
 }
 
 function gb_cookie_policy_meta_section() {
